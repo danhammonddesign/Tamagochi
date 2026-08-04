@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#ffd3e6">
+<meta name="description" content="Pixel Pals — adopt a baby cat or fox, feed it, play with it and watch it grow up.">
+<title>Pixel Pals — Take care of your pet!</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦊</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ---------------- start screen ---------------- -->
+<div id="startScreen" class="overlay hidden">
+  <div class="start-card">
+    <h1 class="logo">Pixel&nbsp;Pals</h1>
+    <p class="tagline">Pick a baby pet to take care of!</p>
+
+    <div class="picker" role="radiogroup" aria-label="Choose your pet">
+      <button class="pick-card" data-species="cat" role="radio" aria-checked="false">
+        <canvas id="preview-cat" class="preview" width="44" height="44" aria-hidden="true"></canvas>
+        <span class="pick-name">🐱 Cat</span>
+        <span class="pick-blurb">Soft and sleepy</span>
+      </button>
+      <button class="pick-card" data-species="fox" role="radio" aria-checked="false">
+        <canvas id="preview-fox" class="preview" width="44" height="44" aria-hidden="true"></canvas>
+        <span class="pick-name">🦊 Fox</span>
+        <span class="pick-blurb">Bouncy and cheeky</span>
+      </button>
+    </div>
+
+    <label class="name-label" for="nameInput">Give your pet a name</label>
+    <input id="nameInput" class="name-input" type="text" maxlength="14" autocomplete="off"
+           spellcheck="false" placeholder="Ember">
+
+    <button id="startBtn" class="big-btn start-btn">Let's go! ✨</button>
+  </div>
+</div>
+
+<!-- ---------------- game ---------------- -->
+<main id="game" class="app hidden">
+
+  <header class="topbar">
+    <div class="pet-id">
+      <span id="petEmoji" class="pet-emoji" aria-hidden="true">🦊</span>
+      <div class="pet-titles">
+        <h1 id="petName" class="pet-name">Ember</h1>
+        <p id="petStage" class="pet-stage">Baby Fox</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="soundBtn" class="icon-btn" aria-label="Turn sound off">🔊</button>
+      <button id="resetBtn" class="icon-btn" aria-label="Start over with a new pet">🔄</button>
+    </div>
+  </header>
+
+  <section class="growth">
+    <div class="growth-row">
+      <span id="growthLabel" class="growth-label">Growing to Kid</span>
+      <span class="growth-star" aria-hidden="true">⭐</span>
+    </div>
+    <div class="bar growth-bar"><i id="growthFill" class="fill"></i></div>
+  </section>
+
+  <section class="screen-frame">
+    <canvas id="scene" width="88" height="64" aria-label="Your pet in its room"></canvas>
+    <div id="speech" class="speech"></div>
+    <div id="celebrate" class="celebrate">
+      <div id="celebrateText"></div>
+    </div>
+  </section>
+
+  <div id="hearts" class="hearts" aria-label="Happiness"></div>
+
+  <section class="stats" aria-label="How your pet is doing">
+    <div id="stat-food" class="stat">
+      <span class="stat-icon" aria-hidden="true">🍎</span>
+      <div class="stat-body">
+        <span class="stat-name">Food</span>
+        <div class="bar"><i id="bar-food" class="fill food"></i></div>
+      </div>
+    </div>
+    <div id="stat-water" class="stat">
+      <span class="stat-icon" aria-hidden="true">💧</span>
+      <div class="stat-body">
+        <span class="stat-name">Water</span>
+        <div class="bar"><i id="bar-water" class="fill water"></i></div>
+      </div>
+    </div>
+    <div id="stat-fun" class="stat">
+      <span class="stat-icon" aria-hidden="true">🎾</span>
+      <div class="stat-body">
+        <span class="stat-name">Fun</span>
+        <div class="bar"><i id="bar-fun" class="fill fun"></i></div>
+      </div>
+    </div>
+    <div id="stat-clean" class="stat">
+      <span class="stat-icon" aria-hidden="true">🛁</span>
+      <div class="stat-body">
+        <span class="stat-name">Clean</span>
+        <div class="bar"><i id="bar-clean" class="fill clean"></i></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="actions">
+    <button class="big-btn act-feed" data-action="feed"><span aria-hidden="true">🍎</span>Feed</button>
+    <button class="big-btn act-drink" data-action="drink"><span aria-hidden="true">💧</span>Water</button>
+    <button class="big-btn act-play" data-action="play"><span aria-hidden="true">🎾</span>Play</button>
+    <button class="big-btn act-bath" data-action="bath"><span aria-hidden="true">🛁</span>Bath</button>
+  </section>
+
+  <p id="hint" class="hint">Tap and stroke your pet to give it cuddles! 💕</p>
+</main>
+
+<!-- ---------------- confirm ---------------- -->
+<div id="confirmModal" class="overlay small">
+  <div class="modal">
+    <p class="modal-title">Start over with a new pet?</p>
+    <p class="modal-sub">Your pet will say goodbye.</p>
+    <div class="modal-btns">
+      <button id="confirmNo" class="big-btn soft">No, stay 💕</button>
+      <button id="confirmYes" class="big-btn danger">Yes, new pet</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/pixel.js"></script>
+<script src="js/pets.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
