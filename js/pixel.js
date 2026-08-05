@@ -41,8 +41,15 @@
   Layer.prototype.set = function (x, y, v) {
     x = Math.round(x); y = Math.round(y);
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
-    this.data[y * this.w + x] = v;
+    var i = y * this.w + x;
+    this.data[i] = v;
+    if (this.rec) this.rec[i] = 1;
   };
+
+  /* While a mask is attached, every pixel written is flagged in it. The game
+     uses this to draw the room first, then flag everything painted on top so
+     the evening light dims the room alone. */
+  Layer.prototype.record = function (mask) { this.rec = mask || null; };
 
   Layer.prototype.get = function (x, y) {
     x = Math.round(x); y = Math.round(y);
@@ -153,21 +160,6 @@
   }
 
   Screen.prototype.clearMask = function () { this.mask.fill(0); };
-
-  /* Marks every filled pixel of `src` as exempt from the tint, so the room can
-     be dimmed without draining the colour out of whatever is drawn on it. */
-  Screen.prototype.protect = function (src, ox, oy) {
-    ox = Math.round(ox); oy = Math.round(oy);
-    for (var y = 0; y < src.h; y++) {
-      var ty = oy + y;
-      if (ty < 0 || ty >= this.h) continue;
-      for (var x = 0; x < src.w; x++) {
-        var tx = ox + x;
-        if (tx < 0 || tx >= this.w) continue;
-        if (src.data[y * src.w + x]) this.mask[ty * this.w + tx] = 1;
-      }
-    }
-  };
 
   /* `tint` is an optional [r, g, b, amount] wash applied to every colour —
      used for the night-time and golden-hour lighting. It is folded into a

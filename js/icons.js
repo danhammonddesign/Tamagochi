@@ -53,6 +53,61 @@
       L.rect(6, 10, 4, 1, C('#ff5f5f'));
     },
 
+    // ---- dinner menu --------------------------------------------------
+    foodMeal: function (L) {                   // bowl of kibble
+      L.disc(5, 6, 1.6, C('#e0a566'));
+      L.disc(8, 5, 1.6, C('#c98a4b'));
+      L.disc(11, 6, 1.6, C('#e0a566'));
+      L.ellipse(8, 8, 7, 2.4, C('#ff8a5c'));
+      L.rect(2, 8, 12, 3, C('#e56b40'));
+      L.ellipse(8, 11, 6, 2.2, C('#c4552f'));
+    },
+    foodSteak: function (L) {
+      L.ellipse(8, 9, 6, 4.4, C('#c4553f'));
+      L.ellipse(7, 8, 4, 2.8, C('#e0705c'));
+      L.ellipse(2.6, 5, 2, 2, C('#f4efe6'));
+      L.ellipse(4.4, 3.4, 1.8, 1.8, C('#f4efe6'));
+      L.rect(3, 4.6, 3, 2, C('#f4efe6'));
+    },
+    foodBone: function (L) {
+      L.rect(4, 7, 8, 3, C('#f4efe6'));
+      L.disc(3.6, 6.4, 2, C('#f4efe6'));
+      L.disc(3.6, 10, 2, C('#f4efe6'));
+      L.disc(12.4, 6.4, 2, C('#f4efe6'));
+      L.disc(12.4, 10, 2, C('#f4efe6'));
+      L.rect(6, 8, 4, 1, C('#ddd6c8'));
+    },
+    foodDonut: function (L) {
+      L.disc(8, 8.5, 6.4, C('#d9954f'));
+      L.disc(8, 7.6, 6, C('#ff9ec4'));
+      L.disc(8, 8.5, 2.2, 0);
+      L.disc(8, 8.5, 2.2, C('#d9954f'));
+      L.disc(8, 8.5, 1.4, 0);
+      L.set(5, 5, C('#8ee86a')); L.set(10, 4.6, C('#ffe07a'));
+      L.set(11.6, 9, C('#7fd8ff')); L.set(4.6, 10.4, C('#ffffff'));
+    },
+    foodCandy: function (L) {
+      L.disc(8, 8, 3.8, C('#ff5f8f'));
+      L.ellipse(6.6, 6.8, 1.4, 1, C('#ffb3cc'));
+      L.tri(4.4, 8, 1, 4.6, 1, 11.4, C('#ffd93d'));
+      L.tri(11.6, 8, 15, 4.6, 15, 11.4, C('#ffd93d'));
+    },
+    foodLolly: function (L) {
+      L.rect(7.5, 9, 1.5, 6, C('#f4efe6'));
+      L.disc(8, 6, 5, C('#ff5f8f'));
+      L.disc(8, 6, 3.4, C('#ffffff'));
+      L.disc(8, 6, 2, C('#ff5f8f'));
+      L.set(6, 4, C('#ffb3cc'));
+    },
+    present: function (L) {
+      L.rect(2, 7, 12, 7, C('#ff8fb8'));
+      L.rect(1, 5, 14, 3, C('#ff5f8f'));
+      L.rect(7, 5, 2, 9, C('#ffd93d'));
+      L.disc(6.4, 3.4, 2, C('#ffd93d'));
+      L.disc(9.6, 3.4, 2, C('#ffd93d'));
+      L.rect(7, 3, 2, 2, C('#ffb01a'));
+    },
+
     // ---- mini games ---------------------------------------------------
     bubble: function (L) {
       L.disc(6.5, 9, 5.2, C('#bfe9ff'));

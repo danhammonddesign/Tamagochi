@@ -24,13 +24,14 @@ thumb-sized targets along the bottom, and everything is saved to
 
 ## How to play
 
-1. **Pick a pet** — cat or fox — and give it a name.
+1. **Pick a pet** and give it a name. It arrives gift-wrapped: tap the present
+   and your new pet pops out of the box in a shower of confetti.
 2. Five round buttons along the bottom care for five needs. Each button is its
    own gauge: the coloured ring around the icon shows how full that need is.
 
    | Button | Need | How it works |
    |---|---|---|
-   | Feed | Food | A bowl slides in and your pet tucks in |
+   | Feed | Food | Pick from six things to eat |
    | Water | Water | A water bowl to lap from |
    | Play | Fun | Pick one of three mini games |
    | Bath | Clean | **Hands on:** scrub, rinse and dry your pet in three steps |
@@ -39,11 +40,19 @@ thumb-sized targets along the bottom, and everything is saved to
    A sixth **Medicine** button appears only when your pet is poorly.
 
 3. **Stroke your pet** anywhere on screen to give it cuddles — hearts float up
-   and it purrs.
+   and it purrs. Keep going and it gets so happy it sings out loud.
 4. Care earns growth points. Fill the gold bar at the top to grow up:
    **Baby → Kid → Teen → Adult**, each with a little celebration.
 5. Tap the **paw** button (top left) for *My Pets*: switch between pets, add a
    new one (up to six), or say goodbye to one.
+
+### Dinner time
+
+Feed opens a menu of six things: a proper **meal**, a **steak**, a **bone**, a
+**donut**, a **candy** or a **lollipop**. Real food fills your pet up the most;
+treats fill it up less but are far more fun, so a lollipop is a poor dinner and
+a lovely snack. Whatever you pick slides in and shrinks bite by bite as your
+pet works through it.
 
 ### Mini games
 
@@ -75,10 +84,15 @@ the evening** into night. The lighting only makes the room darker — it never
 recolours it — and your pet and whatever tool you are holding always keep
 their own colours, so they stay bright and readable whatever the hour.
 
+The evening light falls on the **room only**. Your pet, its food, the bath, the
+toys and everything else you put in the room keep their own colours, so nothing
+changes shade as it passes in front of the pet.
+
 The window is where the colour lives: the sky outside changes through the day,
 a sun or moon rides an arc across the panes, stars come out after dark and a
 night light switches on in the corner. Your pet dozes off far more readily at
-night, and greets you differently depending on the hour.
+night — and once it is properly dark it curls up in its own little bed — and it
+greets you differently depending on the hour.
 
 ### Accidents
 

@@ -523,6 +523,33 @@ body {
 .game-card .g-name { font-size: 17px; font-weight: 900; }
 .game-card .g-sub { font-size: 12px; font-weight: 800; color: var(--muted); margin-left: auto; }
 
+/* ---------------- food picker ---------------- */
+.food-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.food-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 4px 8px;
+  border: 3px solid rgba(58, 43, 64, .12);
+  border-radius: 16px;
+  background: #f7f8fc;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--ink);
+  transition: transform .08s, border-color .15s;
+}
+.food-card:active { transform: scale(.94); }
+.food-card:hover { border-color: var(--pink); }
+.food-card canvas { image-rendering: pixelated; display: block; }
+
 /* ---------------- tight screens ---------------- */
 @media (max-height: 620px) {
   .ring { width: 48px; height: 48px; }

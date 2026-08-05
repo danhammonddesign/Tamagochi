@@ -43,6 +43,17 @@
     medicine: { stat: null, kind: 'anim', dur: 4.4, gain: 0, done: 'All better!', full: '' }
   };
 
+  /* Six things to eat. Proper food fills you up; treats fill you up less but
+     are a lot more fun. */
+  var FOODS = {
+    meal:  { label: 'Meal',     gain: 42, fun: 0,  say: 'Yum yum!' },
+    steak: { label: 'Steak',    gain: 46, fun: 4,  say: 'Delicious!' },
+    bone:  { label: 'Bone',     gain: 34, fun: 8,  say: 'Crunch crunch!' },
+    donut: { label: 'Donut',    gain: 26, fun: 14, say: 'So sweet!' },
+    candy: { label: 'Candy',    gain: 18, fun: 18, say: 'Sugar rush!' },
+    lolly: { label: 'Lollipop', gain: 16, fun: 20, say: 'Slurp!' }
+  };
+
   var HINTS = {
     food: 'Your pet is hungry — tap Feed!',
     water: 'Your pet is thirsty — tap Water!',
@@ -121,7 +132,16 @@
     snore: function () { this.tone(90, 0.5, 'triangle', 0.025, 0, 70); },
     plop: function () { this.tone(200, 0.12, 'triangle', 0.05, 0, 90); },
     pop: function () { this.tone(1100, 0.06, 'sine', 0.05, 0, 1700); },
-    whoosh: function () { this.tone(500, 0.14, 'sine', 0.03, 0, 260); }
+    whoosh: function () { this.tone(500, 0.14, 'sine', 0.03, 0, 260); },
+    delight: function () {          // the happy trill after lots of fuss
+      var notes = [660, 880, 990, 1320];
+      for (var i = 0; i < notes.length; i++) this.tone(notes[i], 0.16, 'sine', 0.05, i * 0.09);
+      this.tone(1760, 0.2, 'sine', 0.03, 0.38);
+    },
+    unwrap: function () {
+      this.tone(300, 0.1, 'triangle', 0.04, 0, 520);
+      this.tone(520, 0.12, 'triangle', 0.04, 0.1, 780);
+    }
   };
 
   /* ------------------------------------------------------------------ */
@@ -251,7 +271,8 @@
     petting: false, lastHeart: 0,
     shine: 0, growthFlash: 0,
     sleep: null, angry: 0, lastWake: -60,
-    pooping: null, messTimer: 40 + Math.random() * 50, messAge: {}
+    pooping: null, messTimer: 40 + Math.random() * 50, messAge: {},
+    intro: null, petStreak: 0, lastDelight: -60
   };
 
   /* ------------------------------------------------------------------ */
@@ -284,12 +305,11 @@
   /* ------------------------------------------------------------------ */
   /* outline() only fills empty pixels, and the room covers the whole scene,
      so anything needing its own black edge is drawn on a scratch layer. */
-  function stampOutlined(L, x, y, draw, keepLit) {
+  function stampOutlined(L, x, y, draw) {
     fx.clear();
     draw(fx, 22, 22);
     fx.outline(C('#141014'));
     L.blit(fx, Math.round(x) - 22, Math.round(y) - 22);
-    if (keepLit && screen) screen.protect(fx, Math.round(x) - 22, Math.round(y) - 22);
   }
 
   /* ------------------------------------------------------------------ */
@@ -584,6 +604,43 @@
     });
   }
 
+  /* One dish per food, shrinking as it gets eaten. */
+  function drawDish(L, x, y, kind, left) {
+    var k = 0.35 + 0.65 * clamp(left, 0, 1);
+    if (left <= 0.02) return;
+    stampOutlined(L, x, y, function (b, bx, by) {
+      if (kind === 'steak') {
+        b.ellipse(bx, by, 7 * k, 5 * k, C('#c4553f'));
+        b.ellipse(bx - 1 * k, by - 1 * k, 4.4 * k, 3 * k, C('#e0705c'));
+        b.disc(bx - 6 * k, by - 3 * k, 2.2 * k, C('#f4efe6'));
+        b.disc(bx - 4 * k, by - 4.6 * k, 2 * k, C('#f4efe6'));
+      } else if (kind === 'bone') {
+        b.rect(bx - 5 * k, by - 1.5 * k, 10 * k, 3 * k, C('#f4efe6'));
+        b.disc(bx - 5 * k, by - 2.4 * k, 2.2 * k, C('#f4efe6'));
+        b.disc(bx - 5 * k, by + 1.4 * k, 2.2 * k, C('#f4efe6'));
+        b.disc(bx + 5 * k, by - 2.4 * k, 2.2 * k, C('#f4efe6'));
+        b.disc(bx + 5 * k, by + 1.4 * k, 2.2 * k, C('#f4efe6'));
+      } else if (kind === 'donut') {
+        b.disc(bx, by + 0.6 * k, 6.4 * k, C('#d9954f'));
+        b.disc(bx, by - 0.4 * k, 6 * k, C('#ff9ec4'));
+        b.disc(bx, by, 2.2 * k, C('#d9954f'));
+        b.set(bx - 3 * k, by - 3 * k, C('#8ee86a'));
+        b.set(bx + 2 * k, by - 3.4 * k, C('#ffe07a'));
+        b.set(bx + 3.4 * k, by + 1 * k, C('#7fd8ff'));
+      } else if (kind === 'candy') {
+        b.disc(bx, by, 4 * k, C('#ff5f8f'));
+        b.ellipse(bx - 1.4 * k, by - 1.2 * k, 1.4 * k, 1 * k, C('#ffb3cc'));
+        b.tri(bx - 3.6 * k, by, bx - 7 * k, by - 3.4 * k, bx - 7 * k, by + 3.4 * k, C('#ffd93d'));
+        b.tri(bx + 3.6 * k, by, bx + 7 * k, by - 3.4 * k, bx + 7 * k, by + 3.4 * k, C('#ffd93d'));
+      } else {  // lollipop
+        b.rect(bx - 0.5, by + 1, 1.5, 7 * k, C('#f4efe6'));
+        b.disc(bx, by - 1 * k, 5 * k, C('#ff5f8f'));
+        b.disc(bx, by - 1 * k, 3.4 * k, C('#ffffff'));
+        b.disc(bx, by - 1 * k, 1.8 * k, C('#ff5f8f'));
+      }
+    });
+  }
+
   function drawTub(L, x, y, backOnly, t) {
     var shell = C('#ffffff'), shellShade = C('#dfe9f5'), water = C('#8fd8ff');
     if (backOnly) {
@@ -629,7 +686,7 @@
       b.ellipse(bx - 1.6, by - 0.8, 1.8, 0.9, C('#eaf9ff'));
       b.disc(bx + 5, by - 4 + tilt, 1.6, C('#ffffff'));
       b.disc(bx - 5, by - 5 - tilt, 1.2, C('#ffffff'));
-    }, true);
+    });
   }
 
   function drawShower(L, x, y, tilt, running) {
@@ -637,7 +694,7 @@
       b.line(bx + 2, by - 2, bx + 7 + tilt, by - 8, C('#b9c2d0'), 2.4);
       b.ellipse(bx - 1, by, 4.6, 2.6, C('#d8dee8'));
       b.ellipse(bx - 1, by - 1, 4, 1.7, C('#eef2f8'));
-    }, true);
+    });
     if (running) {
       for (var i = 0; i < 4; i++) {
         var jx = x - 4 + i * 2.2;
@@ -653,7 +710,7 @@
       b.rect(bx - 5, by - 3 + tilt * 0.3, 10, 2, C('#ff8fb8'));
       b.rect(bx - 5, by + 0.5, 10, 1, C('#ffb3d0'));
       for (var i = 0; i < 3; i++) b.rect(bx - 4 + i * 3, by + 4 + tilt * 0.3, 2, 2, C('#ffe4f0'));
-    }, true);
+    });
   }
 
   function drawBrush(L, x, y, tilt) {
@@ -662,7 +719,7 @@
       b.ellipse(bx - 1, by, 5, 3, C('#d9954f'));
       b.ellipse(bx - 1, by - 1, 4.4, 2, C('#eab275'));
       for (var i = -4; i <= 3; i += 2) b.rect(bx + i, by + 2, 1, 3, C('#fbf3e6'));
-    }, true);
+    });
   }
 
   /* ------------------------------------------------------------------ */
@@ -760,7 +817,7 @@
       var key = messKey(pet.messes[i]);
       rt.messAge[key] = (rt.messAge[key] || 0) + dt;
     }
-    if (rt.activity || rt.tool || rt.sleep || rt.pooping || rt.angry > 0) return;
+    if (rt.activity || rt.tool || rt.sleep || rt.pooping || rt.angry > 0 || rt.intro) return;
     if (pet.messes.length >= MAX_MESS) return;
 
     rt.messTimer -= dt;
@@ -832,9 +889,13 @@
     return lo;
   }
 
+  function pickerOpen() {
+    return el.foodPicker.classList.contains('show') || el.gamePicker.classList.contains('show');
+  }
+
   function maybeSleep(dt) {
     if (rt.sleep || rt.activity || rt.tool || rt.pooping || rt.petting || rt.angry > 0) return;
-    if (pet.sick) return;
+    if (pet.sick || rt.intro || pickerOpen()) return;
     if (minStat(pet) < 32) return;              // never nap while something is needed
     if (pet.messes.length) return;              // or with a mess on the floor
     if (rt.t - rt.lastWake < 30) return;
@@ -1032,8 +1093,18 @@
     return false;
   }
 
+  function startFeeding(kind) {
+    el.foodPicker.classList.remove('show');
+    if (rt.sleep) { wake(true); return; }
+    var food = FOODS[kind] || FOODS.meal;
+    rt.activity = { kind: 'feed', food: kind, t: 0, dur: 4.6, given: 0, beat: 0, gain: food.gain };
+    rt.props = {};
+    refreshDock();
+  }
+
   function startGame(id) {
     el.gamePicker.classList.remove('show');
+    if (rt.sleep) { wake(true); return; }
     rt.activity = { kind: 'play', game: id, t: 0, dur: GAMES[id].dur, score: 0 };
     rt.props = {};
     if (id === 'ball') {
@@ -1072,6 +1143,50 @@
     refreshDock();
     save();
     void cfg;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* the present a new pet arrives in                                    */
+  /* ------------------------------------------------------------------ */
+  function drawPresent(L, x, y, open, wobble) {
+    var box = C('#ff5f8f'), boxLo = C('#e04a78'), ribbon = C('#ffd93d'), ribLo = C('#ffb01a');
+    // lid, which pops up and tips over as it opens
+    var lidY = y - 12 - open * 22;
+    var tilt = open * 6;
+    stampOutlined(L, x + tilt * 0.6, lidY, function (b, bx, by) {
+      b.rect(bx - 11, by - 2, 22, 5, box);
+      b.rect(bx - 11, by - 2, 22, 2, C('#ff8fb8'));
+      b.rect(bx - 1.5, by - 2, 3, 5, ribbon);
+      b.disc(bx - 3.5, by - 5, 2.6, ribbon);
+      b.disc(bx + 3.5, by - 5, 2.6, ribbon);
+      b.rect(bx - 1.5, by - 6, 3, 3, ribLo);
+    });
+    if (open < 0.98) {
+      stampOutlined(L, x + wobble, y, function (b, bx, by) {
+        b.rect(bx - 10, by - 11, 20, 12, box);
+        b.rect(bx - 10, by - 1, 20, 2, boxLo);
+        b.rect(bx - 1.5, by - 11, 3, 13, ribbon);
+      });
+    }
+  }
+
+  /* A basket to curl up in once it is properly dark, drawn in two passes so
+     the pet sits down inside it rather than on top of it. */
+  function drawBedBack(L, x, y) {
+    stampOutlined(L, x, y, function (b, bx, by) {
+      b.ellipse(bx, by - 3, 15, 5, C('#e08aa8'));
+      b.ellipse(bx, by - 4, 12.5, 3.6, C('#ffd9e6'));
+      b.ellipse(bx, by - 4.4, 10, 2.6, C('#fff0f5'));
+    });
+  }
+
+  /* Just the front lip of the basket, so the pet is tucked in behind it. */
+  function drawBedFront(L, x, y) {
+    stampOutlined(L, x, y, function (b, bx, by) {
+      b.ellipse(bx, by, 15, 4.6, C('#e08aa8'));
+      b.ellipse(bx, by - 0.6, 12.5, 3.2, C('#f0a8c0'));
+      b.rect(bx - 16, by - 8, 32, 8, 0);          // keep only the bottom arc
+    });
   }
 
   /* ------------------------------------------------------------------ */
@@ -1169,7 +1284,7 @@
   /* actions                                                             */
   /* ------------------------------------------------------------------ */
   function startAction(name) {
-    if (!pet || rt.activity || rt.tool) return;
+    if (!pet || rt.activity || rt.tool || rt.intro) return;
     var cfg = ACTIONS[name];
     if (!cfg) return;
     Sfx.init();
@@ -1190,6 +1305,7 @@
 
     if (cfg.kind === 'tool') return startTool(name);
     if (name === 'play') { el.gamePicker.classList.add('show'); return; }
+    if (name === 'feed') { el.foodPicker.classList.add('show'); return; }
 
     rt.activity = { kind: name, t: 0, dur: cfg.dur, given: 0, beat: 0 };
     rt.props = {};
@@ -1204,7 +1320,8 @@
     var p = a.t / a.dur;
 
     var fillFrom = 0.25, fillTo = 0.8;
-    var want = (cfg.gain || 0) * clamp((p - fillFrom) / (fillTo - fillFrom), 0, 1);
+    var totalGain = a.gain !== undefined ? a.gain : (cfg.gain || 0);
+    var want = totalGain * clamp((p - fillFrom) / (fillTo - fillFrom), 0, 1);
     if (want > a.given) {
       pet.stats[cfg.stat] = clamp(pet.stats[cfg.stat] + (want - a.given), 0, 100);
       a.given = want;
@@ -1231,12 +1348,17 @@
       var slide = clamp(p / 0.18, 0, 1);
       var out = clamp((p - 0.86) / 0.14, 0, 1);
       var bowlX = W / 2 + 18;
-      rt.props.bowl = {
-        x: (W + 10) - slide * (W + 10 - bowlX) + out * 26,
-        y: room.groundY - 1,
-        fill: isFood ? '#c98a4b' : '#7fd8ff',
-        level: clamp(1 - (p - fillFrom) / (fillTo - fillFrom), 0.12, 1)
-      };
+      var propX = (W + 10) - slide * (W + 10 - bowlX) + out * 26;
+      var left = clamp(1 - (p - fillFrom) / (fillTo - fillFrom), 0, 1);
+      if (isFood && a.food !== 'meal') {
+        rt.props.dish = { x: propX, y: room.groundY - 3, kind: a.food, left: left };
+      } else {
+        rt.props.bowl = {
+          x: propX, y: room.groundY - 1,
+          fill: isFood ? '#c98a4b' : '#7fd8ff',
+          level: clamp(left, 0.12, 1)
+        };
+      }
       if (p > 0.2 && p < 0.85) {
         rt.leanTarget = 4;
         var beat = Math.floor(a.t * (isFood ? 3.2 : 4));
@@ -1244,10 +1366,10 @@
           a.beat = beat;
           if (isFood) {
             Sfx.chomp();
-            spawn('crumb', rt.props.bowl.x - 4, room.groundY - 6, { vx: -12, vy: -14, g: 60, max: 0.7 });
+            spawn('crumb', propX - 4, room.groundY - 6, { vx: -12, vy: -14, g: 60, max: 0.7 });
           } else {
             Sfx.sip();
-            spawn('drop', rt.props.bowl.x - 3, room.groundY - 7, { vx: -6, vy: -12, g: 55, max: 0.6 });
+            spawn('drop', propX - 3, room.groundY - 7, { vx: -6, vy: -12, g: 55, max: 0.6 });
           }
         }
       } else rt.leanTarget = 0;
@@ -1300,9 +1422,15 @@
     }
 
     if (a.t >= a.dur) {
-      addGrowth(!cfg.stat ? 5 : pet.stats[cfg.stat] - cfg.gain < 55 ? 6 : 2.5);
+      addGrowth(!cfg.stat ? 5 : pet.stats[cfg.stat] - totalGain < 55 ? 6 : 2.5);
       bumpLove(6);
-      say(cfg.done);
+      if (a.kind === 'feed' && a.food) {
+        var eaten = FOODS[a.food] || FOODS.meal;
+        if (eaten.fun) pet.stats.fun = clamp(pet.stats.fun + eaten.fun, 0, 100);
+        say(eaten.say);
+      } else {
+        say(cfg.done);
+      }
       for (var i = 0; i < 5; i++) {
         spawn('heart', W / 2 + (Math.random() - 0.5) * 14, room.groundY - 28, { vy: -14, max: 1.2 });
       }
@@ -1525,6 +1653,55 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* unwrapping a new pet                                                */
+  /* ------------------------------------------------------------------ */
+  function startIntro() {
+    rt.intro = { t: 0, open: 0, popped: false, done: false };
+    setHint('Tap the present!');
+    el.dock.classList.add('hide');
+  }
+
+  function updateIntro(dt) {
+    var it = rt.intro;
+    if (!it) return;
+    it.t += dt;
+    if (!it.popped) return;
+
+    it.open = Math.min(1, it.open + dt * 2.2);
+    if (it.t > 2.4) {
+      rt.intro = null;
+      el.dock.classList.remove('hide');
+      say('Hi! I am ' + pet.name + '!', 2600);
+      bumpLove(10);
+      save();
+    }
+  }
+
+  function popPresent() {
+    var it = rt.intro;
+    if (!it || it.popped) return;
+    it.popped = true;
+    it.t = 0;
+    Sfx.unwrap();
+    Sfx.grow();
+    setHint('');
+    for (var i = 0; i < 24; i++) {
+      spawn(i % 2 ? 'sparkle' : 'heart', W / 2 + (Math.random() - 0.5) * 22, room.groundY - 16,
+        { vx: (Math.random() - 0.5) * 34, vy: -22 - Math.random() * 20, g: 34, max: 1.5 });
+    }
+  }
+
+  /* How high the pet is riding out of the box, 0 when it has landed. */
+  function introLift() {
+    var it = rt.intro;
+    if (!it || !it.popped) return null;
+    var t = it.t;
+    if (t < 0.12) return 40;                       // still inside
+    var k = clamp((t - 0.12) / 1.1, 0, 1);
+    return Math.max(0, 26 * Math.sin(Math.PI * (1 - k)) * (1 - k) + (1 - k) * 6);
+  }
+
+  /* ------------------------------------------------------------------ */
   /* growth + love                                                       */
   /* ------------------------------------------------------------------ */
   function addGrowth(n) {
@@ -1548,7 +1725,7 @@
       'dock', 'toolBar', 'toolText', 'doneBtn', 'petsBtn', 'soundBtn', 'petsScreen',
       'petsClose', 'petGrid', 'startScreen', 'nameInput', 'startBtn', 'startBack',
       'confirmModal', 'confirmText', 'confirmYes', 'confirmNo', 'celebrate', 'celebrateText',
-      'gamePicker', 'gameCancel', 'toolFill', 'medBtn'
+      'gamePicker', 'gameCancel', 'toolFill', 'medBtn', 'foodPicker', 'foodCancel'
     ].forEach(function (id) { el[id] = $(id); });
 
     el.actionBtns = Array.prototype.slice.call(document.querySelectorAll('[data-action]'));
@@ -1641,7 +1818,8 @@
       for (var i = 0; i < 5; i++) Icons.render(el.heartCanvases[i], i < hc ? 'heart' : 'heartEmpty', 13);
     }
 
-    if (!rt.tool && !rt.activity) {
+    if (rt.intro) setHint(rt.intro.popped ? '' : 'Tap the present!');
+    else if (!rt.tool && !rt.activity) {
       if (rt.sleep) setHint('Shhh… your pet is asleep.');
       else if (pet.sick) setHint('Your pet is poorly — give it Medicine!');
       else if (rt.angry > 0) setHint('Uh oh — you woke it up!');
@@ -1689,8 +1867,18 @@
 
   function render() {
     var L = screen.layer;
+    screen.clearMask();
+    L.record(null);
     L.clear(C('#ffe6f2'));
     drawRoom(L, rt.t);
+    L.ellipse(W / 2, room.groundY + 1, 13, 2.5, C('#e0b273'));
+
+    // everything from here on is an object in the room, not the room itself,
+    // so it is flagged to keep its own colours whatever the light is doing
+    L.record(screen.mask);
+
+    var inBed = rt.sleep && sky.night > 0.45;
+    if (inBed) drawBedBack(L, W / 2, room.groundY + 3);
 
     if (rt.props.tub) drawTub(L, rt.props.tub.x, rt.props.tub.y, true, rt.t);
 
@@ -1702,12 +1890,13 @@
       }
     }
 
-    L.ellipse(W / 2, room.groundY + 1, 13, 2.5, C('#e0b273'));
-
     petLayer.clear();
     var bobAmp = rt.activity && rt.activity.kind === 'play' ? 1.8 : 0.8;
     if (rt.sleep) bobAmp = 0.5;
     var squat = rt.pooping ? Math.min(3, rt.pooping.t * 4) * (rt.pooping.t > 1.6 ? 0.3 : 1) : 0;
+    var blitDY = inBed ? 3 : 0;
+    var lift = introLift();
+    if (lift !== null) blitDY -= lift;
     var wagSpeed = rt.angry > 0 ? 11 : (rt.petting || rt.tool ? 7 : rt.sleep ? 0.8 : 2.4);
     bounds = Pets.drawPet(petLayer, pet.species, Pets.stageFor(pet.growth).key, {
       bob: Math.sin(rt.bobPhase) * bobAmp + squat,
@@ -1723,10 +1912,15 @@
       sick: pet.sick,
       shine: rt.shine > 0 ? rt.shine : 0
     });
-    var petOX = Math.round(W / 2 - Pets.SIZE / 2), petOY = Math.round(room.groundY - Pets.FEET);
-    L.blit(petLayer, petOX, petOY);
-    screen.clearMask();
-    screen.protect(petLayer, petOX, petOY);
+    if (!rt.intro || rt.intro.popped) {
+      L.blit(petLayer, Math.round(W / 2 - Pets.SIZE / 2),
+        Math.round(room.groundY - Pets.FEET + blitDY));
+    }
+    if (inBed) drawBedFront(L, W / 2, room.groundY + 3);
+    if (rt.intro) {
+      drawPresent(L, W / 2, room.groundY, rt.intro.open,
+        rt.intro.popped ? 0 : Math.sin(rt.t * 4) * 0.8);
+    }
 
     // messes in front of the pet
     for (mi = 0; mi < pet.messes.length; mi++) {
@@ -1735,6 +1929,7 @@
       }
     }
 
+    if (rt.props.dish) drawDish(L, rt.props.dish.x, rt.props.dish.y, rt.props.dish.kind, rt.props.dish.left);
     if (rt.props.bottle) drawBottle(L, rt.props.bottle.x, rt.props.bottle.y);
     if (rt.props.bowl) drawBowl(L, rt.props.bowl.x, rt.props.bowl.y, rt.props.bowl.fill, rt.props.bowl.level);
     if (rt.props.tub) drawTub(L, rt.props.tub.x, rt.props.tub.y, false, rt.t);
@@ -1776,6 +1971,7 @@
       for (var y = 0; y < H; y++) for (var x = (y % 2); x < W; x += 2) L.set(x, y, white);
     }
 
+    L.record(null);
     screen.present(sky.tint);
   }
 
@@ -1792,7 +1988,7 @@
     updateSky();
 
     // every pet ages; the one you are looking after ages fastest
-    for (var i = 0; i < db.pets.length; i++) {
+    for (var i = 0; i < db.pets.length && !rt.intro; i++) {
       var p = db.pets[i];
       var busy = (p === pet) && (rt.activity || rt.tool);
       var rate = p === pet ? (busy ? 0 : 1) : IDLE_RATE;
@@ -1846,10 +2042,25 @@
         pet.stats.fun = clamp(pet.stats.fun + 1.2, 0, 100);
         addGrowth(0.25);
         pet.cuddles = (pet.cuddles || 0) + 1;
-        Sfx.purr();
+        rt.petStreak++;
+        if (rt.petStreak >= 7 && rt.t - rt.lastDelight > 14) {
+          rt.petStreak = 0;
+          rt.lastDelight = rt.t;
+          Sfx.delight();
+          say(pet.species === 'dog' ? 'Woof woof!' : 'Purrrrr!', 2000);
+          bumpLove(14);
+          addGrowth(1.5);
+          for (var hb = 0; hb < 10; hb++) {
+            spawn('heart', W / 2 + (Math.random() - 0.5) * 24, room.groundY - 34,
+              { vx: (Math.random() - 0.5) * 24, vy: -18 - Math.random() * 12, max: 1.4 });
+          }
+        } else {
+          Sfx.purr();
+        }
       }
     }
 
+    updateIntro(dt);
     maybeSleep(dt);
     updateSleep(dt);
     updateAngry(dt);
@@ -1892,6 +2103,8 @@
       if (!pet) return;
       canvas.setPointerCapture(ev.pointerId);
       var p = sceneCoords(ev);
+
+      if (rt.intro) { popPresent(); return; }
 
       if (rt.tool) {
         rt.tool.down = true;
@@ -1984,6 +2197,7 @@
   function stopPetting() {
     if (!rt.petting) return;
     rt.petting = false;
+    rt.petStreak = 0;
     if (!rt.activity && !rt.tool) rt.leanTarget = 0;
     save();
   }
@@ -2014,6 +2228,20 @@
     el.gameCancel.addEventListener('click', function () {
       Sfx.click();
       el.gamePicker.classList.remove('show');
+    });
+
+    var foodCards = document.querySelectorAll('.food-card');
+    for (var fi = 0; fi < foodCards.length; fi++) {
+      (function (card) {
+        card.addEventListener('click', function () {
+          Sfx.click();
+          startFeeding(card.dataset.food);
+        });
+      })(foodCards[fi]);
+    }
+    el.foodCancel.addEventListener('click', function () {
+      Sfx.click();
+      el.foodPicker.classList.remove('show');
     });
 
     el.soundBtn.addEventListener('click', function () {
@@ -2282,7 +2510,7 @@
       hideStartScreen();
       save();
       startLoop();
-      say('Hi! I am ' + p.name + '!', 2600);
+      startIntro();
     });
 
     el.startBack.addEventListener('click', function () {
