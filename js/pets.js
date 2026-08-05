@@ -316,19 +316,51 @@
         L.line(headCX + s6 * hrx * 0.5, noseY + 1.5, headCX + s6 * hrx * 0.96, noseY + 1.5, wc, 1);
       }
     }
-    /* ---- dirt ---- */
-    if (opts.dirty) {
-      var mud = C('#8a6a45');
-      var spots = [[-0.5, 0.2], [0.45, -0.1], [0.1, 0.6], [-0.7, 0.75], [0.7, 0.45]];
-      for (var d2 = 0; d2 < spots.length; d2++) {
-        if (d2 / spots.length > opts.dirty) continue;
-        L.disc(cx + spots[d2][0] * brx, bodyCY + spots[d2][1] * bry, 1.2, mud);
+    /* ---- scrubbable spots: mud to wash off, tufts to brush out ---- */
+    if (opts.spots && opts.spots.length) {
+      var mud = C('#8a6a45'), mudD = C('#6d5233');
+      for (var d2 = 0; d2 < opts.spots.length; d2++) {
+        var sp2 = opts.spots[d2];
+        var sx = sp2.x, sy = sp2.y + bob * 0.5;
+        // spots on the head ride along with the head tilt
+        var dxh = (sp2.x - cx) / hrx, dyh = (sp2.y - (headCY - bob)) / hry;
+        if (dxh * dxh + dyh * dyh <= 1.1) { sx += lean; sy += bob * 0.5; }
+        if (sp2.kind === 'tuft') {
+          var dir = sp2.flip ? 1 : -1;
+          L.tri(sx - 1.6, sy + 1.2, sx + 1.6, sy + 1.2, sx + dir * 2, sy - 2.6, furD);
+          L.line(sx + dir * 0.6, sy + 0.6, sx + dir * 1.6, sy - 1.8, furL, 1);
+        } else {
+          L.disc(sx, sy, 1.6, mud);
+          L.set(sx, sy, mudD);
+          L.set(sx + 1, sy - 1, mudD);
+        }
       }
-      if (opts.dirty > 0.6) L.disc(headCX + hrx * 0.55, headCY - hry * 0.55, 1.2, mud);
+    }
+
+    /* ---- soap foam stuck to the fur ---- */
+    if (opts.foam && opts.foam.length) {
+      for (var f = 0; f < opts.foam.length; f++) {
+        var fm = opts.foam[f];
+        L.disc(fm.x, fm.y + bob * 0.5, fm.r, C('#ffffff'));
+        L.set(fm.x - 1, fm.y - 1 + bob * 0.5, C('#eaf9ff'));
+      }
     }
 
     /* ---- outline ---- */
     L.outline(ink);
+
+    if (opts.shine) {
+      var sh = C('#ffffff');
+      var pts = [[headCX - hrx * 0.55, headCY - hry * 0.6], [cx + brx * 0.5, bodyCY - bry * 0.5],
+                 [headCX + hrx * 0.5, headCY - hry * 0.75]];
+      for (var q = 0; q < pts.length; q++) {
+        if ((opts.shine * 3) < q) break;
+        L.set(pts[q][0], pts[q][1], sh);
+        L.set(pts[q][0] - 1, pts[q][1] + 1, sh);
+        L.set(pts[q][0] + 1, pts[q][1] + 1, sh);
+        L.set(pts[q][0], pts[q][1] + 2, sh);
+      }
+    }
 
     return {
       cx: cx,
@@ -340,12 +372,29 @@
     };
   }
 
+  /* Geometry of a stage, in layer coordinates — used to scatter dirt and
+     tufts inside the body and head. */
+  function metrics(stageKey) {
+    var st = STAGES[stageIndex(stageKey)];
+    var hrx = st.head[0], hry = st.head[1];
+    var brx = st.body[0], bry = st.body[1];
+    var bodyCY = FEET - bry - 2.5;
+    var headCY = bodyCY - (bry + hry) * 0.74;
+    return {
+      cx: SIZE / 2, feet: FEET,
+      bodyCY: bodyCY, bodyRX: brx, bodyRY: bry,
+      headCY: headCY, headRX: hrx, headRY: hry,
+      top: headCY - hry - st.ear
+    };
+  }
+
   global.Pets = {
     SPECIES: SPECIES,
     STAGES: STAGES,
     SIZE: SIZE,
     FEET: FEET,
     stageFor: stageFor,
+    metrics: metrics,
     stageIndex: stageIndex,
     drawPet: drawPet,
     HEART: HEART

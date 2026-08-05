@@ -1,9 +1,10 @@
 # 🦊 Pixel Pals
 
-A Tamagotchi-style pet game for kids. Adopt a baby **cat** or **fox**, look after it,
-and watch it grow up from a Baby into a full-grown Adult.
+A Tamagotchi-style pet game for kids. Adopt baby **cats** and **foxes**, look
+after them, and watch them grow up from Baby to Adult. Keep a whole shelf of
+pets and switch between them whenever you like.
 
-No build step, no dependencies, no network — just open `index.html` in a browser.
+No build step, no dependencies, no network — just open `index.html`.
 
 ## Play
 
@@ -17,56 +18,77 @@ Or serve the folder any way you like:
 python3 -m http.server 8000     # then visit http://localhost:8000
 ```
 
-Works on phones, tablets and desktop. Everything is saved to `localStorage`, so
-your pet is still there when you come back.
+Built mobile-first: the room fills the whole screen, the controls are big
+thumb-sized targets along the bottom, and everything is saved to
+`localStorage`.
 
 ## How to play
 
 1. **Pick a pet** — cat or fox — and give it a name.
-2. Keep the four bars topped up:
+2. Five round buttons along the bottom care for five needs. Each button is its
+   own gauge: the coloured ring around the icon shows how full that need is.
 
-   | Button | Looks after | Refills |
+   | Button | Need | How it works |
    |---|---|---|
-   | 🍎 Feed | Food | +38 |
-   | 💧 Water | Water | +42 |
-   | 🎾 Play | Fun | +45 (tap the bouncing ball for extra!) |
-   | 🛁 Bath | Clean | +60 |
+   | Feed | Food | A bowl slides in and your pet tucks in |
+   | Water | Water | A water bowl to lap from |
+   | Play | Fun | A ball bounces around — tap it for bonus fun |
+   | Bath | Clean | **Hands on:** drag the soap over your pet to scrub the mud off |
+   | Brush | Brush | **Hands on:** swipe the brush over the fur to smooth the tufts out |
 
-3. **Pet your pal** — press and stroke it on the screen. Hearts float up, it
-   purrs, and it loves you a bit more.
-4. Every bit of care adds **growth points**. Fill the gold bar at the top to grow
-   up: **Baby → Kid → Teen → Adult**. Each stage gets a little celebration.
+3. **Stroke your pet** anywhere on screen to give it cuddles — hearts float up
+   and it purrs.
+4. Care earns growth points. Fill the gold bar at the top to grow up:
+   **Baby → Kid → Teen → Adult**, each with a little celebration.
+5. Tap the **paw** button (top left) for *My Pets*: switch between pets, add a
+   new one (up to six), or say goodbye to one.
 
-The pet never gets sick and never dies. If a bar runs low it just looks sad, a
-thought bubble shows what it wants, and the matching button wiggles — so a young
+### Bath and brush
+
+These two are not animations you watch — you do them. The mud on your pet and
+the scruffy tufts in its fur are real objects on the sprite: drag the soap or
+the brush across one and it comes off, with foam or fur flying and the gauge
+ticking up. When the last spot is gone your pet sparkles clean. Press **Done**
+any time to stop early and keep what you have cleaned so far.
+
+Because the number of spots is derived from the Clean and Brush stats, the mess
+you can see always matches the gauges — a pet on 40% Clean has exactly five
+patches of mud to find.
+
+The pet never gets sick and never dies. If a need runs low it just looks sad, a
+thought bubble shows what it wants, and the matching button pulses — so a young
 player always knows what to do next.
 
 ## Files
 
 ```
-index.html      layout and controls
-css/style.css   the chunky, colourful UI
-js/pixel.js     tiny indexed-colour pixel raster engine (layers, ellipse/tri/line, outline pass, blit)
-js/pets.js      the animals — palettes, life stages, and the procedural sprite
-js/game.js      the room, props, particles, care actions, growth, saving
+index.html      full-screen canvas plus the floating HUD
+css/style.css   minimal translucent controls
+js/pixel.js     indexed-colour pixel raster engine (layers, shapes, outline pass, blit)
+js/icons.js     the custom 16x16 pixel icons used all over the UI
+js/pets.js      the animals — palettes, life stages, procedural sprite
+js/game.js      the room, props, particles, care actions, growth, saving, pet switching
 ```
 
 ### How the art works
 
-The sprites are not fixed images. `js/pets.js` draws each pet procedurally onto a
-44×44 index buffer from a handful of numbers per life stage (head radius, body
-radius, ear length, eye size, tail length). That means:
+Nothing is a bitmap asset. Everything — the animals, the room, the interface
+icons — is drawn at runtime with the same handful of primitives in
+`js/pixel.js` (ellipse, triangle, line, rect) onto small index buffers, then
+run through one `outline()` pass that wraps the silhouette in black. That is
+why the UI icons and the pets look like they come from the same set.
 
-* one function covers both species at all four stages,
-* ears, tails, eyes, mouths and leaning are all animated by parameters,
-* growing up is a smooth change of proportions rather than a new sprite sheet.
+The pets are built from a few numbers per life stage — head radius, body
+radius, ear length, eye size, tail length — so one function covers both species
+at all four stages, ears/tails/eyes/mouths animate by parameter, and growing up
+is a change of proportions rather than a new sprite sheet. Overlapping parts
+(tail, body, ears, head, legs) are each drawn one pixel larger in black first,
+so every piece keeps a solid outline against the piece behind it.
 
-Parts that overlap (tail, body, ears, head, legs) are each drawn one pixel larger
-in black first, so every piece keeps the solid outline of the reference art. A
-final `outline()` pass wraps the whole silhouette.
+The room is sized to the viewport at runtime: the game picks an integer pixel
+scale from the screen height, works out how many logical pixels fit, and lays
+the floor, furniture and decorations out proportionally. So the same room fills
+a small phone, a tablet or a desktop window without letterboxing.
 
-The scene is an 88×64 pixel buffer scaled up by an integer factor with
-`image-rendering: pixelated`, so pixels stay square and crisp at any size.
-
-Sound is generated at runtime with the Web Audio API (no audio files) and can be
-muted with the 🔊 button.
+Sound is generated with the Web Audio API — no audio files — and mutes with the
+speaker button.

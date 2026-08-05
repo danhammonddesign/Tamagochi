@@ -2,131 +2,133 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1">
 <meta name="theme-color" content="#ffd3e6">
-<meta name="description" content="Pixel Pals — adopt a baby cat or fox, feed it, play with it and watch it grow up.">
-<title>Pixel Pals — Take care of your pet!</title>
+<meta name="description" content="Pixel Pals — adopt baby cats and foxes, care for them and watch them grow up.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Pixel Pals</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦊</text></svg>">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<!-- ---------------- start screen ---------------- -->
-<div id="startScreen" class="overlay hidden">
+<canvas id="scene" width="88" height="64" aria-label="Your pet in its room"></canvas>
+
+<!-- ------------- heads-up display over the room ------------- -->
+<div id="ui" class="ui">
+
+  <div class="hud-top">
+    <button id="petsBtn" class="hud-btn" aria-label="My pets">
+      <canvas data-icon="paw" data-icon-size="26"></canvas>
+    </button>
+
+    <div class="hud-card">
+      <div class="hud-line">
+        <span id="petName" class="hud-name">Ember</span>
+        <span id="hearts" class="hud-hearts" aria-label="Happiness"></span>
+      </div>
+      <div class="hud-line hud-sub">
+        <span id="petStage">Baby Fox</span>
+        <span class="growth-track"><i id="growthFill"></i></span>
+      </div>
+    </div>
+
+    <button id="soundBtn" class="hud-btn" aria-label="Turn sound off">
+      <canvas data-icon="soundOn" data-icon-size="26"></canvas>
+    </button>
+  </div>
+
+  <div id="speech" class="speech"></div>
+
+  <div class="hud-bottom">
+    <p id="hint" class="hint"></p>
+
+    <nav id="dock" class="dock" aria-label="Care for your pet">
+      <button class="dock-btn" data-action="feed">
+        <span class="ring" style="--c:#ff6b6b"><span class="ring-in"><canvas data-icon="feed" data-icon-size="32"></canvas></span></span>
+        <span class="dock-label">Feed</span>
+      </button>
+      <button class="dock-btn" data-action="water">
+        <span class="ring" style="--c:#3fa9ff"><span class="ring-in"><canvas data-icon="water" data-icon-size="32"></canvas></span></span>
+        <span class="dock-label">Water</span>
+      </button>
+      <button class="dock-btn" data-action="play">
+        <span class="ring" style="--c:#ff9f3d"><span class="ring-in"><canvas data-icon="play" data-icon-size="32"></canvas></span></span>
+        <span class="dock-label">Play</span>
+      </button>
+      <button class="dock-btn" data-action="bath">
+        <span class="ring" style="--c:#3fd6a0"><span class="ring-in"><canvas data-icon="bath" data-icon-size="32"></canvas></span></span>
+        <span class="dock-label">Bath</span>
+      </button>
+      <button class="dock-btn" data-action="brush">
+        <span class="ring" style="--c:#b78bff"><span class="ring-in"><canvas data-icon="brush" data-icon-size="32"></canvas></span></span>
+        <span class="dock-label">Brush</span>
+      </button>
+    </nav>
+
+    <div id="toolBar" class="tool-bar">
+      <span id="toolText" class="tool-text">Scrub your pet!</span>
+      <button id="doneBtn" class="pill-btn">
+        <canvas data-icon="check" data-icon-size="20"></canvas><span>Done</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="celebrate" class="celebrate"><div id="celebrateText"></div></div>
+</div>
+
+<!-- ------------- my pets ------------- -->
+<div id="petsScreen" class="screen hidden">
+  <div class="screen-head">
+    <h2>My Pets</h2>
+    <button id="petsClose" class="hud-btn" aria-label="Close">
+      <canvas data-icon="close" data-icon-size="24"></canvas>
+    </button>
+  </div>
+  <div id="petGrid" class="pet-grid"></div>
+</div>
+
+<!-- ------------- new pet ------------- -->
+<div id="startScreen" class="screen hidden">
   <div class="start-card">
     <h1 class="logo">Pixel&nbsp;Pals</h1>
     <p class="tagline">Pick a baby pet to take care of!</p>
 
     <div class="picker" role="radiogroup" aria-label="Choose your pet">
       <button class="pick-card" data-species="cat" role="radio" aria-checked="false">
-        <canvas id="preview-cat" class="preview" width="44" height="44" aria-hidden="true"></canvas>
-        <span class="pick-name">🐱 Cat</span>
-        <span class="pick-blurb">Soft and sleepy</span>
+        <canvas id="preview-cat" class="preview" width="48" height="48" aria-hidden="true"></canvas>
+        <span class="pick-name">Cat</span>
       </button>
       <button class="pick-card" data-species="fox" role="radio" aria-checked="false">
-        <canvas id="preview-fox" class="preview" width="44" height="44" aria-hidden="true"></canvas>
-        <span class="pick-name">🦊 Fox</span>
-        <span class="pick-blurb">Bouncy and cheeky</span>
+        <canvas id="preview-fox" class="preview" width="48" height="48" aria-hidden="true"></canvas>
+        <span class="pick-name">Fox</span>
       </button>
     </div>
 
-    <label class="name-label" for="nameInput">Give your pet a name</label>
     <input id="nameInput" class="name-input" type="text" maxlength="14" autocomplete="off"
-           spellcheck="false" placeholder="Ember">
+           spellcheck="false" placeholder="Ember" aria-label="Pet name">
 
-    <button id="startBtn" class="big-btn start-btn">Let's go! ✨</button>
+    <div class="start-actions">
+      <button id="startBack" class="pill-btn ghost hidden">Back</button>
+      <button id="startBtn" class="pill-btn go">Let's go!</button>
+    </div>
   </div>
 </div>
 
-<!-- ---------------- game ---------------- -->
-<main id="game" class="app hidden">
-
-  <header class="topbar">
-    <div class="pet-id">
-      <span id="petEmoji" class="pet-emoji" aria-hidden="true">🦊</span>
-      <div class="pet-titles">
-        <h1 id="petName" class="pet-name">Ember</h1>
-        <p id="petStage" class="pet-stage">Baby Fox</p>
-      </div>
-    </div>
-    <div class="top-actions">
-      <button id="soundBtn" class="icon-btn" aria-label="Turn sound off">🔊</button>
-      <button id="resetBtn" class="icon-btn" aria-label="Start over with a new pet">🔄</button>
-    </div>
-  </header>
-
-  <section class="growth">
-    <div class="growth-row">
-      <span id="growthLabel" class="growth-label">Growing to Kid</span>
-      <span class="growth-star" aria-hidden="true">⭐</span>
-    </div>
-    <div class="bar growth-bar"><i id="growthFill" class="fill"></i></div>
-  </section>
-
-  <section class="screen-frame">
-    <canvas id="scene" width="88" height="64" aria-label="Your pet in its room"></canvas>
-    <div id="speech" class="speech"></div>
-    <div id="celebrate" class="celebrate">
-      <div id="celebrateText"></div>
-    </div>
-  </section>
-
-  <div id="hearts" class="hearts" aria-label="Happiness"></div>
-
-  <section class="stats" aria-label="How your pet is doing">
-    <div id="stat-food" class="stat">
-      <span class="stat-icon" aria-hidden="true">🍎</span>
-      <div class="stat-body">
-        <span class="stat-name">Food</span>
-        <div class="bar"><i id="bar-food" class="fill food"></i></div>
-      </div>
-    </div>
-    <div id="stat-water" class="stat">
-      <span class="stat-icon" aria-hidden="true">💧</span>
-      <div class="stat-body">
-        <span class="stat-name">Water</span>
-        <div class="bar"><i id="bar-water" class="fill water"></i></div>
-      </div>
-    </div>
-    <div id="stat-fun" class="stat">
-      <span class="stat-icon" aria-hidden="true">🎾</span>
-      <div class="stat-body">
-        <span class="stat-name">Fun</span>
-        <div class="bar"><i id="bar-fun" class="fill fun"></i></div>
-      </div>
-    </div>
-    <div id="stat-clean" class="stat">
-      <span class="stat-icon" aria-hidden="true">🛁</span>
-      <div class="stat-body">
-        <span class="stat-name">Clean</span>
-        <div class="bar"><i id="bar-clean" class="fill clean"></i></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="actions">
-    <button class="big-btn act-feed" data-action="feed"><span aria-hidden="true">🍎</span>Feed</button>
-    <button class="big-btn act-drink" data-action="drink"><span aria-hidden="true">💧</span>Water</button>
-    <button class="big-btn act-play" data-action="play"><span aria-hidden="true">🎾</span>Play</button>
-    <button class="big-btn act-bath" data-action="bath"><span aria-hidden="true">🛁</span>Bath</button>
-  </section>
-
-  <p id="hint" class="hint">Tap and stroke your pet to give it cuddles! 💕</p>
-</main>
-
-<!-- ---------------- confirm ---------------- -->
-<div id="confirmModal" class="overlay small">
+<!-- ------------- confirm ------------- -->
+<div id="confirmModal" class="overlay">
   <div class="modal">
-    <p class="modal-title">Start over with a new pet?</p>
-    <p class="modal-sub">Your pet will say goodbye.</p>
+    <p id="confirmText" class="modal-title">Say goodbye to this pet?</p>
     <div class="modal-btns">
-      <button id="confirmNo" class="big-btn soft">No, stay 💕</button>
-      <button id="confirmYes" class="big-btn danger">Yes, new pet</button>
+      <button id="confirmNo" class="pill-btn ghost">No</button>
+      <button id="confirmYes" class="pill-btn danger">Yes</button>
     </div>
   </div>
 </div>
 
 <script src="js/pixel.js"></script>
+<script src="js/icons.js"></script>
 <script src="js/pets.js"></script>
 <script src="js/game.js"></script>
 </body>
