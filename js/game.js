@@ -1587,7 +1587,8 @@
   }
 
   function bathStep() {
-    return rt.tool && rt.tool.kind === 'bath' ? BATH_STEPS[rt.tool.step] : null;
+    if (!rt.tool || rt.tool.kind !== 'bath') return null;
+    return BATH_STEPS[rt.tool.step] || null;
   }
 
   function targetCount(kind) {
@@ -1628,6 +1629,7 @@
 
   function finishStep() {
     var t = rt.tool;
+    if (!t || t.finishing) return;
     var park = parkSpot();
 
     // the tool you were using vanishes in a puff
@@ -1637,11 +1639,11 @@
     }
     Sfx.stepDone();
 
-    if (t.kind !== 'bath') { t.finishing = 0.9; return; }
+    if (t.kind !== 'bath') { t.finishing = 0.6; return; }
 
     convertLeftovers(t.step);
     t.step++;
-    if (t.step >= BATH_STEPS.length) { t.finishing = 0.9; return; }
+    if (t.step >= BATH_STEPS.length) { t.finishing = 0.6; return; }
 
     t.target = BATH_STEPS[t.step].target;
     t.stepTime = 0;
@@ -1779,7 +1781,7 @@
     t.t += dt;
     if (t.popT > 0) t.popT -= dt;
 
-    if (!t.parked && t.down && t.onPet) {
+    if (!t.parked && !t.finishing && t.down && t.onPet) {
       t.stepTime += dt;
       applyToolProgress();
       if (t.stepTime >= STEP_SECONDS) { t.stepTime = STEP_SECONDS; finishStep(); }
@@ -2093,7 +2095,7 @@
 
     drawParticles(L);
 
-    if (rt.tool) {
+    if (rt.tool && !rt.tool.finishing) {
       var tl = rt.tool;
       var tx = tl.x, ty = tl.y;
       if (tl.parked) {
