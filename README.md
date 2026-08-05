@@ -40,7 +40,8 @@ thumb-sized targets along the bottom, and everything is saved to
    A sixth **Medicine** button appears only when your pet is poorly.
 
 3. **Stroke your pet** anywhere on screen to give it cuddles — hearts float up
-   and it purrs. Keep going and it gets so happy it sings out loud.
+   and it purrs. Keep going and it gets so happy it calls out: cats meow and
+   chirrup, the Dalmatian barks twice and whines, the fox yips.
 4. Care earns growth points. Fill the gold bar at the top to grow up:
    **Baby → Kid → Teen → Adult**, each with a little celebration.
 5. Tap the **paw** button (top left) for *My Pets*: switch between pets, add a

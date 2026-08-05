@@ -55,6 +55,9 @@
     lolly: { label: 'Lollipop', gain: 25, fun: 20, say: 'Slurp!' }
   };
 
+  // what each animal says when it is thoroughly pleased with you
+  var HAPPY_SAY = { dog: 'Woof woof!', fox: 'Yip yip!', cat: 'Purrrrr!', blackcat: 'Purrrrr!' };
+
   var HINTS = {
     food: 'Your pet is hungry — tap Feed!',
     water: 'Your pet is thirsty — tap Water!',
@@ -143,10 +146,109 @@
       this.tone(1400, 0.05, 'square', 0.035);
       this.tone(1200, 0.05, 'square', 0.035, 0.09);
     },
-    delight: function () {          // the happy trill after lots of fuss
-      var notes = [660, 880, 990, 1320];
-      for (var i = 0; i < notes.length; i++) this.tone(notes[i], 0.16, 'sine', 0.05, i * 0.09);
-      this.tone(1760, 0.2, 'sine', 0.03, 0.38);
+    /* A little voice box: two detuned oscillators swept along a pitch path,
+       through a lowpass, with optional wobble. Animal calls glide and waver
+       rather than stepping between notes, which is what makes them read as a
+       creature instead of a chime. */
+    voice: function (o) {
+      if (!this.on || !this.ctx) return;
+      var ctx = this.ctx;
+      var t0 = ctx.currentTime + (o.delay || 0);
+      var dur = o.dur;
+      var osc = ctx.createOscillator();
+      var osc2 = ctx.createOscillator();
+      var filt = ctx.createBiquadFilter();
+      var gain = ctx.createGain();
+
+      osc.type = o.type || 'sawtooth';
+      osc2.type = o.type || 'sawtooth';
+      osc2.detune.value = o.detune === undefined ? 9 : o.detune;
+
+      filt.type = 'lowpass';
+      filt.Q.value = o.q || 4;
+      filt.frequency.setValueAtTime(o.cutoff || 1800, t0);
+      if (o.cutoffEnd) filt.frequency.linearRampToValueAtTime(o.cutoffEnd, t0 + dur);
+
+      var pts = o.freq;
+      osc.frequency.setValueAtTime(pts[0][1], t0);
+      osc2.frequency.setValueAtTime(pts[0][1], t0);
+      for (var i = 1; i < pts.length; i++) {
+        osc.frequency.exponentialRampToValueAtTime(pts[i][1], t0 + pts[i][0] * dur);
+        osc2.frequency.exponentialRampToValueAtTime(pts[i][1], t0 + pts[i][0] * dur);
+      }
+
+      if (o.vibHz) {                       // the waver in a trill or a purr
+        var lfo = ctx.createOscillator();
+        var lfoGain = ctx.createGain();
+        lfo.frequency.value = o.vibHz;
+        lfoGain.gain.value = o.vibDepth || 20;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfoGain.connect(osc2.frequency);
+        lfo.start(t0);
+        lfo.stop(t0 + dur + 0.05);
+      }
+
+      var vol = o.vol || 0.05;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(vol, t0 + (o.attack || 0.02));
+      gain.gain.setValueAtTime(vol, t0 + dur * (o.hold || 0.45));
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+      osc.connect(filt);
+      osc2.connect(filt);
+      filt.connect(gain).connect(ctx.destination);
+      osc.start(t0); osc.stop(t0 + dur + 0.06);
+      osc2.start(t0); osc2.stop(t0 + dur + 0.06);
+    },
+
+    happyMeow: function () {               // "mrrrow!" then a little chirrup
+      this.voice({
+        dur: 0.44, type: 'sawtooth', vol: 0.055, cutoff: 1500, cutoffEnd: 850, q: 6,
+        vibHz: 25, vibDepth: 28, attack: 0.035, hold: 0.5,
+        freq: [[0, 430], [0.25, 790], [0.6, 850], [1, 500]]
+      });
+      this.voice({
+        dur: 0.3, delay: 0.46, type: 'sawtooth', vol: 0.042, cutoff: 1300, q: 6,
+        vibHz: 30, vibDepth: 22, attack: 0.02, hold: 0.4,
+        freq: [[0, 600], [0.4, 920], [1, 660]]
+      });
+    },
+
+    happyBark: function () {               // "woof woof!" and a happy whine
+      for (var i = 0; i < 2; i++) {
+        this.voice({
+          dur: 0.13, delay: i * 0.2, type: 'sawtooth', vol: 0.06,
+          cutoff: 1500, cutoffEnd: 600, q: 3, attack: 0.008, hold: 0.25,
+          freq: [[0, 430], [0.18, 330], [1, 165]]
+        });
+      }
+      this.voice({
+        dur: 0.28, delay: 0.44, type: 'triangle', vol: 0.038, cutoff: 2200, q: 2,
+        vibHz: 17, vibDepth: 20, attack: 0.02, hold: 0.4,
+        freq: [[0, 520], [0.5, 780], [1, 620]]
+      });
+    },
+
+    happyYip: function () {                // a fox's excited "yip yip!"
+      for (var i = 0; i < 2; i++) {
+        this.voice({
+          dur: 0.12, delay: i * 0.17, type: 'sawtooth', vol: 0.05,
+          cutoff: 2600, cutoffEnd: 1600, q: 5, attack: 0.01, hold: 0.3,
+          freq: [[0, 700], [0.25, 1280], [1, 880]]
+        });
+      }
+      this.voice({
+        dur: 0.24, delay: 0.38, type: 'sawtooth', vol: 0.04, cutoff: 2400, q: 5,
+        vibHz: 23, vibDepth: 32, attack: 0.015, hold: 0.4,
+        freq: [[0, 940], [0.5, 1420], [1, 1020]]
+      });
+    },
+
+    delight: function (species) {          // the happy noise after lots of fuss
+      if (species === 'dog') this.happyBark();
+      else if (species === 'fox') this.happyYip();
+      else this.happyMeow();
     },
     unwrap: function () {
       this.tone(300, 0.1, 'triangle', 0.04, 0, 520);
@@ -2203,8 +2305,8 @@
         if (rt.petStreak >= 7 && rt.t - rt.lastDelight > 14) {
           rt.petStreak = 0;
           rt.lastDelight = rt.t;
-          Sfx.delight();
-          say(pet.species === 'dog' ? 'Woof woof!' : 'Purrrrr!', 2000);
+          Sfx.delight(pet.species);
+          say(HAPPY_SAY[pet.species] || 'Purrrrr!', 2000);
           bumpLove(14);
           addGrowth(1.5);
           for (var hb = 0; hb < 10; hb++) {
