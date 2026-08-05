@@ -20,15 +20,15 @@
   // one dirt spot is worth this much Clean; one tuft this much Brush
   var DIRT_PER = 12, TUFT_PER = 14;
   var BATH_MIN_DIRT = 7;      // a proper bath is always a decent scrub
-  var BATH_PER = 3;           // Clean earned per spot cleared in any bath step
 
   /* Bath time is scrub, then rinse, then dry — each step turns what you
      cleared in the last one into the next thing to deal with. */
   var BATH_STEPS = [
-    { key: 'scrub', target: 'dirt', tool: 'soap', text: 'Step 1 of 3 · Scrub off the mud!' },
-    { key: 'rinse', target: 'foam', tool: 'shower', text: 'Step 2 of 3 · Rinse the soap off!' },
-    { key: 'dry', target: 'drip', tool: 'towel', text: 'Step 3 of 3 · Rub your pet dry!' }
+    { key: 'scrub', target: 'dirt', tool: 'soap', grab: 'Step 1 of 3 · Grab the soap!', text: 'Step 1 of 3 · Scrub off the mud!' },
+    { key: 'rinse', target: 'foam', tool: 'shower', grab: 'Step 2 of 3 · Grab the shower!', text: 'Step 2 of 3 · Rinse the soap off!' },
+    { key: 'dry', target: 'drip', tool: 'towel', grab: 'Step 3 of 3 · Grab the towel!', text: 'Step 3 of 3 · Rub your pet dry!' }
   ];
+  var STEP_SECONDS = 5;       // how long a step takes with the tool on the pet
 
   var STARVING = 15;          // a stat this low starts making the pet unwell
   var SICK_AFTER = 80;        // seconds of going without before it gets sick
@@ -46,11 +46,12 @@
   /* Six things to eat. Proper food fills you up; treats fill you up less but
      are a lot more fun. */
   var FOODS = {
+    // meals fill the Food ring right up; treats barely dent it but are fun
     meal:  { label: 'Meal',     gain: 75, fun: 0,  say: 'Yum yum!' },
+    fish:  { label: 'Fish',     gain: 75, fun: 5,  say: 'Tasty!' },
     steak: { label: 'Steak',    gain: 75, fun: 4,  say: 'Delicious!' },
-    bone:  { label: 'Bone',     gain: 75, fun: 8,  say: 'Crunch crunch!' },
     donut: { label: 'Donut',    gain: 25, fun: 15, say: 'So sweet!' },
-    fish:  { label: 'Fish',     gain: 25, fun: 10, say: 'Tasty!' },
+    bone:  { label: 'Bone',     gain: 25, fun: 18, say: 'Crunch crunch!' },
     lolly: { label: 'Lollipop', gain: 25, fun: 20, say: 'Slurp!' }
   };
 
@@ -133,6 +134,11 @@
     plop: function () { this.tone(200, 0.12, 'triangle', 0.05, 0, 90); },
     pop: function () { this.tone(1100, 0.06, 'sine', 0.05, 0, 1700); },
     whoosh: function () { this.tone(500, 0.14, 'sine', 0.03, 0, 260); },
+    stepDone: function () {
+      var notes = [784, 988, 1319];
+      for (var i = 0; i < notes.length; i++) this.tone(notes[i], 0.16, 'sine', 0.055, i * 0.1);
+    },
+    pickup: function () { this.tone(760, 0.08, 'triangle', 0.045, 0, 1020); },
     snip: function () {
       this.tone(1400, 0.05, 'square', 0.035);
       this.tone(1200, 0.05, 'square', 0.035, 0.09);
@@ -1525,10 +1531,10 @@
     }
 
     rt.tool = {
-      kind: name, target: kind, step: 0, t: 0, cleared: 0, lock: 0, needsRelease: false,
-      stepTotal: 0,
-      x: W / 2, y: room.groundY - 20, down: false, lastX: null, lastY: null,
-      finishing: 0
+      kind: name, target: kind, step: 0, t: 0, cleared: 0,
+      stepTime: 0, parked: true, popT: 0.45,
+      startStat: pet.stats[ACTIONS[name].stat],
+      x: 0, y: 0, down: false, finishing: 0
     };
     if (name === 'bath') {
       rt.props.tub = { x: W / 2, y: room.groundY + 1 };
@@ -1547,19 +1553,37 @@
     }
     el.dock.classList.add('hide');
     el.toolBar.classList.add('show');
-    rt.tool.stepTotal = targetCount(rt.tool.target);
-    el.toolText.textContent = name === 'bath' ? BATH_STEPS[0].text : 'Swipe to brush the fur!';
+    var park0 = parkSpot();
+    rt.tool.x = park0.x;
+    rt.tool.y = park0.y;
+    el.toolText.textContent = name === 'bath' ? BATH_STEPS[0].grab : 'Grab the brush!';
     el.toolFill.style.width = '0%';
     setHint('');
+  }
+
+  /* Where the current tool waits until you pick it up. */
+  function parkSpot() {
+    return { x: Math.min(W - 10, W / 2 + 24), y: room.groundY - 5 };
   }
 
   function updateToolMeter() {
     var t = rt.tool;
     if (!t) return;
-    var left = targetCount(t.target);
-    var total = Math.max(1, t.stepTotal || 1);
-    var doneFrac = clamp((total - left) / total, 0, 1);
-    el.toolFill.style.width = (doneFrac * 100).toFixed(1) + '%';
+    el.toolFill.style.width = (clamp(t.stepTime / STEP_SECONDS, 0, 1) * 100).toFixed(1) + '%';
+  }
+
+  function stepCount() {
+    return rt.tool && rt.tool.kind === 'bath' ? BATH_STEPS.length : 1;
+  }
+
+  /* Clean (or Brush) climbs steadily with how much of the job is done. */
+  function applyToolProgress() {
+    var t = rt.tool;
+    if (!t) return;
+    var key = ACTIONS[t.kind].stat;
+    var done = (t.step + clamp(t.stepTime / STEP_SECONDS, 0, 1)) / stepCount();
+    var target = t.startStat + (100 - t.startStat) * done;
+    if (target > pet.stats[key]) pet.stats[key] = clamp(target, 0, 100);
   }
 
   function bathStep() {
@@ -1572,21 +1596,69 @@
     return countSpots(kind);
   }
 
-  function advanceBath() {
+  /* Anything still on the pet when the clock runs out turns into whatever the
+     next step deals with, so the pet always ends a step looking right: soapy
+     after scrubbing, dripping after rinsing, spotless after drying. */
+  function convertLeftovers(fromStep) {
+    var i;
+    if (fromStep === 0) {
+      for (i = rt.spots.length - 1; i >= 0; i--) {
+        if (rt.spots[i].kind === 'dirt') {
+          rt.foam.push({ x: rt.spots[i].x, y: rt.spots[i].y, r: 1.9, life: 0 });
+          rt.spots.splice(i, 1);
+        }
+      }
+      while (rt.foam.length < 8) {
+        var sp = makeSpot('dirt');
+        rt.foam.push({ x: sp.x, y: Math.min(sp.y, Pets.FEET - 10), r: 1.9, life: 0 });
+      }
+    } else if (fromStep === 1) {
+      for (i = rt.foam.length - 1; i >= 0; i--) {
+        rt.drips.push({ x: rt.foam[i].x, y: rt.foam[i].y });
+        rt.foam.splice(i, 1);
+      }
+      while (rt.drips.length < 7) {
+        var sp2 = makeSpot('dirt');
+        rt.drips.push({ x: sp2.x, y: Math.min(sp2.y, Pets.FEET - 10) });
+      }
+    } else {
+      rt.drips.length = 0;
+    }
+  }
+
+  function finishStep() {
     var t = rt.tool;
+    var park = parkSpot();
+
+    // the tool you were using vanishes in a puff
+    for (var i = 0; i < 7; i++) {
+      spawn('poof', t.x + (Math.random() - 0.5) * 10, t.y + (Math.random() - 0.5) * 8,
+        { vx: (Math.random() - 0.5) * 16, vy: -8 - Math.random() * 8, max: 0.8 });
+    }
+    Sfx.stepDone();
+
+    if (t.kind !== 'bath') { t.finishing = 0.9; return; }
+
+    convertLeftovers(t.step);
     t.step++;
     if (t.step >= BATH_STEPS.length) { t.finishing = 0.9; return; }
+
     t.target = BATH_STEPS[t.step].target;
-    // each step is its own deliberate action: lift your finger, pick up the
-    // next thing, start again
-    t.needsRelease = true;
-    t.lock = 0.7;
-    t.stepTotal = targetCount(BATH_STEPS[t.step].target);
+    t.stepTime = 0;
+    t.parked = true;
+    t.down = false;
+    t.popT = 0.45;
+    t.x = park.x;
+    t.y = park.y;
     el.toolFill.style.width = '0%';
-    el.toolText.textContent = BATH_STEPS[t.step].text;
+    el.toolText.textContent = BATH_STEPS[t.step].grab;
     say(t.step === 1 ? 'All soapy!' : 'Nice and rinsed!', 1800);
-    Sfx.ding();
     if (t.step === 1) Sfx.splash();
+    // the next thing to use pops in beside the tub
+    for (var k = 0; k < 6; k++) {
+      spawn('sparkle', park.x + (Math.random() - 0.5) * 10, park.y - 4,
+        { vx: (Math.random() - 0.5) * 12, vy: -10, max: 0.8 });
+    }
   }
 
   function endTool(complete) {
@@ -1618,18 +1690,18 @@
 
   function scrubAt(x, y) {
     var t = rt.tool;
-    if (!t || t.finishing || t.needsRelease || t.lock > 0) return;
+    if (!t || t.finishing || t.parked) return;
     var lx = x - (W / 2 - Pets.SIZE / 2);
     var ly = y - (room.groundY - Pets.FEET);
     var hit = false;
     var cfg = ACTIONS[t.kind];
     var i, k;
 
-    function reward(gain) {
-      pet.stats[cfg.stat] = clamp(pet.stats[cfg.stat] + gain, 0, 100);
-      bumpLove(1.5);
-      addGrowth(0.4);
+    function reward() {
+      bumpLove(1);
+      addGrowth(0.3);
     }
+    void cfg;
 
     if (t.target === 'dirt' || t.target === 'tuft') {
       for (i = rt.spots.length - 1; i >= 0; i--) {
@@ -1640,13 +1712,13 @@
           t.cleared++;
           hit = true;
           if (t.target === 'dirt') {
-            reward(BATH_PER);
+            reward();
             rt.foam.push({ x: s.x, y: s.y, r: 1.9, life: 0 });
             for (k = 0; k < 3; k++) {
               spawn('bubble', x + (Math.random() - 0.5) * 6, y - 2, { vy: -12 - Math.random() * 8, max: 1.3 });
             }
           } else {
-            reward(TUFT_PER);
+            reward();
             for (k = 0; k < 3; k++) {
               spawn('fluff', x + (Math.random() - 0.5) * 6, y - 2,
                 { vx: (Math.random() - 0.5) * 14, vy: -10, g: 18, max: 0.9 });
@@ -1663,7 +1735,7 @@
           rt.drips.push({ x: fm.x, y: fm.y });
           t.cleared++;
           hit = true;
-          reward(BATH_PER);
+          reward();
           for (k = 0; k < 3; k++) {
             spawn('drop', x + (Math.random() - 0.5) * 8, y,
               { vx: (Math.random() - 0.5) * 16, vy: 4 + Math.random() * 8, g: 60, max: 0.7 });
@@ -1677,7 +1749,7 @@
           rt.drips.splice(i, 1);
           t.cleared++;
           hit = true;
-          reward(BATH_PER);
+          reward();
           spawn('sparkle', x, y - 3, { vy: -10, max: 0.7 });
           if (Math.random() < 0.4) spawn('heart', x, y - 4, { vy: -14, max: 1 });
         }
@@ -1686,6 +1758,7 @@
 
     // scrubbing over the pet at all is pleasant even when nothing is there
     var overPetNow = Math.abs(lx - Pets.SIZE / 2) < 16 && ly > 4 && ly < Pets.FEET + 2;
+    t.onPet = overPetNow;
     if (overPetNow) {
       rt.leanTarget = clamp((x - W / 2) * 0.22, -3, 3);
       if (t.kind !== 'bath') Sfx.swish();
@@ -1697,19 +1770,22 @@
       }
     }
 
-    if (hit && targetCount(t.target) === 0) {
-      if (t.kind === 'bath') advanceBath();
-      else t.finishing = 0.9;
-    }
+    void hit;
   }
 
   function updateTool(dt) {
     var t = rt.tool;
     if (!t) return;
     t.t += dt;
-    if (t.lock > 0) t.lock -= dt;
+    if (t.popT > 0) t.popT -= dt;
+
+    if (!t.parked && t.down && t.onPet) {
+      t.stepTime += dt;
+      applyToolProgress();
+      if (t.stepTime >= STEP_SECONDS) { t.stepTime = STEP_SECONDS; finishStep(); }
+    }
     updateToolMeter();
-    if (t.kind === 'bath' && t.step === 0 && Math.random() < dt * 5) {
+    if (!t.parked && t.kind === 'bath' && t.step === 0 && Math.random() < dt * 5) {
       spawn('bubble', W / 2 + (Math.random() - 0.5) * 30, room.groundY - 10 - Math.random() * 6,
         { vy: -8 - Math.random() * 6, max: 1.5 });
     }
@@ -2018,12 +2094,21 @@
     drawParticles(L);
 
     if (rt.tool) {
-      var tilt = Math.sin(rt.t * 9) * (rt.tool.down ? 1.2 : 0.3);
+      var tl = rt.tool;
+      var tx = tl.x, ty = tl.y;
+      if (tl.parked) {
+        var park = parkSpot();
+        tx = park.x;
+        ty = park.y + Math.sin(rt.t * 3) * 1.2;
+        if (tl.popT > 0) ty -= tl.popT / 0.45 * 16;      // drops in from above
+        L.ellipse(park.x, room.groundY + 1, 5, 1.5, C('#d9a869'));
+      }
+      var tilt = Math.sin(rt.t * 9) * (tl.down ? 1.2 : 0.3);
       var step = bathStep();
-      if (!step) drawBrush(L, rt.tool.x, rt.tool.y, tilt);
-      else if (step.tool === 'soap') drawSoap(L, rt.tool.x, rt.tool.y, tilt);
-      else if (step.tool === 'shower') drawShower(L, rt.tool.x, rt.tool.y, tilt, rt.tool.down);
-      else drawTowel(L, rt.tool.x, rt.tool.y, tilt);
+      if (!step) drawBrush(L, tx, ty, tilt);
+      else if (step.tool === 'soap') drawSoap(L, tx, ty, tilt);
+      else if (step.tool === 'shower') drawShower(L, tx, ty, tilt, tl.down && !tl.parked);
+      else drawTowel(L, tx, ty, tilt);
     }
 
     if (!rt.activity && !rt.tool && !rt.sleep && !rt.angry) {
@@ -2177,6 +2262,13 @@
       if (rt.intro) { popPresent(); return; }
 
       if (rt.tool) {
+        if (rt.tool.parked) {
+          rt.tool.parked = false;
+          rt.tool.popT = 0;
+          Sfx.pickup();
+          el.toolText.textContent = rt.tool.kind === 'bath'
+            ? BATH_STEPS[rt.tool.step].text : 'Swipe to brush the fur!';
+        }
         rt.tool.down = true;
         rt.tool.x = p.x;
         rt.tool.y = p.y;
@@ -2259,7 +2351,7 @@
 
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) {
       canvas.addEventListener(t, function () {
-        if (rt.tool) { rt.tool.down = false; rt.tool.needsRelease = false; rt.leanTarget = 0; }
+        if (rt.tool) { rt.tool.down = false; rt.tool.onPet = false; rt.leanTarget = 0; }
         stopPetting();
       });
     });

@@ -48,12 +48,12 @@ thumb-sized targets along the bottom, and everything is saved to
 
 ### Dinner time
 
-Feed opens a menu of six things. A proper **meal**, a **steak** or a **bone**
-is a real dinner and fills about three quarters of the Food ring. A **donut**,
-a **fish** or a **lollipop** is a snack and only fills about a quarter — but
-snacks give a good helping of Fun, so a lollipop is a poor dinner and a lovely
-treat. Whatever you pick slides in and shrinks bite by bite as your pet works
-through it.
+Feed opens a menu split in two. The top row is **meals** — a proper meal, a
+fish or a steak — and each fills about three quarters of the Food ring. The
+bottom row is **treats** — a donut, a bone or a lollipop — which only fill
+about a quarter but give a good helping of Fun. So a lollipop makes a poor
+dinner and a lovely snack. Whatever you pick slides in and shrinks bite by bite
+as your pet works through it.
 
 ### Mini games
 
@@ -114,18 +114,18 @@ one or two waiting for you.
 
 Bath time is a proper three-step job, and every step is hands on:
 
-1. **Scrub** — drag the bar of soap over your pet. Each patch of mud you find
-   comes off and leaves a blob of foam behind.
-2. **Rinse** — pick up the shower and wash all that foam away. Every blob you
-   rinse leaves the fur dripping wet.
-3. **Dry** — rub the towel over your pet until every last drip is gone.
+1. **Scrub** — the soap sits waiting beside the tub. Grab it and rub it over
+   your pet; the mud comes off where you rub and leaves foam behind.
+2. **Rinse** — the shower is next. Wash all that foam away and the fur is left
+   dripping wet.
+3. **Dry** — finally the towel, until every last drip is gone.
 
-Each step needs a fresh press, so you lift your finger, pick up the next thing
-and start again. A meter under the step name fills as you work, so you can
-always see how much of the current step is left. Your pet sparkles clean once
-the last drip is towelled off. There are always at least seven patches of mud,
-so a bath is never a two-second job. Press **Done** any time to stop early and
-keep what you have cleaned.
+Each step takes **five seconds of work with the tool on your pet**, shown by
+the meter under the step name. When the meter fills you get a happy chime, the
+thing you were holding puffs away, and the next one pops in beside the tub
+ready to be picked up — so each step is its own little job with a clear start
+and finish. Press **Done** any time to stop early and keep what you've done so
+far.
 
 ### Brushing
 
