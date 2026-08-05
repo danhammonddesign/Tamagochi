@@ -8,6 +8,7 @@
   var OLD_KEY = 'pixelpals.save.v1';
   var MAX_OFFLINE = 3 * 3600;   // cap on decay while you are away (seconds)
   var MAX_PETS = 6;
+  var MAX_MESS = 4;            // how much mess can pile up before the pet stops
 
   var STAT_KEYS = ['food', 'water', 'fun', 'clean', 'groom'];
   var DECAY = {
@@ -22,7 +23,7 @@
   var ACTIONS = {
     feed: { stat: 'food', kind: 'anim', dur: 4.6, gain: 38, done: 'Yum yum!', full: "I'm so full!" },
     water: { stat: 'water', kind: 'anim', dur: 4.0, gain: 42, done: 'Glug glug!', full: 'Not thirsty!' },
-    play: { stat: 'fun', kind: 'anim', dur: 6.5, gain: 45, done: 'That was fun!', full: 'Played out!' },
+    play: { stat: 'fun', kind: 'games', full: 'Played out!' },
     bath: { stat: 'clean', kind: 'tool', done: 'Squeaky clean!', full: "I'm already clean!" },
     brush: { stat: 'groom', kind: 'tool', done: 'So fluffy!', full: 'My fur is perfect!' }
   };
@@ -96,7 +97,16 @@
       var notes = [523, 659, 784, 1046];
       for (var i = 0; i < notes.length; i++) this.tone(notes[i], 0.22, 'square', 0.055, i * 0.12);
     },
-    sad: function () { this.tone(330, 0.25, 'sine', 0.045, 0, 200); }
+    sad: function () { this.tone(330, 0.25, 'sine', 0.045, 0, 200); },
+    growl: function () {
+      this.tone(120, 0.35, 'sawtooth', 0.05, 0, 80);
+      this.tone(90, 0.3, 'square', 0.03, 0.08, 70);
+    },
+    yawn: function () { this.tone(280, 0.5, 'sine', 0.04, 0, 480); },
+    snore: function () { this.tone(90, 0.5, 'triangle', 0.025, 0, 70); },
+    plop: function () { this.tone(200, 0.12, 'triangle', 0.05, 0, 90); },
+    pop: function () { this.tone(1100, 0.06, 'sine', 0.05, 0, 1700); },
+    whoosh: function () { this.tone(500, 0.14, 'sine', 0.03, 0, 260); }
   };
 
   /* ------------------------------------------------------------------ */
@@ -113,7 +123,8 @@
       id: uid(), species: species, name: name,
       growth: 0, stage: 'baby',
       stats: { food: 75, water: 75, fun: 75, clean: 95, groom: 92 },
-      love: 40, born: Date.now(), saved: Date.now(), cuddles: 0
+      love: 40, born: Date.now(), saved: Date.now(), cuddles: 0,
+      messes: []
     };
   }
 
@@ -127,6 +138,8 @@
     if (typeof p.growth !== 'number') p.growth = 0;
     if (typeof p.love !== 'number') p.love = 40;
     if (!p.id) p.id = uid();
+    if (!Array.isArray(p.messes)) p.messes = [];
+    p.messes = p.messes.slice(0, MAX_MESS);
     p.stage = Pets.stageFor(p.growth).key;
     return p;
   }
@@ -185,6 +198,9 @@
       p.stats[k] = clamp(p.stats[k] - DECAY[k] * used * 0.5, 8, 100);
     }
     p.love = clamp((p.love || 0) - used * 0.02, 0, 100);
+    // a pet left alone for a while will have had an accident or two
+    var owed = Math.min(2, Math.floor(used / 900));
+    for (var m = 0; m < owed; m++) addMess(p);
     p.saved = Date.now();
     return away;
   }
@@ -212,7 +228,9 @@
     props: {}, particles: [],
     spots: [], foam: [],
     petting: false, lastHeart: 0,
-    shine: 0, growthFlash: 0
+    shine: 0, growthFlash: 0,
+    sleep: null, angry: 0, lastWake: -60,
+    pooping: null, messTimer: 40 + Math.random() * 50, messAge: {}
   };
 
   /* ------------------------------------------------------------------ */
@@ -273,7 +291,11 @@
     crumb: { rows: ['##', '##'], color: '#c98a4b' },
     drop: { rows: ['.#.', '###', '.#.'], color: '#7fd8ff' },
     note: { rows: ['..#', '..#', '###', '.##'], color: '#5f4bb6' },
-    fluff: { rows: ['.#.', '###', '.#.'], color: '#ffffff' }
+    fluff: { rows: ['.#.', '###', '.#.'], color: '#ffffff' },
+    zzz: { rows: ['###', '..#', '.#.', '###'], color: '#8f9bd6' },
+    anger: { rows: ['.#.#.', '.###.', '#####', '.###.', '.#.#.'], color: '#ff3b3b' },
+    poof: { rows: ['.##.', '####', '####', '.##.'], color: '#e6ded4' },
+    star: { rows: ['..#..', '.###.', '#####', '.###.', '..#..'], color: '#ffd93d' }
   };
 
   function updateParticles(dt) {
@@ -479,6 +501,378 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* accidents on the floor                                              */
+  /* ------------------------------------------------------------------ */
+  function randomMess() {
+    return {
+      k: Math.random() < 0.62 ? 'poop' : 'pee',
+      nx: (0.4 + Math.random() * 0.6) * (Math.random() < 0.5 ? -1 : 1),
+      ny: Math.random()
+    };
+  }
+
+  /* Finds a free patch of floor so accidents do not land on top of each other. */
+  function addMess(p) {
+    if (p.messes.length >= MAX_MESS) return null;
+    var best = null;
+    for (var tries = 0; tries < 10; tries++) {
+      var cand = randomMess();
+      var ok = true;
+      for (var i = 0; i < p.messes.length; i++) {
+        var o = p.messes[i];
+        if (Math.abs(o.nx - cand.nx) < 0.34 && Math.abs(o.ny - cand.ny) < 0.5) { ok = false; break; }
+      }
+      if (ok) { best = cand; break; }
+    }
+    if (!best) return null;
+    p.messes.push(best);
+    return best;
+  }
+
+  function messPos(m) {
+    return {
+      x: W / 2 + m.nx * (W * 0.3),
+      y: room.groundY + 2 + m.ny * 5
+    };
+  }
+
+  function drawMess(L, m, t, age) {
+    var p = messPos(m);
+    if (m.k === 'poop') {
+      stampOutlined(L, p.x, p.y, function (b, bx, by) {
+        b.ellipse(bx, by, 5, 2, C('#6d5233'));
+        b.ellipse(bx, by - 2, 4, 2, C('#8a6a45'));
+        b.ellipse(bx + 0.5, by - 4, 2.6, 1.8, C('#8a6a45'));
+        b.ellipse(bx - 1, by - 2.6, 1.6, 0.8, C('#a3835a'));
+        b.disc(bx + 1, by - 5.4, 1, C('#a3835a'));
+      });
+    } else {
+      stampOutlined(L, p.x, p.y, function (b, bx, by) {
+        b.ellipse(bx, by, 6.5, 2.6, C('#ffd83d'));
+        b.ellipse(bx - 1, by - 0.5, 3.4, 1.2, C('#ffeb9a'));
+      });
+    }
+    // a fly turns up once the mess has been sitting a while
+    if (age > 18) {
+      var fx2 = p.x + Math.cos(t * 3 + m.nx * 4) * 6;
+      var fy2 = p.y - 7 + Math.sin(t * 4.5 + m.nx * 4) * 3;
+      L.set(fx2, fy2, C('#3a2b40'));
+      L.set(fx2 - 1, fy2 - 1, C('#8f9bd6'));
+      L.set(fx2 + 1, fy2 - 1, C('#8f9bd6'));
+    }
+  }
+
+  function messKey(m) { return m.k + Math.round(m.nx * 100) + '_' + Math.round(m.ny * 100); }
+
+  function cleanMessAt(x, y) {
+    if (!pet.messes) return false;
+    for (var i = 0; i < pet.messes.length; i++) {
+      var p = messPos(pet.messes[i]);
+      if (Math.abs(x - p.x) < 8 && Math.abs(y - p.y) < 7) {
+        delete rt.messAge[messKey(pet.messes[i])];
+        pet.messes.splice(i, 1);
+        for (var k = 0; k < 6; k++) {
+          spawn('poof', p.x + (Math.random() - 0.5) * 10, p.y - 3,
+            { vx: (Math.random() - 0.5) * 18, vy: -10 - Math.random() * 10, max: 0.8 });
+        }
+        spawn('sparkle', p.x, p.y - 6, { vy: -12, max: 0.8 });
+        pet.stats.clean = clamp(pet.stats.clean + 6, 0, 100);
+        bumpLove(3);
+        addGrowth(0.8);
+        Sfx.pop();
+        if (!pet.messes.length) say('All tidy!', 1600);
+        save();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /* The pet quietly excuses itself now and then. */
+  function updateMesses(dt) {
+    var i;
+    for (i = 0; i < pet.messes.length; i++) {
+      var key = messKey(pet.messes[i]);
+      rt.messAge[key] = (rt.messAge[key] || 0) + dt;
+    }
+    if (rt.activity || rt.tool || rt.sleep || rt.pooping || rt.angry > 0) return;
+    if (pet.messes.length >= MAX_MESS) return;
+
+    rt.messTimer -= dt;
+    if (rt.messTimer <= 0) {
+      rt.messTimer = 55 + Math.random() * 70;
+      rt.pooping = { t: 0, dur: 2.4, dropped: false };
+    }
+  }
+
+  function updatePooping(dt) {
+    var pp = rt.pooping;
+    if (!pp) return;
+    pp.t += dt;
+    if (!pp.dropped && pp.t > 1) {
+      pp.dropped = true;
+      var made = addMess(pet);
+      if (made) {
+        rt.messAge[messKey(made)] = 0;
+        Sfx.plop();
+        say(made.k === 'poop' ? 'Oops!' : 'Uh oh…', 1600);
+        save();
+      }
+    }
+    if (pp.t >= pp.dur) rt.pooping = null;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* naps, and being woken up                                            */
+  /* ------------------------------------------------------------------ */
+  function minStat(p) {
+    var lo = 101;
+    for (var i = 0; i < STAT_KEYS.length; i++) lo = Math.min(lo, p.stats[STAT_KEYS[i]]);
+    return lo;
+  }
+
+  function maybeSleep(dt) {
+    if (rt.sleep || rt.activity || rt.tool || rt.pooping || rt.petting || rt.angry > 0) return;
+    if (minStat(pet) < 32) return;              // never nap while something is needed
+    if (pet.messes.length) return;              // or with a mess on the floor
+    if (rt.t - rt.lastWake < 30) return;
+    if (Math.random() < dt / 70) {
+      rt.sleep = { t: 0, dur: 15 + Math.random() * 18 };
+      say('Zzz…', 1600);
+      Sfx.yawn();
+    }
+  }
+
+  function updateSleep(dt) {
+    if (!rt.sleep) return;
+    rt.sleep.t += dt;
+    if (Math.random() < dt * 1.1) {
+      spawn('zzz', W / 2 + 9, room.groundY - 26, { vx: 4 + Math.random() * 3, vy: -8, max: 1.9 });
+    }
+    if (Math.random() < dt * 0.35) Sfx.snore();
+    if (rt.sleep.t >= rt.sleep.dur) wake(false);
+  }
+
+  /* Waking the pet yourself is rude, and it will let you know. */
+  function wake(rude) {
+    if (!rt.sleep) return false;
+    rt.sleep = null;
+    rt.lastWake = rt.t;
+    if (rude) {
+      rt.angry = 9;
+      bumpLove(-14);
+      pet.stats.fun = clamp(pet.stats.fun - 5, 0, 100);
+      say('Grrr! I was sleeping!', 2400);
+      Sfx.growl();
+      for (var i = 0; i < 3; i++) {
+        spawn('anger', W / 2 + 8 + i * 2, room.groundY - 40 - i * 2,
+          { vx: 6 + i * 4, vy: -8, max: 1.1 });
+      }
+    } else {
+      bumpLove(10);
+      say('*yawn* What a nap!', 2000);
+      Sfx.yawn();
+    }
+    save();
+    return true;
+  }
+
+  function updateAngry(dt) {
+    if (rt.angry <= 0) return;
+    rt.angry -= dt;
+    if (Math.random() < dt * 0.8) {
+      spawn('anger', W / 2 + (Math.random() < 0.5 ? -12 : 12), room.groundY - 38,
+        { vy: -6, max: 0.9 });
+    }
+    if (rt.angry <= 0) {
+      rt.angry = 0;
+      say('Okay… I forgive you!', 2000);
+      bumpLove(6);
+      for (var i = 0; i < 4; i++) {
+        spawn('heart', W / 2 + (Math.random() - 0.5) * 14, room.groundY - 30, { vy: -14, max: 1.1 });
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* mini games                                                          */
+  /* ------------------------------------------------------------------ */
+  var GAMES = {
+    ball: { label: 'Bounce', dur: 9, hint: 'Tap the ball!', per: 4 },
+    bubble: { label: 'Bubbles', dur: 14, hint: 'Pop the bubbles!', per: 3 },
+    treat: { label: 'Find It', dur: 0, hint: 'Which cup hides the treat?', per: 14 }
+  };
+
+  function cupGap() { return Math.min(20, Math.max(14, Math.round(W * 0.26))); }
+  function cupX(slot) { return W / 2 + (slot - 1) * cupGap(); }
+  function cupY() { return room.groundY + 5; }
+
+  function drawCup(L, x, y, lift) {
+    stampOutlined(L, x, y - lift, function (b, bx, by) {
+      b.tri(bx - 5.5, by, bx + 5.5, by, bx + 4, by - 11, C('#77b8f0'));
+      b.tri(bx - 5.5, by, bx + 4, by - 11, bx - 4, by - 11, C('#77b8f0'));
+      b.rect(bx - 5, by - 13, 10, 3, C('#9ad0ff'));
+      b.ellipse(bx, by - 12, 5, 1.4, C('#bfe0ff'));
+      b.ellipse(bx - 2.4, by - 5, 1.2, 3, C('#a8d8ff'));
+    });
+  }
+
+  function drawTreat(L, x, y) {
+    stampOutlined(L, x, y - 3, function (b, bx, by) {
+      b.disc(bx, by, 4, C('#d9954f'));
+      b.disc(bx - 1.5, by - 1, 0.9, C('#8a5a2a'));
+      b.disc(bx + 1.5, by + 0.5, 0.9, C('#8a5a2a'));
+      b.disc(bx, by + 2, 0.9, C('#8a5a2a'));
+    });
+  }
+
+  function drawGameBubble(L, bb) {
+    stampOutlined(L, bb.x, bb.y, function (b, bx, by) {
+      b.disc(bx, by, bb.r, C('#bfe9ff'));
+      b.disc(bx, by, Math.max(1, bb.r - 1.6), C('#eaf9ff'));
+      b.disc(bx - bb.r * 0.4, by - bb.r * 0.4, Math.max(0.8, bb.r * 0.25), C('#ffffff'));
+    });
+  }
+
+  function newTreatRound() {
+    var g = rt.activity;
+    g.round++;
+    g.cups = [0, 1, 2].map(function (i) { return { slot: i, x: cupX(i), lift: 0 }; });
+    g.treatCup = Math.floor(Math.random() * 3);
+    g.phase = 'reveal';
+    g.phaseT = 0;
+    g.swapsLeft = 2 + g.round;
+    g.swap = null;
+    g.picked = -1;
+  }
+
+  function beginSwap() {
+    var g = rt.activity;
+    var a = Math.floor(Math.random() * 3);
+    var b = (a + 1 + Math.floor(Math.random() * 2)) % 3;
+    g.swap = { a: a, b: b, t: 0, dur: 0.42, ax: g.cups[a].slot, bx: g.cups[b].slot };
+    Sfx.whoosh();
+  }
+
+  function updateTreatGame(dt) {
+    var g = rt.activity;
+    g.phaseT += dt;
+
+    if (g.phase === 'reveal') {
+      g.cups[g.treatCup].lift = Math.min(13, g.phaseT * 40);
+      if (g.phaseT > 1.5) {
+        g.cups[g.treatCup].lift = 0;
+        g.phase = 'shuffle';
+        g.phaseT = 0;
+      }
+      return;
+    }
+
+    if (g.phase === 'shuffle') {
+      if (!g.swap) {
+        if (g.swapsLeft <= 0) { g.phase = 'choose'; g.phaseT = 0; return; }
+        g.swapsLeft--;
+        beginSwap();
+      }
+      var sw = g.swap;
+      sw.t += dt;
+      var k = Math.min(1, sw.t / sw.dur);
+      var ca = g.cups[sw.a], cb = g.cups[sw.b];
+      ca.x = cupX(sw.ax) + (cupX(sw.bx) - cupX(sw.ax)) * k;
+      cb.x = cupX(sw.bx) + (cupX(sw.ax) - cupX(sw.bx)) * k;
+      ca.lift = Math.sin(Math.PI * k) * 5;
+      cb.lift = 0;
+      if (k >= 1) {
+        var t2 = ca.slot; ca.slot = cb.slot; cb.slot = t2;
+        ca.x = cupX(ca.slot); cb.x = cupX(cb.slot);
+        ca.lift = cb.lift = 0;
+        g.swap = null;
+      }
+      return;
+    }
+
+    if (g.phase === 'result') {
+      var right = g.picked === g.treatCup;
+      g.cups[g.picked].lift = Math.min(13, g.phaseT * 45);
+      if (!right && g.phaseT > 0.8) g.cups[g.treatCup].lift = Math.min(13, (g.phaseT - 0.8) * 45);
+      if (g.phaseT > 2) {
+        if (g.round >= 3) endGame();
+        else newTreatRound();
+      }
+    }
+  }
+
+  function pickCup(x, y) {
+    var g = rt.activity;
+    if (!g || g.game !== 'treat' || g.phase !== 'choose') return false;
+    if (y < cupY() - 16 || y > cupY() + 5) return false;
+    for (var i = 0; i < g.cups.length; i++) {
+      if (Math.abs(x - g.cups[i].x) < cupGap() / 2) {
+        g.picked = i;
+        g.phase = 'result';
+        g.phaseT = 0;
+        if (i === g.treatCup) {
+          g.score++;
+          pet.stats.fun = clamp(pet.stats.fun + GAMES.treat.per, 0, 100);
+          bumpLove(5);
+          Sfx.ding();
+          say('You found it!', 1600);
+          for (var k = 0; k < 5; k++) {
+            spawn('heart', g.cups[i].x + (Math.random() - 0.5) * 10, room.groundY - 20, { vy: -15, max: 1.1 });
+          }
+        } else {
+          Sfx.sad();
+          say('Not that one!', 1600);
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function startGame(id) {
+    el.gamePicker.classList.remove('show');
+    rt.activity = { kind: 'play', game: id, t: 0, dur: GAMES[id].dur, score: 0 };
+    rt.props = {};
+    if (id === 'ball') {
+      rt.props.ball = { x: W * 0.72, y: room.groundY - 34, vx: -16, vy: 0, spin: 0 };
+      Sfx.boing();
+    } else if (id === 'bubble') {
+      rt.props.bubbles = [];
+      rt.activity.spawnT = 0;
+    } else if (id === 'treat') {
+      rt.activity.round = 0;
+      newTreatRound();
+    }
+    el.dock.classList.add('hide');
+    el.toolBar.classList.add('show');
+    el.toolText.textContent = GAMES[id].hint;
+    setHint('');
+    refreshDock();
+  }
+
+  function endGame() {
+    var g = rt.activity;
+    if (!g) return;
+    var cfg = GAMES[g.game];
+    pet.stats.fun = clamp(pet.stats.fun + 12, 0, 100);
+    addGrowth(4 + Math.min(4, g.score * 0.4));
+    bumpLove(8);
+    say(g.score > 0 ? 'Score: ' + g.score + '!' : 'That was fun!', 2200);
+    for (var i = 0; i < 5; i++) {
+      spawn('heart', W / 2 + (Math.random() - 0.5) * 14, room.groundY - 28, { vy: -14, max: 1.2 });
+    }
+    rt.activity = null;
+    rt.props = {};
+    rt.leanTarget = 0;
+    el.dock.classList.remove('hide');
+    el.toolBar.classList.remove('show');
+    refreshDock();
+    save();
+    void cfg;
+  }
+
+  /* ------------------------------------------------------------------ */
   /* need bubble                                                         */
   /* ------------------------------------------------------------------ */
   function drawNeedBubble(L, x, y, need, t) {
@@ -546,6 +940,10 @@
     if (!cfg) return;
     Sfx.init();
 
+    // poking a sleeping pet into action is the rudest thing you can do
+    if (rt.sleep) { wake(true); return; }
+    if (rt.pooping) return;
+
     if (pet.stats[cfg.stat] > (cfg.kind === 'tool' ? 95 : 92)) {
       say(cfg.full);
       Sfx.sad();
@@ -554,13 +952,10 @@
     }
 
     if (cfg.kind === 'tool') return startTool(name);
+    if (name === 'play') { el.gamePicker.classList.add('show'); return; }
 
     rt.activity = { kind: name, t: 0, dur: cfg.dur, given: 0, beat: 0 };
     rt.props = {};
-    if (name === 'play') {
-      rt.props.ball = { x: W * 0.72, y: room.groundY - 34, vx: -16, vy: 0, spin: 0 };
-      Sfx.boing();
-    }
     refreshDock();
   }
 
@@ -572,7 +967,7 @@
     var p = a.t / a.dur;
 
     var fillFrom = 0.25, fillTo = 0.8;
-    var want = cfg.gain * clamp((p - fillFrom) / (fillTo - fillFrom), 0, 1);
+    var want = (cfg.gain || 0) * clamp((p - fillFrom) / (fillTo - fillFrom), 0, 1);
     if (want > a.given) {
       pet.stats[cfg.stat] = clamp(pet.stats[cfg.stat] + (want - a.given), 0, 100);
       a.given = want;
@@ -606,21 +1001,49 @@
     }
 
     if (a.kind === 'play') {
-      var b = rt.props.ball;
-      b.vy += 90 * dt;
-      b.x += b.vx * dt;
-      b.y += b.vy * dt;
-      b.spin += dt * 6;
-      if (b.y > room.groundY - 5) {
-        b.y = room.groundY - 5;
-        b.vy = -Math.abs(b.vy) * 0.78;
-        if (Math.abs(b.vy) < 12) b.vy = -46;
-        Sfx.boing();
+      if (a.game === 'ball') {
+        var b = rt.props.ball;
+        b.vy += 90 * dt;
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        b.spin += dt * 6;
+        if (b.y > room.groundY - 5) {
+          b.y = room.groundY - 5;
+          b.vy = -Math.abs(b.vy) * 0.78;
+          if (Math.abs(b.vy) < 12) b.vy = -46;
+          Sfx.boing();
+        }
+        if (b.x < 8) { b.x = 8; b.vx = Math.abs(b.vx); }
+        if (b.x > W - 8) { b.x = W - 8; b.vx = -Math.abs(b.vx); }
+        rt.leanTarget = clamp((b.x - W / 2) * 0.16, -5, 5);
+      } else if (a.game === 'bubble') {
+        a.spawnT -= dt;
+        if (a.spawnT <= 0) {
+          a.spawnT = 0.42 + Math.random() * 0.3;
+          rt.props.bubbles.push({
+            x: 8 + Math.random() * (W - 16), y: room.groundY + 4,
+            r: 3 + Math.random() * 1.8, vy: -(9 + Math.random() * 6), wob: Math.random() * 6
+          });
+        }
+        var nearest = null;
+        for (var i2 = rt.props.bubbles.length - 1; i2 >= 0; i2--) {
+          var bb = rt.props.bubbles[i2];
+          bb.y += bb.vy * dt;
+          bb.x += Math.sin((a.t + bb.wob) * 2.2) * 0.35;
+          if (bb.y < 10) { rt.props.bubbles.splice(i2, 1); continue; }
+          if (!nearest || bb.y > nearest.y) nearest = bb;
+        }
+        if (nearest) rt.leanTarget = clamp((nearest.x - W / 2) * 0.14, -5, 5);
+      } else if (a.game === 'treat') {
+        updateTreatGame(dt);
+        rt.leanTarget = 0;
       }
-      if (b.x < 8) { b.x = 8; b.vx = Math.abs(b.vx); }
-      if (b.x > W - 8) { b.x = W - 8; b.vx = -Math.abs(b.vx); }
-      rt.leanTarget = clamp((b.x - W / 2) * 0.16, -5, 5);
-      if (Math.random() < dt * 3) spawn('note', W / 2 + (Math.random() - 0.5) * 16, room.groundY - 30, { vy: -10, max: 1.2 });
+      if (a.game !== 'treat' && Math.random() < dt * 3) {
+        spawn('note', W / 2 + (Math.random() - 0.5) * 16, room.groundY - 30, { vy: -10, max: 1.2 });
+      }
+      el.toolText.textContent = GAMES[a.game].hint + (a.score ? '  ' + a.score : '');
+      if (a.dur > 0 && a.t >= a.dur) endGame();
+      return;
     }
 
     if (a.t >= a.dur) {
@@ -784,7 +1207,8 @@
     ['scene', 'ui', 'petName', 'petStage', 'growthFill', 'hearts', 'speech', 'hint',
       'dock', 'toolBar', 'toolText', 'doneBtn', 'petsBtn', 'soundBtn', 'petsScreen',
       'petsClose', 'petGrid', 'startScreen', 'nameInput', 'startBtn', 'startBack',
-      'confirmModal', 'confirmText', 'confirmYes', 'confirmNo', 'celebrate', 'celebrateText'
+      'confirmModal', 'confirmText', 'confirmYes', 'confirmNo', 'celebrate', 'celebrateText',
+      'gamePicker', 'gameCancel'
     ].forEach(function (id) { el[id] = $(id); });
 
     el.actionBtns = Array.prototype.slice.call(document.querySelectorAll('[data-action]'));
@@ -868,8 +1292,10 @@
       for (var i = 0; i < 5; i++) Icons.render(el.heartCanvases[i], i < hc ? 'heart' : 'heartEmpty', 13);
     }
 
-    if (!rt.tool) {
-      if (rt.activity) setHint('');
+    if (!rt.tool && !rt.activity) {
+      if (rt.sleep) setHint('Shhh… your pet is asleep.');
+      else if (rt.angry > 0) setHint('Uh oh — you woke it up!');
+      else if (pet.messes.length) setHint('Tap the mess to clean it up!');
       else if (lowVal < 30) setHint(HINTS[lowest]);
       else setHint('Stroke your pet to give it cuddles!');
     }
@@ -881,6 +1307,9 @@
   var bounds = null;
 
   function currentEyes() {
+    if (rt.sleep) return 'sleep';
+    if (rt.angry > 0) return 'angry';
+    if (rt.pooping) return 'blink';
     if (rt.petting || rt.tool) return 'happy';
     if (rt.blinking > 0) return 'blink';
     if (rt.activity) return 'open';
@@ -891,6 +1320,9 @@
   }
 
   function currentMouth() {
+    if (rt.sleep) return 'snooze';
+    if (rt.angry > 0) return 'angry';
+    if (rt.pooping) return 'snooze';
     if (rt.petting || rt.tool) return 'smile';
     var a = rt.activity;
     if (a && (a.kind === 'feed' || a.kind === 'water')) {
@@ -909,14 +1341,26 @@
 
     if (rt.props.tub) drawTub(L, rt.props.tub.x, rt.props.tub.y, true, rt.t);
 
+    // messes behind the pet get drawn first so it can stand in front of them
+    var mi;
+    for (mi = 0; mi < pet.messes.length; mi++) {
+      if (pet.messes[mi].ny < 0.4) {
+        drawMess(L, pet.messes[mi], rt.t, rt.messAge[messKey(pet.messes[mi])] || 0);
+      }
+    }
+
     L.ellipse(W / 2, room.groundY + 1, 13, 2.5, C('#e0b273'));
 
     petLayer.clear();
     var bobAmp = rt.activity && rt.activity.kind === 'play' ? 1.8 : 0.8;
+    if (rt.sleep) bobAmp = 0.5;
+    var squat = rt.pooping ? Math.min(3, rt.pooping.t * 4) * (rt.pooping.t > 1.6 ? 0.3 : 1) : 0;
+    var wagSpeed = rt.angry > 0 ? 11 : (rt.petting || rt.tool ? 7 : rt.sleep ? 0.8 : 2.4);
     bounds = Pets.drawPet(petLayer, pet.species, Pets.stageFor(pet.growth).key, {
-      bob: Math.sin(rt.bobPhase) * bobAmp,
+      bob: Math.sin(rt.bobPhase) * bobAmp + squat,
       lean: rt.lean,
-      tailWag: Math.sin(rt.t * (rt.petting || rt.tool ? 7 : 2.4)) * (rt.petting ? 1.4 : 1),
+      sleep: rt.sleep ? 1 : 0,
+      tailWag: Math.sin(rt.t * wagSpeed) * (rt.angry > 0 ? 1.8 : rt.petting ? 1.4 : 1),
       earWig: Math.sin(rt.t * 3.1) * 0.5,
       eyes: currentEyes(),
       mouth: currentMouth(),
@@ -926,9 +1370,28 @@
     });
     L.blit(petLayer, Math.round(W / 2 - Pets.SIZE / 2), Math.round(room.groundY - Pets.FEET));
 
+    // messes in front of the pet
+    for (mi = 0; mi < pet.messes.length; mi++) {
+      if (pet.messes[mi].ny >= 0.4) {
+        drawMess(L, pet.messes[mi], rt.t, rt.messAge[messKey(pet.messes[mi])] || 0);
+      }
+    }
+
     if (rt.props.bowl) drawBowl(L, rt.props.bowl.x, rt.props.bowl.y, rt.props.bowl.fill, rt.props.bowl.level);
     if (rt.props.tub) drawTub(L, rt.props.tub.x, rt.props.tub.y, false, rt.t);
     if (rt.props.ball) drawBall(L, rt.props.ball.x, rt.props.ball.y, rt.props.ball.spin);
+    if (rt.props.bubbles) {
+      for (var bi = 0; bi < rt.props.bubbles.length; bi++) drawGameBubble(L, rt.props.bubbles[bi]);
+    }
+    if (rt.activity && rt.activity.game === 'treat' && rt.activity.cups) {
+      var g = rt.activity;
+      if (g.cups[g.treatCup].lift > 3) drawTreat(L, g.cups[g.treatCup].x, cupY());
+      var order = [0, 1, 2].sort(function (a2, b2) { return g.cups[a2].lift - g.cups[b2].lift; });
+      for (var ci = 0; ci < 3; ci++) {
+        var cup = g.cups[order[ci]];
+        drawCup(L, cup.x, cupY(), cup.lift);
+      }
+    }
 
     drawParticles(L);
 
@@ -938,7 +1401,7 @@
       else drawBrush(L, rt.tool.x, rt.tool.y, tilt);
     }
 
-    if (!rt.activity && !rt.tool) {
+    if (!rt.activity && !rt.tool && !rt.sleep && !rt.angry) {
       var lowest = null, lv = 101;
       for (var i = 0; i < STAT_KEYS.length; i++) {
         if (pet.stats[STAT_KEYS[i]] < lv) { lv = pet.stats[STAT_KEYS[i]]; lowest = STAT_KEYS[i]; }
@@ -970,10 +1433,14 @@
       var p = db.pets[i];
       var busy = (p === pet) && (rt.activity || rt.tool);
       var rate = p === pet ? (busy ? 0 : 1) : IDLE_RATE;
+      if (p === pet && rt.sleep) rate = 0.5;          // resting is restful
       if (rate > 0) {
+        // a mess on the floor makes the room dirty much faster
+        var messMult = 1 + (p.messes ? p.messes.length : 0) * 0.8;
         for (var s = 0; s < STAT_KEYS.length; s++) {
           var k = STAT_KEYS[s];
-          p.stats[k] = clamp(p.stats[k] - DECAY[k] * dt * rate, 0, 100);
+          var r2 = rate * (k === 'clean' ? messMult : 1);
+          p.stats[k] = clamp(p.stats[k] - DECAY[k] * dt * r2, 0, 100);
         }
       }
       if (p !== pet) p.love = clamp((p.love || 0) - dt * 0.5, 0, 100);
@@ -986,10 +1453,11 @@
       if (avgStats(pet) > 55) addGrowth(0.6);
     }
 
-    rt.bobPhase += dt * (rt.activity && rt.activity.kind === 'play' ? 7 : 2.2);
+    rt.bobPhase += dt * (rt.sleep ? 0.9 : rt.activity && rt.activity.kind === 'play' ? 7 : 2.2);
     rt.lean += (rt.leanTarget - rt.lean) * Math.min(1, dt * 6);
     if (rt.blinking > 0) rt.blinking -= dt;
     else if (rt.t > rt.blinkAt) { rt.blinking = 0.14; rt.blinkAt = rt.t + 2 + Math.random() * 3.5; }
+    if (rt.sleep) rt.blinking = 0;
     if (rt.growthFlash > 0) rt.growthFlash -= dt;
     if (rt.shine > 0) rt.shine -= dt * 0.5;
 
@@ -1012,6 +1480,11 @@
       }
     }
 
+    maybeSleep(dt);
+    updateSleep(dt);
+    updateAngry(dt);
+    updateMesses(dt);
+    updatePooping(dt);
     updateActivity(dt);
     updateTool(dt);
     if (!rt.tool) syncSpots();
@@ -1057,18 +1530,58 @@
         scrubAt(p.x, p.y);
         return;
       }
-      if (rt.activity && rt.activity.kind === 'play' && rt.props.ball) {
-        var b = rt.props.ball;
-        if (Math.abs(p.x - b.x) < 8 && Math.abs(p.y - b.y) < 8) {
-          b.vy = -70;
-          b.vx = (b.x < W / 2 ? 1 : -1) * (18 + Math.random() * 16);
-          pet.stats.fun = clamp(pet.stats.fun + 3, 0, 100);
-          addGrowth(0.4);
-          Sfx.boing();
-          spawn('sparkle', b.x, b.y - 4, { vy: -12, max: 0.6 });
+      // mini games
+      if (rt.activity && rt.activity.kind === 'play') {
+        var g = rt.activity;
+        if (g.game === 'ball' && rt.props.ball) {
+          var b = rt.props.ball;
+          if (Math.abs(p.x - b.x) < 9 && Math.abs(p.y - b.y) < 9) {
+            b.vy = -70;
+            b.vx = (b.x < W / 2 ? 1 : -1) * (18 + Math.random() * 16);
+            g.score++;
+            pet.stats.fun = clamp(pet.stats.fun + GAMES.ball.per, 0, 100);
+            addGrowth(0.4);
+            Sfx.boing();
+            spawn('sparkle', b.x, b.y - 4, { vy: -12, max: 0.6 });
+          }
           return;
         }
+        if (g.game === 'bubble' && rt.props.bubbles) {
+          for (var bi = rt.props.bubbles.length - 1; bi >= 0; bi--) {
+            var bb = rt.props.bubbles[bi];
+            if (Math.abs(p.x - bb.x) < bb.r + 4 && Math.abs(p.y - bb.y) < bb.r + 4) {
+              rt.props.bubbles.splice(bi, 1);
+              g.score++;
+              pet.stats.fun = clamp(pet.stats.fun + GAMES.bubble.per, 0, 100);
+              addGrowth(0.35);
+              Sfx.pop();
+              for (var pi = 0; pi < 4; pi++) {
+                spawn('sparkle', bb.x + (Math.random() - 0.5) * 6, bb.y,
+                  { vx: (Math.random() - 0.5) * 22, vy: -8 - Math.random() * 10, g: 30, max: 0.6 });
+              }
+              break;
+            }
+          }
+          return;
+        }
+        if (g.game === 'treat') { pickCup(p.x, p.y); return; }
+        return;
       }
+
+      // tidy up an accident
+      if (!rt.tool && cleanMessAt(p.x, p.y)) return;
+
+      // a sleeping pet does not want to be prodded
+      if (rt.sleep) {
+        if (overPet(p)) wake(true);
+        return;
+      }
+      if (rt.angry > 0) {
+        if (overPet(p)) { say('Hmph!', 1200); Sfx.growl(); }
+        return;
+      }
+      if (rt.pooping) return;
+
       if (!rt.activity && overPet(p)) {
         rt.petting = true;
         rt.lastHeart = -1;
@@ -1115,7 +1628,22 @@
 
     el.doneBtn.addEventListener('click', function () {
       Sfx.click();
-      endTool(false);
+      if (rt.activity && rt.activity.kind === 'play') endGame();
+      else endTool(false);
+    });
+
+    var gameCards = document.querySelectorAll('.game-card');
+    for (var gi = 0; gi < gameCards.length; gi++) {
+      (function (card) {
+        card.addEventListener('click', function () {
+          Sfx.click();
+          startGame(card.dataset.game);
+        });
+      })(gameCards[gi]);
+    }
+    el.gameCancel.addEventListener('click', function () {
+      Sfx.click();
+      el.gamePicker.classList.remove('show');
     });
 
     el.soundBtn.addEventListener('click', function () {
@@ -1242,6 +1770,11 @@
     rt.foam = [];
     rt.spots = [];
     rt.shine = 0;
+    rt.sleep = null;
+    rt.angry = 0;
+    rt.pooping = null;
+    rt.messAge = {};
+    rt.messTimer = 40 + Math.random() * 50;
     db.activeId = id;
     pet = p;
     applyAway(pet);

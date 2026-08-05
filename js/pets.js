@@ -95,14 +95,25 @@
   var SIZE = 44;      // pet layer is SIZE x SIZE
   var FEET = 40;      // ground line inside the layer
 
-  function drawEye(L, sp, ex, ey, r, state) {
+  function drawEye(L, sp, ex, ey, r, state, side) {
+    side = side || -1;
     var dark = C(sp.eyeColor);
     var white = C('#ffffff');
 
     switch (state) {
       case 'blink':
-      case 'sleep':
         L.rect(ex - r, ey, r * 2, 1, dark);
+        break;
+
+      case 'sleep':   // a contented downward curve
+        L.set(ex - r, ey - 1, dark);
+        L.rect(ex - r + 1, ey, r * 2 - 2, 1, dark);
+        L.set(ex + r, ey - 1, dark);
+        break;
+
+      case 'angry':
+        L.ellipse(ex, ey + r * 0.35, r * 0.8, r * 0.5, dark);
+        L.line(ex + side * r * 1.05, ey - r * 1.15, ex - side * r * 0.95, ey - r * 0.3, dark, 1);
         break;
 
       case 'happy':
@@ -155,6 +166,20 @@
         L.set(mx + 1, my, dark);
         L.set(mx + 2, my + 1, dark);
         break;
+      case 'angry':
+        L.set(mx - 2, my + 1, dark);
+        L.set(mx - 1, my, dark);
+        L.set(mx, my + 1, dark);
+        L.set(mx + 1, my, dark);
+        L.set(mx + 2, my + 1, dark);
+        L.set(mx - 1, my + 1, dark);
+        L.set(mx + 1, my + 1, dark);
+        break;
+
+      case 'snooze':
+        L.ellipse(mx, my + 1, 1.4, 1.1, dark);
+        break;
+
       case 'none':
         break;
       default: // smile — a little "w"
@@ -182,10 +207,11 @@
     var brx = st.body[0], bry = st.body[1];
     var bob = opts.bob || 0;
     var lean = opts.lean || 0;
+    var sleep = opts.sleep || 0;
 
     var cx = SIZE / 2;
-    var bodyCY = FEET - bry - 2.5 + bob * 0.5;
-    var headCY = bodyCY - (bry + hry) * 0.74 + bob;
+    var bodyCY = FEET - bry - 2.5 + bob * 0.5 + sleep;
+    var headCY = bodyCY - (bry + hry) * 0.74 + bob + hry * 0.45 * sleep;
     var headCX = cx + lean;
 
     /* ---- tail (behind everything, sweeping up the left side) ---- */
@@ -237,8 +263,8 @@
     }
 
     /* ---- ears (drawn before the head so the bases tuck under it) ---- */
-    var earLen = st.ear;
-    var wig = opts.earWig || 0;
+    var earLen = st.ear * (1 - 0.18 * sleep);
+    var wig = (opts.earWig || 0) + sleep * 1.6;
     function grow(p, g2, k) {
       return { x: g2.x + (p.x - g2.x) * k, y: g2.y + (p.y - g2.y) * k };
     }
@@ -293,8 +319,8 @@
     var eyeY = headCY - hry * 0.02;
     var eyeDX = hrx * 0.44;
     var eyes = opts.eyes || 'open';
-    drawEye(L, sp, headCX - eyeDX, eyeY, eyeR, eyes === 'wink' ? 'blink' : eyes);
-    drawEye(L, sp, headCX + eyeDX, eyeY, eyeR, eyes);
+    drawEye(L, sp, headCX - eyeDX, eyeY, eyeR, eyes === 'wink' ? 'blink' : eyes, -1);
+    drawEye(L, sp, headCX + eyeDX, eyeY, eyeR, eyes, 1);
 
     // blush
     if (opts.blush !== false) {

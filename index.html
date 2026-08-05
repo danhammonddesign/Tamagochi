@@ -116,6 +116,33 @@
   </div>
 </div>
 
+<!-- ------------- pick a game ------------- -->
+<div id="gamePicker" class="overlay">
+  <div class="modal wide">
+    <p class="modal-title">What shall we play?</p>
+    <div class="game-list">
+      <button class="game-card" data-game="ball">
+        <canvas data-icon="play" data-icon-size="34"></canvas>
+        <span class="g-name">Bounce</span>
+        <span class="g-sub">Tap the ball</span>
+      </button>
+      <button class="game-card" data-game="bubble">
+        <canvas data-icon="bubble" data-icon-size="34"></canvas>
+        <span class="g-name">Bubbles</span>
+        <span class="g-sub">Pop them all</span>
+      </button>
+      <button class="game-card" data-game="treat">
+        <canvas data-icon="treat" data-icon-size="34"></canvas>
+        <span class="g-name">Find It</span>
+        <span class="g-sub">Where's the treat?</span>
+      </button>
+    </div>
+    <div class="modal-btns">
+      <button id="gameCancel" class="pill-btn ghost">Not now</button>
+    </div>
+  </div>
+</div>
+
 <!-- ------------- confirm ------------- -->
 <div id="confirmModal" class="overlay">
   <div class="modal">

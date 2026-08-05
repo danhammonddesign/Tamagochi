@@ -44,6 +44,24 @@
       for (var x = 2; x <= 10; x += 2) L.rect(x, 11, 1, 3, C('#fbf3e6'));
     },
 
+    // ---- mini games ---------------------------------------------------
+    bubble: function (L) {
+      L.disc(6.5, 9, 5.2, C('#bfe9ff'));
+      L.disc(6.5, 9, 3.4, C('#eaf9ff'));
+      L.disc(4.6, 7, 1.4, C('#ffffff'));
+      L.disc(12.5, 4, 2.6, C('#bfe9ff'));
+      L.set(12, 3, C('#ffffff'));
+    },
+    treat: function (L) {                      // cup with a star over it
+      L.tri(3, 14, 13, 14, 4.6, 6, C('#77b8f0'));
+      L.tri(13, 14, 11.4, 6, 4.6, 6, C('#77b8f0'));
+      L.rect(4, 5, 8, 2, C('#9ad0ff'));
+      L.rect(5, 9, 2, 4, C('#a8d8ff'));
+      L.tri(8, 0.5, 6, 4.5, 10, 4.5, C('#ffd93d'));
+      L.tri(8, 0.5, 6, 4.5, 10, 4.5, C('#ffd93d'));
+      L.disc(8, 3, 1.6, C('#ffd93d'));
+    },
+
     // ---- chrome -------------------------------------------------------
     paw: function (L) {
       L.disc(4, 5, 2, C('#ff8fb0'));

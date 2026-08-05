@@ -473,6 +473,30 @@ body {
 .modal-title { margin: 0 0 16px; font-size: 18px; font-weight: 900; }
 .modal-btns { display: flex; gap: 10px; justify-content: center; }
 
+/* ---------------- game picker ---------------- */
+.modal.wide { max-width: 380px; width: 100%; }
+
+.game-list { display: flex; flex-direction: column; gap: 10px; }
+
+.game-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 3px solid rgba(58, 43, 64, .12);
+  border-radius: 18px;
+  background: #f7f8fc;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: transform .08s, border-color .15s;
+}
+.game-card:active { transform: scale(.97); }
+.game-card:hover { border-color: var(--pink); }
+.game-card canvas { image-rendering: pixelated; display: block; flex: 0 0 auto; }
+.game-card .g-name { font-size: 17px; font-weight: 900; }
+.game-card .g-sub { font-size: 12px; font-weight: 800; color: var(--muted); margin-left: auto; }
+
 /* ---------------- tight screens ---------------- */
 @media (max-height: 620px) {
   .ring { width: 48px; height: 48px; }

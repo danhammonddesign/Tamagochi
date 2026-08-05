@@ -32,7 +32,7 @@ thumb-sized targets along the bottom, and everything is saved to
    |---|---|---|
    | Feed | Food | A bowl slides in and your pet tucks in |
    | Water | Water | A water bowl to lap from |
-   | Play | Fun | A ball bounces around — tap it for bonus fun |
+   | Play | Fun | Pick one of three mini games |
    | Bath | Clean | **Hands on:** drag the soap over your pet to scrub the mud off |
    | Brush | Brush | **Hands on:** swipe the brush over the fur to smooth the tufts out |
 
@@ -42,6 +42,36 @@ thumb-sized targets along the bottom, and everything is saved to
    **Baby → Kid → Teen → Adult**, each with a little celebration.
 5. Tap the **paw** button (top left) for *My Pets*: switch between pets, add a
    new one (up to six), or say goodbye to one.
+
+### Mini games
+
+Tapping **Play** lets you pick what to play:
+
+* **Bounce** — a ball ricochets around the room; tap it to keep it flying.
+* **Bubbles** — bubbles drift up from the floor; pop as many as you can before
+  time runs out. Your pet follows them with its eyes.
+* **Find It** — a treat goes under one of three cups, the cups shuffle, and you
+  pick the one you think is hiding it. Three rounds.
+
+Each game shows your score in the bar at the bottom and tops up the Fun ring
+as you play. **Done** ends a game early.
+
+### Naps
+
+Your pet nods off by itself now and then — closed eyes, drooped ears, Zzz
+floating up. Let it sleep and it wakes on its own in a better mood. Poke it, or
+press a care button while it's asleep, and it wakes up **cross**: angry brows,
+gritted teeth, red pops over its head, and it sulks for a few seconds before
+forgiving you. It only naps when it doesn't need anything, so a sleeping pet
+never blocks you from looking after it.
+
+### Accidents
+
+Every so often your pet has an accident on the floor — a poop or a puddle. It
+squats, says "Oops!", and the mess stays there until you **tap it to clean it
+up**. Leave it and the room gets dirty roughly twice as fast per mess, and
+flies turn up after a while. Come back after a long time away and you may find
+one or two waiting for you.
 
 ### Bath and brush
 
