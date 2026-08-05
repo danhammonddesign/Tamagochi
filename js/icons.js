@@ -44,6 +44,15 @@
       for (var x = 2; x <= 10; x += 2) L.rect(x, 11, 1, 3, C('#fbf3e6'));
     },
 
+    medicine: function (L) {                   // bottle with a cross
+      L.rect(6, 1, 4, 2, C('#b9c2d0'));
+      L.rect(4, 3, 8, 3, C('#d8dee8'));
+      L.rect(3, 6, 10, 8, C('#7fd8a8'));
+      L.rect(3, 8, 10, 5, C('#ffffff'));
+      L.rect(7, 9, 2, 3, C('#ff5f5f'));
+      L.rect(6, 10, 4, 1, C('#ff5f5f'));
+    },
+
     // ---- mini games ---------------------------------------------------
     bubble: function (L) {
       L.disc(6.5, 9, 5.2, C('#bfe9ff'));

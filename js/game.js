@@ -30,12 +30,17 @@
     { key: 'dry', target: 'drip', tool: 'towel', text: 'Step 3 of 3 · Rub your pet dry!' }
   ];
 
+  var STARVING = 15;          // a stat this low starts making the pet unwell
+  var SICK_AFTER = 80;        // seconds of going without before it gets sick
+  var SICK_DECAY = 1.4;       // everything drains faster while poorly
+
   var ACTIONS = {
     feed: { stat: 'food', kind: 'anim', dur: 4.6, gain: 38, done: 'Yum yum!', full: "I'm so full!" },
     water: { stat: 'water', kind: 'anim', dur: 4.0, gain: 42, done: 'Glug glug!', full: 'Not thirsty!' },
     play: { stat: 'fun', kind: 'games', full: 'Played out!' },
     bath: { stat: 'clean', kind: 'tool', done: 'Squeaky clean!', full: "I'm already clean!" },
-    brush: { stat: 'groom', kind: 'tool', done: 'So fluffy!', full: 'My fur is perfect!' }
+    brush: { stat: 'groom', kind: 'tool', done: 'So fluffy!', full: 'My fur is perfect!' },
+    medicine: { stat: null, kind: 'anim', dur: 4.4, gain: 0, done: 'All better!', full: '' }
   };
 
   var HINTS = {
@@ -134,7 +139,7 @@
       growth: 0, stage: 'baby',
       stats: { food: 75, water: 75, fun: 75, clean: 95, groom: 92 },
       love: 40, born: Date.now(), saved: Date.now(), cuddles: 0,
-      messes: []
+      messes: [], sick: false, sickT: 0
     };
   }
 
@@ -149,6 +154,8 @@
     if (typeof p.love !== 'number') p.love = 40;
     if (!p.id) p.id = uid();
     if (!Pets.SPECIES[p.species]) p.species = 'cat';
+    p.sick = !!p.sick;
+    if (typeof p.sickT !== 'number') p.sickT = 0;
     if (!Array.isArray(p.messes)) p.messes = [];
     p.messes = p.messes.slice(0, MAX_MESS);
     p.stage = Pets.stageFor(p.growth).key;
@@ -212,6 +219,7 @@
     // a pet left alone for a while will have had an accident or two
     var owed = Math.min(2, Math.floor(used / 900));
     for (var m = 0; m < owed; m++) addMess(p);
+    if (!p.sick && used > 1800 && (p.stats.food < 20 || p.stats.water < 20)) p.sick = true;
     p.saved = Date.now();
     return away;
   }
@@ -223,7 +231,9 @@
   }
 
   function happiness(p) {
-    return clamp(avgStats(p) * 0.75 + (p.love || 0) * 0.25, 0, 100);
+    var h = avgStats(p) * 0.75 + (p.love || 0) * 0.25;
+    if (p.sick) h *= 0.55;
+    return clamp(h, 0, 100);
   }
 
   function heartCount(p) { return Math.round(happiness(p) / 20); }
@@ -274,11 +284,12 @@
   /* ------------------------------------------------------------------ */
   /* outline() only fills empty pixels, and the room covers the whole scene,
      so anything needing its own black edge is drawn on a scratch layer. */
-  function stampOutlined(L, x, y, draw) {
+  function stampOutlined(L, x, y, draw, keepLit) {
     fx.clear();
     draw(fx, 22, 22);
     fx.outline(C('#141014'));
     L.blit(fx, Math.round(x) - 22, Math.round(y) - 22);
+    if (keepLit && screen) screen.protect(fx, Math.round(x) - 22, Math.round(y) - 22);
   }
 
   /* ------------------------------------------------------------------ */
@@ -306,7 +317,8 @@
     zzz: { rows: ['###', '..#', '.#.', '###'], color: '#8f9bd6' },
     anger: { rows: ['.#.#.', '.###.', '#####', '.###.', '.#.#.'], color: '#ff3b3b' },
     poof: { rows: ['.##.', '####', '####', '.##.'], color: '#e6ded4' },
-    star: { rows: ['..#..', '.###.', '#####', '.###.', '..#..'], color: '#ffd93d' }
+    star: { rows: ['..#..', '.###.', '#####', '.###.', '..#..'], color: '#ffd93d' },
+    sick: { rows: ['.##.', '#..#', '#..#', '.##.'], color: '#8fd66a' }
   };
 
   function updateParticles(dt) {
@@ -338,19 +350,24 @@
   /* Keyframes around the 24 hour dial. Sunrise runs 7-9am and sunset
      7-9pm, as asked; everything between is interpolated so the room shifts
      gradually rather than snapping. */
+  /* How dark the room is through the day. Sunrise 7-9am lifts it, sunset
+     7-9pm brings it back down. This only dims the room — the sky colour in
+     the window still changes, and the pet keeps its own colours. */
   var SKY_KEYS = [
-    { h: 0, tint: [22, 30, 84, 0.46], sky: '#161d44', stars: 1 },
-    { h: 6, tint: [22, 30, 84, 0.46], sky: '#161d44', stars: 1 },
-    { h: 7, tint: [96, 66, 122, 0.40], sky: '#5c4478', stars: 0.45 },
-    { h: 8, tint: [255, 148, 88, 0.30], sky: '#ff9e6b', stars: 0 },
-    { h: 9, tint: [255, 206, 156, 0.07], sky: '#a8e0ff', stars: 0 },
-    { h: 12, tint: [255, 255, 255, 0], sky: '#a8e0ff', stars: 0 },
-    { h: 18.5, tint: [255, 236, 200, 0.05], sky: '#b6e4ff', stars: 0 },
-    { h: 19, tint: [255, 152, 84, 0.20], sky: '#ffb07a', stars: 0 },
-    { h: 20, tint: [255, 108, 72, 0.32], sky: '#ff7a5c', stars: 0.15 },
-    { h: 21, tint: [22, 30, 84, 0.46], sky: '#161d44', stars: 1 },
-    { h: 24, tint: [22, 30, 84, 0.46], sky: '#161d44', stars: 1 }
+    { h: 0, dark: 1, sky: '#161d44', stars: 1 },
+    { h: 6, dark: 1, sky: '#161d44', stars: 1 },
+    { h: 7, dark: 0.85, sky: '#5c4478', stars: 0.45 },
+    { h: 8, dark: 0.42, sky: '#ff9e6b', stars: 0 },
+    { h: 9, dark: 0, sky: '#a8e0ff', stars: 0 },
+    { h: 18.5, dark: 0, sky: '#b6e4ff', stars: 0 },
+    { h: 19, dark: 0.14, sky: '#ffb07a', stars: 0 },
+    { h: 20, dark: 0.5, sky: '#ff7a5c', stars: 0.15 },
+    { h: 21, dark: 1, sky: '#161d44', stars: 1 },
+    { h: 24, dark: 1, sky: '#161d44', stars: 1 }
   ];
+
+  var DIM = [20, 26, 58];       // the colour the room fades toward
+  var DIM_MAX = 0.38;           // how dark it ever gets
 
   function hexRgb(h) {
     var n = parseInt(h.slice(1), 16);
@@ -367,7 +384,7 @@
     return out;
   }
 
-  var sky = { tint: [0, 0, 0, 0], sky: '#a8e0ff', stars: 0, hour: 12, night: 0 };
+  var sky = { tint: [DIM[0], DIM[1], DIM[2], 0], sky: '#a8e0ff', stars: 0, hour: 12, night: 0 };
 
   function updateSky() {
     var d = new Date();
@@ -377,11 +394,11 @@
       if (h >= SKY_KEYS[i].h && h <= SKY_KEYS[i + 1].h) { a = SKY_KEYS[i]; b = SKY_KEYS[i + 1]; break; }
     }
     var k = b.h === a.h ? 0 : (h - a.h) / (b.h - a.h);
-    for (var j = 0; j < 4; j++) sky.tint[j] = a.tint[j] + (b.tint[j] - a.tint[j]) * k;
+    sky.tint[3] = (a.dark + (b.dark - a.dark) * k) * DIM_MAX;
     sky.sky = mixHex(a.sky, b.sky, k);
     sky.stars = a.stars + (b.stars - a.stars) * k;
     sky.hour = h;
-    sky.night = sky.stars;
+    sky.night = a.dark + (b.dark - a.dark) * k;
   }
 
   function greeting() {
@@ -551,6 +568,22 @@
     });
   }
 
+  function drawBottle(L, x, y) {
+    stampOutlined(L, x, y - 5, function (b, bx, by) {
+      b.rect(bx - 1, by - 9, 3, 2, C('#b9c2d0'));
+      b.rect(bx - 3, by - 7, 7, 2, C('#d8dee8'));
+      b.rect(bx - 4, by - 5, 9, 9, C('#7fd8a8'));
+      b.rect(bx - 4, by - 2, 9, 4, C('#ffffff'));
+      b.rect(bx - 0.5, by - 1, 2, 3, C('#ff5f5f'));
+      b.rect(bx - 2, by, 5, 1, C('#ff5f5f'));
+    });
+    // spoon
+    stampOutlined(L, x - 9, y - 9, function (b, bx, by) {
+      b.ellipse(bx, by, 2.6, 1.8, C('#dfe6ee'));
+      b.line(bx + 2, by, bx + 6, by - 2, C('#b9c2d0'), 1.6);
+    });
+  }
+
   function drawTub(L, x, y, backOnly, t) {
     var shell = C('#ffffff'), shellShade = C('#dfe9f5'), water = C('#8fd8ff');
     if (backOnly) {
@@ -596,7 +629,7 @@
       b.ellipse(bx - 1.6, by - 0.8, 1.8, 0.9, C('#eaf9ff'));
       b.disc(bx + 5, by - 4 + tilt, 1.6, C('#ffffff'));
       b.disc(bx - 5, by - 5 - tilt, 1.2, C('#ffffff'));
-    });
+    }, true);
   }
 
   function drawShower(L, x, y, tilt, running) {
@@ -604,7 +637,7 @@
       b.line(bx + 2, by - 2, bx + 7 + tilt, by - 8, C('#b9c2d0'), 2.4);
       b.ellipse(bx - 1, by, 4.6, 2.6, C('#d8dee8'));
       b.ellipse(bx - 1, by - 1, 4, 1.7, C('#eef2f8'));
-    });
+    }, true);
     if (running) {
       for (var i = 0; i < 4; i++) {
         var jx = x - 4 + i * 2.2;
@@ -620,7 +653,7 @@
       b.rect(bx - 5, by - 3 + tilt * 0.3, 10, 2, C('#ff8fb8'));
       b.rect(bx - 5, by + 0.5, 10, 1, C('#ffb3d0'));
       for (var i = 0; i < 3; i++) b.rect(bx - 4 + i * 3, by + 4 + tilt * 0.3, 2, 2, C('#ffe4f0'));
-    });
+    }, true);
   }
 
   function drawBrush(L, x, y, tilt) {
@@ -629,7 +662,7 @@
       b.ellipse(bx - 1, by, 5, 3, C('#d9954f'));
       b.ellipse(bx - 1, by - 1, 4.4, 2, C('#eab275'));
       for (var i = -4; i <= 3; i += 2) b.rect(bx + i, by + 2, 1, 3, C('#fbf3e6'));
-    });
+    }, true);
   }
 
   /* ------------------------------------------------------------------ */
@@ -755,6 +788,42 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* falling ill                                                         */
+  /* ------------------------------------------------------------------ */
+  /* Going hungry or thirsty for long enough makes a pet poorly. It never
+     gets worse than this and medicine always works, but everything drains
+     faster and it is too under the weather to play. */
+  function updateSickness(p, dt, rate) {
+    if (p.sick) return;
+    var hungry = p.stats.food < STARVING || p.stats.water < STARVING;
+    if (hungry) {
+      p.sickT = (p.sickT || 0) + dt * rate;
+      if (p.sickT >= SICK_AFTER) {
+        p.sickT = 0;
+        p.sick = true;
+        if (p === pet) {
+          say("I don't feel well…", 2600);
+          Sfx.sad();
+          save();
+        }
+      }
+    } else {
+      p.sickT = Math.max(0, (p.sickT || 0) - dt * 0.8);
+    }
+  }
+
+  function cure() {
+    pet.sick = false;
+    pet.sickT = 0;
+    rt.shine = 1.4;
+    for (var i = 0; i < 14; i++) {
+      spawn('sparkle', W / 2 + (Math.random() - 0.5) * 26, room.groundY - 32 + Math.random() * 16,
+        { vx: (Math.random() - 0.5) * 20, vy: -16 - Math.random() * 12, g: 26, max: 1.2 });
+    }
+    save();
+  }
+
+  /* ------------------------------------------------------------------ */
   /* naps, and being woken up                                            */
   /* ------------------------------------------------------------------ */
   function minStat(p) {
@@ -765,6 +834,7 @@
 
   function maybeSleep(dt) {
     if (rt.sleep || rt.activity || rt.tool || rt.pooping || rt.petting || rt.angry > 0) return;
+    if (pet.sick) return;
     if (minStat(pet) < 32) return;              // never nap while something is needed
     if (pet.messes.length) return;              // or with a mess on the floor
     if (rt.t - rt.lastWake < 30) return;
@@ -1108,7 +1178,10 @@
     if (rt.sleep) { wake(true); return; }
     if (rt.pooping) return;
 
-    if (pet.stats[cfg.stat] > (cfg.kind === 'tool' ? 95 : 92)) {
+    if (name === 'medicine' && !pet.sick) { say('I feel fine!', 1600); return; }
+    if (name === 'play' && pet.sick) { say('I am too poorly to play…', 2200); Sfx.sad(); return; }
+
+    if (cfg.stat && pet.stats[cfg.stat] > (cfg.kind === 'tool' ? 95 : 92)) {
       say(cfg.full);
       Sfx.sad();
       bumpLove(1);
@@ -1135,6 +1208,22 @@
     if (want > a.given) {
       pet.stats[cfg.stat] = clamp(pet.stats[cfg.stat] + (want - a.given), 0, 100);
       a.given = want;
+    }
+
+    if (a.kind === 'medicine') {
+      var slide = clamp(p / 0.2, 0, 1);
+      var out = clamp((p - 0.84) / 0.16, 0, 1);
+      rt.props.bottle = { x: (W + 12) - slide * (W / 2 + 30) + out * 30, y: room.groundY - 1 };
+      if (p > 0.25 && p < 0.8) {
+        rt.leanTarget = 3;
+        var beat2 = Math.floor(a.t * 2.4);
+        if (beat2 !== a.beat) {
+          a.beat = beat2;
+          Sfx.sip();
+          spawn('sparkle', W / 2 + 6, room.groundY - 24, { vy: -10, max: 0.8 });
+        }
+      } else rt.leanTarget = 0;
+      if (p > 0.8 && pet.sick) cure();
     }
 
     if (a.kind === 'feed' || a.kind === 'water') {
@@ -1211,7 +1300,7 @@
     }
 
     if (a.t >= a.dur) {
-      addGrowth(pet.stats[cfg.stat] - cfg.gain < 55 ? 6 : 2.5);
+      addGrowth(!cfg.stat ? 5 : pet.stats[cfg.stat] - cfg.gain < 55 ? 6 : 2.5);
       bumpLove(6);
       say(cfg.done);
       for (var i = 0; i < 5; i++) {
@@ -1242,6 +1331,7 @@
 
     rt.tool = {
       kind: name, target: kind, step: 0, t: 0, cleared: 0, lock: 0, needsRelease: false,
+      stepTotal: 0,
       x: W / 2, y: room.groundY - 20, down: false, lastX: null, lastY: null,
       finishing: 0
     };
@@ -1262,8 +1352,19 @@
     }
     el.dock.classList.add('hide');
     el.toolBar.classList.add('show');
+    rt.tool.stepTotal = targetCount(rt.tool.target);
     el.toolText.textContent = name === 'bath' ? BATH_STEPS[0].text : 'Swipe to brush the fur!';
+    el.toolFill.style.width = '0%';
     setHint('');
+  }
+
+  function updateToolMeter() {
+    var t = rt.tool;
+    if (!t) return;
+    var left = targetCount(t.target);
+    var total = Math.max(1, t.stepTotal || 1);
+    var doneFrac = clamp((total - left) / total, 0, 1);
+    el.toolFill.style.width = (doneFrac * 100).toFixed(1) + '%';
   }
 
   function bathStep() {
@@ -1285,6 +1386,8 @@
     // next thing, start again
     t.needsRelease = true;
     t.lock = 0.7;
+    t.stepTotal = targetCount(BATH_STEPS[t.step].target);
+    el.toolFill.style.width = '0%';
     el.toolText.textContent = BATH_STEPS[t.step].text;
     say(t.step === 1 ? 'All soapy!' : 'Nice and rinsed!', 1800);
     Sfx.ding();
@@ -1410,6 +1513,7 @@
     if (!t) return;
     t.t += dt;
     if (t.lock > 0) t.lock -= dt;
+    updateToolMeter();
     if (t.kind === 'bath' && t.step === 0 && Math.random() < dt * 5) {
       spawn('bubble', W / 2 + (Math.random() - 0.5) * 30, room.groundY - 10 - Math.random() * 6,
         { vy: -8 - Math.random() * 6, max: 1.5 });
@@ -1444,7 +1548,7 @@
       'dock', 'toolBar', 'toolText', 'doneBtn', 'petsBtn', 'soundBtn', 'petsScreen',
       'petsClose', 'petGrid', 'startScreen', 'nameInput', 'startBtn', 'startBack',
       'confirmModal', 'confirmText', 'confirmYes', 'confirmNo', 'celebrate', 'celebrateText',
-      'gamePicker', 'gameCancel'
+      'gamePicker', 'gameCancel', 'toolFill', 'medBtn'
     ].forEach(function (id) { el[id] = $(id); });
 
     el.actionBtns = Array.prototype.slice.call(document.querySelectorAll('[data-action]'));
@@ -1495,6 +1599,9 @@
   function refreshDock() {
     var busy = !!(rt.activity || rt.tool);
     el.actionBtns.forEach(function (b) { b.disabled = busy; });
+    var showMed = !!(pet && pet.sick);
+    el.medBtn.classList.toggle('hidden', !showMed);
+    el.dock.classList.toggle('six', showMed);
   }
 
   var uiClock = 0, lastHearts = -1;
@@ -1516,11 +1623,17 @@
     var lowest = null, lowVal = 101;
     el.actionBtns.forEach(function (b) {
       var k = ACTIONS[b.dataset.action].stat;
+      if (!k) {           // medicine has no gauge of its own
+        el.rings[b.dataset.action].style.setProperty('--p', '100');
+        b.classList.toggle('wants', pet.sick && !rt.activity && !rt.tool);
+        return;
+      }
       var v = pet.stats[k];
       el.rings[b.dataset.action].style.setProperty('--p', clamp(v, 0, 100).toFixed(0));
-      b.classList.toggle('wants', v < 30 && !rt.activity && !rt.tool);
+      b.classList.toggle('wants', v < 30 && !rt.activity && !rt.tool && !pet.sick);
       if (v < lowVal) { lowVal = v; lowest = k; }
     });
+    refreshDock();
 
     var hc = heartCount(pet);
     if (hc !== lastHearts) {
@@ -1530,7 +1643,9 @@
 
     if (!rt.tool && !rt.activity) {
       if (rt.sleep) setHint('Shhh… your pet is asleep.');
+      else if (pet.sick) setHint('Your pet is poorly — give it Medicine!');
       else if (rt.angry > 0) setHint('Uh oh — you woke it up!');
+      else if (pet.sickT > SICK_AFTER * 0.5) setHint("Your pet doesn't look well — feed it!");
       else if (pet.messes.length) setHint('Tap the mess to clean it up!');
       else if (lowVal < 30) setHint(HINTS[lowest]);
       else setHint('Stroke your pet to give it cuddles!');
@@ -1544,6 +1659,7 @@
 
   function currentEyes() {
     if (rt.sleep) return 'sleep';
+    if (pet.sick && !rt.activity && !rt.tool && !rt.petting) return 'sad';
     if (rt.angry > 0) return 'angry';
     if (rt.pooping) return 'blink';
     if (rt.petting || rt.tool) return 'happy';
@@ -1557,6 +1673,7 @@
 
   function currentMouth() {
     if (rt.sleep) return 'snooze';
+    if (pet.sick && !rt.activity && !rt.tool) return 'frown';
     if (rt.angry > 0) return 'angry';
     if (rt.pooping) return 'snooze';
     if (rt.petting || rt.tool) return 'smile';
@@ -1603,9 +1720,13 @@
       spots: rt.spots,
       foam: rt.foam,
       drips: rt.drips,
+      sick: pet.sick,
       shine: rt.shine > 0 ? rt.shine : 0
     });
-    L.blit(petLayer, Math.round(W / 2 - Pets.SIZE / 2), Math.round(room.groundY - Pets.FEET));
+    var petOX = Math.round(W / 2 - Pets.SIZE / 2), petOY = Math.round(room.groundY - Pets.FEET);
+    L.blit(petLayer, petOX, petOY);
+    screen.clearMask();
+    screen.protect(petLayer, petOX, petOY);
 
     // messes in front of the pet
     for (mi = 0; mi < pet.messes.length; mi++) {
@@ -1614,6 +1735,7 @@
       }
     }
 
+    if (rt.props.bottle) drawBottle(L, rt.props.bottle.x, rt.props.bottle.y);
     if (rt.props.bowl) drawBowl(L, rt.props.bowl.x, rt.props.bowl.y, rt.props.bowl.fill, rt.props.bowl.level);
     if (rt.props.tub) drawTub(L, rt.props.tub.x, rt.props.tub.y, false, rt.t);
     if (rt.props.ball) drawBall(L, rt.props.ball.x, rt.props.ball.y, rt.props.ball.spin);
@@ -1678,11 +1800,17 @@
       if (rate > 0) {
         // a mess on the floor makes the room dirty much faster
         var messMult = 1 + (p.messes ? p.messes.length : 0) * 0.8;
+        var illMult = p.sick ? SICK_DECAY : 1;
         for (var s = 0; s < STAT_KEYS.length; s++) {
           var k = STAT_KEYS[s];
-          var r2 = rate * (k === 'clean' ? messMult : 1);
+          var r2 = rate * illMult * (k === 'clean' ? messMult : 1);
           p.stats[k] = clamp(p.stats[k] - DECAY[k] * dt * r2, 0, 100);
         }
+      }
+      updateSickness(p, dt, p === pet ? 1 : IDLE_RATE);
+      if (p === pet && p.sick && Math.random() < dt * 0.7) {
+        spawn('sick', W / 2 + (Math.random() < 0.5 ? -11 : 11), room.groundY - 34,
+          { vy: -7, max: 1.4 });
       }
       if (p !== pet) p.love = clamp((p.love || 0) - dt * 0.5, 0, 100);
     }

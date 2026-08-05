@@ -419,10 +419,12 @@
     drawEye(L, sp, headCX - eyeDX, eyeY, eyeR, eyes === 'wink' ? 'blink' : eyes, -1);
     drawEye(L, sp, headCX + eyeDX, eyeY, eyeR, eyes, 1);
 
-    // blush
+    // blush — feverish and darker when the pet is poorly
     if (opts.blush !== false) {
+      var blushCol = C(opts.sick ? '#e8607a' : sp.blush);
       for (var s5 = -1; s5 <= 1; s5 += 2) {
-        L.ellipse(headCX + s5 * hrx * 0.62, headCY + hry * 0.36, hrx * 0.19, 1, C(sp.blush));
+        L.ellipse(headCX + s5 * hrx * 0.62, headCY + hry * 0.36, hrx * (opts.sick ? 0.24 : 0.19),
+          opts.sick ? 1.4 : 1, blushCol);
       }
     }
 
@@ -482,6 +484,15 @@
 
     /* ---- outline ---- */
     L.outline(ink);
+
+    if (opts.sick) {
+      var iceX = headCX, iceY = headCY - hry * 0.95;
+      L.ellipse(iceX, iceY, hrx * 0.42 + 1, hry * 0.24 + 1, ink);
+      L.ellipse(iceX, iceY, hrx * 0.42, hry * 0.24, C('#9adcf8'));
+      L.ellipse(iceX - hrx * 0.14, iceY - 0.6, hrx * 0.16, 0.7, C('#dff3ff'));
+      L.rect(iceX - 1, iceY - hry * 0.24 - 2, 3, 2, ink);
+      L.rect(iceX - 1, iceY - hry * 0.24 - 2, 2, 1, C('#7fb8d8'));
+    }
 
     if (opts.shine) {
       var sh = C('#ffffff');

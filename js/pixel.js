@@ -149,7 +149,25 @@
     this.ctx.imageSmoothingEnabled = false;
     this.img = this.ctx.createImageData(w, h);
     this.layer = new Layer(w, h);
+    this.mask = new Uint8Array(w * h);   // 1 = keep this pixel's true colour
   }
+
+  Screen.prototype.clearMask = function () { this.mask.fill(0); };
+
+  /* Marks every filled pixel of `src` as exempt from the tint, so the room can
+     be dimmed without draining the colour out of whatever is drawn on it. */
+  Screen.prototype.protect = function (src, ox, oy) {
+    ox = Math.round(ox); oy = Math.round(oy);
+    for (var y = 0; y < src.h; y++) {
+      var ty = oy + y;
+      if (ty < 0 || ty >= this.h) continue;
+      for (var x = 0; x < src.w; x++) {
+        var tx = ox + x;
+        if (tx < 0 || tx >= this.w) continue;
+        if (src.data[y * src.w + x]) this.mask[ty * this.w + tx] = 1;
+      }
+    }
+  };
 
   /* `tint` is an optional [r, g, b, amount] wash applied to every colour —
      used for the night-time and golden-hour lighting. It is folded into a
@@ -171,9 +189,9 @@
       }
       pal[0] = null;
     }
-    var d = this.img.data, L = this.layer.data;
+    var d = this.img.data, L = this.layer.data, M = this.mask;
     for (var i = 0, p = 0; i < L.length; i++, p += 4) {
-      var c = pal[L[i]];
+      var c = M[i] ? P[L[i]] : pal[L[i]];
       if (!c) {
         d[p] = 0; d[p + 1] = 0; d[p + 2] = 0; d[p + 3] = 0;
       } else {

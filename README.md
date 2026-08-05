@@ -36,6 +36,8 @@ thumb-sized targets along the bottom, and everything is saved to
    | Bath | Clean | **Hands on:** scrub, rinse and dry your pet in three steps |
    | Brush | Brush | **Hands on:** swipe the brush over the fur to smooth the tufts out |
 
+   A sixth **Medicine** button appears only when your pet is poorly.
+
 3. **Stroke your pet** anywhere on screen to give it cuddles — hearts float up
    and it purrs.
 4. Care earns growth points. Fill the gold bar at the top to grow up:
@@ -67,12 +69,16 @@ never blocks you from looking after it.
 
 ### Day and night
 
-The room runs on your real clock. It is bright through the middle of the day,
-warms into a **sunrise between 7 and 9 in the morning**, and sinks through a
-**sunset between 7 and 9 in the evening** into night. After dark the whole
-room takes a deep blue wash, the moon rides across the window with a field of
-twinkling stars, and a night light comes on in the corner. Your pet dozes off
-far more readily at night, and it greets you differently depending on the hour.
+The room runs on your real clock. It brightens through a **sunrise between 7
+and 9 in the morning** and dims again through a **sunset between 7 and 9 in
+the evening** into night. The lighting only makes the room darker — it never
+recolours it — and your pet and whatever tool you are holding always keep
+their own colours, so they stay bright and readable whatever the hour.
+
+The window is where the colour lives: the sky outside changes through the day,
+a sun or moon rides an arc across the panes, stars come out after dark and a
+night light switches on in the corner. Your pet dozes off far more readily at
+night, and greets you differently depending on the hour.
 
 ### Accidents
 
@@ -93,9 +99,11 @@ Bath time is a proper three-step job, and every step is hands on:
 3. **Dry** — rub the towel over your pet until every last drip is gone.
 
 Each step needs a fresh press, so you lift your finger, pick up the next thing
-and start again. Your pet sparkles clean once the last drip is towelled off.
-There are always at least seven patches of mud, so a bath is never a two-second
-job. Press **Done** any time to stop early and keep what you have cleaned.
+and start again. A meter under the step name fills as you work, so you can
+always see how much of the current step is left. Your pet sparkles clean once
+the last drip is towelled off. There are always at least seven patches of mud,
+so a bath is never a two-second job. Press **Done** any time to stop early and
+keep what you have cleaned.
 
 ### Brushing
 
@@ -107,9 +115,17 @@ Because the number of spots is derived from the Clean and Brush stats, the mess
 you can see always matches the gauges — a pet on 40% Clean has exactly five
 patches of mud to find.
 
-The pet never gets sick and never dies. If a need runs low it just looks sad, a
-thought bubble shows what it wants, and the matching button pulses — so a young
-player always knows what to do next.
+### Getting poorly
+
+Leave your pet hungry or thirsty for long enough and it falls ill: an ice pack
+appears on its head, its cheeks flush, it looks miserable, everything drains
+faster and it is too under the weather to play. A **Medicine** button appears
+in the dock — a bottle and spoon slide in, your pet takes its medicine, and it
+sparkles better again.
+
+Your pet never dies, and medicine always works. If a need runs low it just
+looks sad, a thought bubble shows what it wants, and the matching button pulses
+— so a young player always knows what to do next.
 
 ## Files
 
