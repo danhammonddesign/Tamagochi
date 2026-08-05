@@ -19,6 +19,16 @@
 
   // one dirt spot is worth this much Clean; one tuft this much Brush
   var DIRT_PER = 12, TUFT_PER = 14;
+  var BATH_MIN_DIRT = 7;      // a proper bath is always a decent scrub
+  var BATH_PER = 3;           // Clean earned per spot cleared in any bath step
+
+  /* Bath time is scrub, then rinse, then dry — each step turns what you
+     cleared in the last one into the next thing to deal with. */
+  var BATH_STEPS = [
+    { key: 'scrub', target: 'dirt', tool: 'soap', text: 'Step 1 of 3 · Scrub off the mud!' },
+    { key: 'rinse', target: 'foam', tool: 'shower', text: 'Step 2 of 3 · Rinse the soap off!' },
+    { key: 'dry', target: 'drip', tool: 'towel', text: 'Step 3 of 3 · Rub your pet dry!' }
+  ];
 
   var ACTIONS = {
     feed: { stat: 'food', kind: 'anim', dur: 4.6, gain: 38, done: 'Yum yum!', full: "I'm so full!" },
@@ -138,6 +148,7 @@
     if (typeof p.growth !== 'number') p.growth = 0;
     if (typeof p.love !== 'number') p.love = 40;
     if (!p.id) p.id = uid();
+    if (!Pets.SPECIES[p.species]) p.species = 'cat';
     if (!Array.isArray(p.messes)) p.messes = [];
     p.messes = p.messes.slice(0, MAX_MESS);
     p.stage = Pets.stageFor(p.growth).key;
@@ -226,7 +237,7 @@
     activity: null,             // feed / water / play
     tool: null,                 // bath / brush
     props: {}, particles: [],
-    spots: [], foam: [],
+    spots: [], foam: [], drips: [],
     petting: false, lastHeart: 0,
     shine: 0, growthFlash: 0,
     sleep: null, angry: 0, lastWake: -60,
@@ -322,6 +333,71 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* time of day — the room follows the real clock                       */
+  /* ------------------------------------------------------------------ */
+  /* Keyframes around the 24 hour dial. Sunrise runs 7-9am and sunset
+     7-9pm, as asked; everything between is interpolated so the room shifts
+     gradually rather than snapping. */
+  var SKY_KEYS = [
+    { h: 0, tint: [22, 30, 84, 0.46], sky: '#161d44', stars: 1 },
+    { h: 6, tint: [22, 30, 84, 0.46], sky: '#161d44', stars: 1 },
+    { h: 7, tint: [96, 66, 122, 0.40], sky: '#5c4478', stars: 0.45 },
+    { h: 8, tint: [255, 148, 88, 0.30], sky: '#ff9e6b', stars: 0 },
+    { h: 9, tint: [255, 206, 156, 0.07], sky: '#a8e0ff', stars: 0 },
+    { h: 12, tint: [255, 255, 255, 0], sky: '#a8e0ff', stars: 0 },
+    { h: 18.5, tint: [255, 236, 200, 0.05], sky: '#b6e4ff', stars: 0 },
+    { h: 19, tint: [255, 152, 84, 0.20], sky: '#ffb07a', stars: 0 },
+    { h: 20, tint: [255, 108, 72, 0.32], sky: '#ff7a5c', stars: 0.15 },
+    { h: 21, tint: [22, 30, 84, 0.46], sky: '#161d44', stars: 1 },
+    { h: 24, tint: [22, 30, 84, 0.46], sky: '#161d44', stars: 1 }
+  ];
+
+  function hexRgb(h) {
+    var n = parseInt(h.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+
+  /* Quantised, so gradual blending does not mint hundreds of palette entries. */
+  function mixHex(a, b, k) {
+    var ca = hexRgb(a), cb = hexRgb(b), out = '#';
+    for (var i = 0; i < 3; i++) {
+      var v = clamp(Math.round((ca[i] + (cb[i] - ca[i]) * k) / 4) * 4, 0, 255);
+      out += (v < 16 ? '0' : '') + v.toString(16);
+    }
+    return out;
+  }
+
+  var sky = { tint: [0, 0, 0, 0], sky: '#a8e0ff', stars: 0, hour: 12, night: 0 };
+
+  function updateSky() {
+    var d = new Date();
+    var h = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+    var a = SKY_KEYS[0], b = SKY_KEYS[SKY_KEYS.length - 1];
+    for (var i = 0; i < SKY_KEYS.length - 1; i++) {
+      if (h >= SKY_KEYS[i].h && h <= SKY_KEYS[i + 1].h) { a = SKY_KEYS[i]; b = SKY_KEYS[i + 1]; break; }
+    }
+    var k = b.h === a.h ? 0 : (h - a.h) / (b.h - a.h);
+    for (var j = 0; j < 4; j++) sky.tint[j] = a.tint[j] + (b.tint[j] - a.tint[j]) * k;
+    sky.sky = mixHex(a.sky, b.sky, k);
+    sky.stars = a.stars + (b.stars - a.stars) * k;
+    sky.hour = h;
+    sky.night = sky.stars;
+  }
+
+  function greeting() {
+    var h = sky.hour;
+    if (h < 5) return 'Sweet dreams!';
+    if (h < 9) return 'Good morning!';
+    if (h < 12) return 'Morning!';
+    if (h < 18) return 'Good afternoon!';
+    if (h < 21) return 'Good evening!';
+    return 'Time for bed soon!';
+  }
+
+  // fixed star field inside the window, each twinkling on its own clock
+  var STARS = [[3, 3], [8, 6], [14, 2], [17, 8], [6, 12], [12, 10], [19, 4], [10, 15], [2, 9], [16, 14]];
+
+  /* ------------------------------------------------------------------ */
   /* the room                                                            */
   /* ------------------------------------------------------------------ */
   function drawRoom(L, t) {
@@ -359,15 +435,36 @@
       L.tri(bx, by + sag + 1, bx + 5, by + sag + 1, bx + 2.5, by + sag + 6, C(cols[i % cols.length]));
     }
 
-    // window
+    // window — the sky outside follows the real time of day
     var wx = 4, wy = Math.round(H * 0.2);
-    L.rect(wx + 2, wy + 2, 20, 18, C('#a8e0ff'));
-    L.disc(wx + 17, wy + 7, 3.5, C('#ffe98a'));
+    L.rect(wx + 2, wy + 2, 20, 18, C(sky.sky));
+
+    if (sky.stars > 0.25) {
+      for (var st = 0; st < STARS.length; st++) {
+        var tw = 0.55 + 0.45 * Math.sin(t * 1.6 + st * 1.7);
+        if (tw * sky.stars < 0.4) continue;
+        L.set(wx + 2 + STARS[st][0], wy + 2 + STARS[st][1], C(tw > 0.85 ? '#ffffff' : '#cfd8ff'));
+      }
+    }
+
+    // sun by day, moon by night, both riding an arc across the panes
+    if (sky.hour >= 6.5 && sky.hour <= 20.5) {
+      var sp2 = (sky.hour - 6.5) / 14;
+      L.disc(wx + 3 + sp2 * 18, wy + 17 - Math.sin(sp2 * Math.PI) * 12, 3.5,
+        C(sky.stars > 0.1 ? '#ffb066' : '#ffe98a'));
+    } else {
+      var mp = (sky.hour > 20.5 ? sky.hour - 20.5 : sky.hour + 3.5) / 10;
+      var mx2 = wx + 3 + mp * 18, my2 = wy + 17 - Math.sin(mp * Math.PI) * 12;
+      L.disc(mx2, my2, 3.2, C('#f4f2ff'));
+      L.disc(mx2 + 1.6, my2 - 1.2, 2.4, C(sky.sky));
+    }
+
+    var cloudCol = sky.stars > 0.5 ? '#3a4272' : sky.stars > 0.1 ? '#ffd0b0' : '#ffffff';
     var c1 = wx + 5 + ((t * 2) % 15);
-    L.ellipse(c1, wy + 13, 4, 2, C('#ffffff'));
-    L.ellipse(c1 + 2, wy + 12, 2.5, 1.5, C('#ffffff'));
+    L.ellipse(c1, wy + 13, 4, 2, C(cloudCol));
+    L.ellipse(c1 + 2, wy + 12, 2.5, 1.5, C(cloudCol));
     var c2 = wx + 5 + ((t * 1.3 + 8) % 15);
-    L.ellipse(c2, wy + 5, 3, 1.4, C('#ffffff'));
+    L.ellipse(c2, wy + 5, 3, 1.4, C(cloudCol));
     var frame = C('#ffffff');
     L.rect(wx, wy, 24, 2, frame);
     L.rect(wx, wy + 20, 24, 2, frame);
@@ -416,6 +513,17 @@
       b.ellipse(bx, by, 9, 4, C('#ff8fb0'));
       b.ellipse(bx, by - 1, 6.5, 2.6, C('#ffd0dd'));
     });
+
+    // a little night light comes on once it gets dark
+    if (sky.night > 0.3) {
+      var nx = W - 13, ny = fy + 9;
+      L.ellipse(nx, ny, 7, 4, C('#fff3c8'));
+      stampOutlined(L, nx, ny, function (b, bx, by) {
+        b.rect(bx - 1, by - 2, 3, 3, C('#e6dfd6'));
+        b.disc(bx, by - 4, 3, C('#fffbe6'));
+        b.disc(bx - 1, by - 5, 1.2, C('#ffffff'));
+      });
+    }
   }
 
   /* ------------------------------------------------------------------ */
@@ -488,6 +596,30 @@
       b.ellipse(bx - 1.6, by - 0.8, 1.8, 0.9, C('#eaf9ff'));
       b.disc(bx + 5, by - 4 + tilt, 1.6, C('#ffffff'));
       b.disc(bx - 5, by - 5 - tilt, 1.2, C('#ffffff'));
+    });
+  }
+
+  function drawShower(L, x, y, tilt, running) {
+    stampOutlined(L, x, y, function (b, bx, by) {
+      b.line(bx + 2, by - 2, bx + 7 + tilt, by - 8, C('#b9c2d0'), 2.4);
+      b.ellipse(bx - 1, by, 4.6, 2.6, C('#d8dee8'));
+      b.ellipse(bx - 1, by - 1, 4, 1.7, C('#eef2f8'));
+    });
+    if (running) {
+      for (var i = 0; i < 4; i++) {
+        var jx = x - 4 + i * 2.2;
+        L.rect(jx, y + 3, 1, 3 + (i % 2) * 2, C('#7fd8ff'));
+        L.set(jx, y + 7 + (i % 2) * 2, C('#d6f2ff'));
+      }
+    }
+  }
+
+  function drawTowel(L, x, y, tilt) {
+    stampOutlined(L, x, y, function (b, bx, by) {
+      b.rect(bx - 5, by - 3 + tilt * 0.3, 10, 7, C('#ffd0e6'));
+      b.rect(bx - 5, by - 3 + tilt * 0.3, 10, 2, C('#ff8fb8'));
+      b.rect(bx - 5, by + 0.5, 10, 1, C('#ffb3d0'));
+      for (var i = 0; i < 3; i++) b.rect(bx - 4 + i * 3, by + 4 + tilt * 0.3, 2, 2, C('#ffe4f0'));
     });
   }
 
@@ -636,7 +768,7 @@
     if (minStat(pet) < 32) return;              // never nap while something is needed
     if (pet.messes.length) return;              // or with a mess on the floor
     if (rt.t - rt.lastWake < 30) return;
-    if (Math.random() < dt / 70) {
+    if (Math.random() < dt / 70 * (1 + sky.night * 2.5)) {
       rt.sleep = { t: 0, dur: 15 + Math.random() * 18 };
       say('Zzz…', 1600);
       Sfx.yawn();
@@ -875,13 +1007,45 @@
   /* ------------------------------------------------------------------ */
   /* need bubble                                                         */
   /* ------------------------------------------------------------------ */
+  /* Small hand-drawn versions of the care icons — the 16px UI icons are too
+     chunky for a thought bubble at this room scale. */
+  var NEED_ICON = {
+    food: function (b, x, y) {
+      b.disc(x, y + 1, 3, C('#ff5f5f'));
+      b.ellipse(x - 1, y - 0.5, 1, 1.4, C('#ff9b9b'));
+      b.rect(x, y - 4, 1, 2, C('#8a5a2a'));
+      b.ellipse(x + 1.6, y - 3.4, 1.6, 0.9, C('#63c93f'));
+    },
+    water: function (b, x, y) {
+      b.tri(x, y - 4, x - 2.6, y + 1, x + 2.6, y + 1, C('#5fc8ff'));
+      b.disc(x, y + 1, 2.7, C('#5fc8ff'));
+      b.set(x - 1, y + 1, C('#c8f0ff'));
+    },
+    fun: function (b, x, y) {
+      b.disc(x, y, 3.2, C('#ff5f8f'));
+      b.ellipse(x, y, 3.2, 0.8, C('#ffffff'));
+      b.set(x - 1, y - 2, C('#ff8fb0'));
+    },
+    clean: function (b, x, y) {
+      b.ellipse(x, y + 1.6, 3.4, 1.8, C('#5fc8ff'));
+      b.ellipse(x, y + 1, 3, 1.3, C('#b6e6ff'));
+      b.disc(x + 2.4, y - 2.4, 1.5, C('#eaf9ff'));
+      b.disc(x - 2, y - 2, 1, C('#eaf9ff'));
+    },
+    groom: function (b, x, y) {
+      b.line(x + 1, y - 1, x + 3.4, y - 3.6, C('#d9954f'), 2);
+      b.ellipse(x - 1, y, 3, 1.9, C('#d9954f'));
+      b.ellipse(x - 1, y - 0.6, 2.6, 1.2, C('#eab275'));
+      for (var i = -3; i <= 1; i += 2) b.rect(x + i, y + 1.6, 1, 2, C('#fbf3e6'));
+    }
+  };
+
   function drawNeedBubble(L, x, y, need, t) {
-    var iconName = { food: 'feed', water: 'water', fun: 'play', clean: 'bath', groom: 'brush' }[need];
     var pop = Math.sin(t * 4) * 0.6;
     stampOutlined(L, x, y + pop, function (b, bx, by) {
-      b.ellipse(bx, by, 10, 9, C('#ffffff'));
-      b.tri(bx - 4, by + 7, bx + 2, by + 7, bx - 2, by + 13, C('#ffffff'));
-      b.blit(Icons.layer(iconName), Math.round(bx - 8), Math.round(by - 8));
+      b.ellipse(bx, by, 6.5, 6, C('#ffffff'));
+      b.tri(bx - 3, by + 4.5, bx + 1.5, by + 4.5, bx - 1.5, by + 9, C('#ffffff'));
+      (NEED_ICON[need] || NEED_ICON.food)(b, bx, by);
     });
   }
 
@@ -1064,16 +1228,20 @@
   /* ---------------- interactive tools: soap + brush ---------------- */
   function startTool(name) {
     var kind = name === 'bath' ? 'dirt' : 'tuft';
-    // make sure there is something to work on
     syncSpots();
-    if (countSpots(kind) === 0) {
-      var statKey = ACTIONS[name].stat;
-      pet.stats[statKey] = clamp(pet.stats[statKey] - (name === 'bath' ? DIRT_PER : TUFT_PER) * 2, 0, 100);
+    if (name === 'brush' && countSpots('tuft') === 0) {
+      pet.stats.groom = clamp(pet.stats.groom - TUFT_PER * 2, 0, 100);
       syncSpots();
+    }
+    if (name === 'bath') {
+      // top the mud up so bath time is always a full three-step job
+      while (countSpots('dirt') < BATH_MIN_DIRT) rt.spots.push(makeSpot('dirt'));
+      rt.foam = [];
+      rt.drips = [];
     }
 
     rt.tool = {
-      kind: name, target: kind, t: 0, cleared: 0,
+      kind: name, target: kind, step: 0, t: 0, cleared: 0, lock: 0, needsRelease: false,
       x: W / 2, y: room.groundY - 20, down: false, lastX: null, lastY: null,
       finishing: 0
     };
@@ -1094,8 +1262,33 @@
     }
     el.dock.classList.add('hide');
     el.toolBar.classList.add('show');
-    el.toolText.textContent = name === 'bath' ? 'Rub the soap on your pet!' : 'Swipe to brush the fur!';
+    el.toolText.textContent = name === 'bath' ? BATH_STEPS[0].text : 'Swipe to brush the fur!';
     setHint('');
+  }
+
+  function bathStep() {
+    return rt.tool && rt.tool.kind === 'bath' ? BATH_STEPS[rt.tool.step] : null;
+  }
+
+  function targetCount(kind) {
+    if (kind === 'foam') return rt.foam.length;
+    if (kind === 'drip') return rt.drips.length;
+    return countSpots(kind);
+  }
+
+  function advanceBath() {
+    var t = rt.tool;
+    t.step++;
+    if (t.step >= BATH_STEPS.length) { t.finishing = 0.9; return; }
+    t.target = BATH_STEPS[t.step].target;
+    // each step is its own deliberate action: lift your finger, pick up the
+    // next thing, start again
+    t.needsRelease = true;
+    t.lock = 0.7;
+    el.toolText.textContent = BATH_STEPS[t.step].text;
+    say(t.step === 1 ? 'All soapy!' : 'Nice and rinsed!', 1800);
+    Sfx.ding();
+    if (t.step === 1) Sfx.splash();
   }
 
   function endTool(complete) {
@@ -1116,6 +1309,7 @@
     }
     rt.tool = null;
     rt.props = {};
+    rt.drips = [];
     rt.leanTarget = 0;
     el.dock.classList.remove('hide');
     el.toolBar.classList.remove('show');
@@ -1126,33 +1320,69 @@
 
   function scrubAt(x, y) {
     var t = rt.tool;
-    if (!t || t.finishing) return;
+    if (!t || t.finishing || t.needsRelease || t.lock > 0) return;
     var lx = x - (W / 2 - Pets.SIZE / 2);
     var ly = y - (room.groundY - Pets.FEET);
     var hit = false;
+    var cfg = ACTIONS[t.kind];
+    var i, k;
 
-    for (var i = rt.spots.length - 1; i >= 0; i--) {
-      var s = rt.spots[i];
-      if (s.kind !== t.target) continue;
-      if (Math.abs(s.x - lx) < 5 && Math.abs(s.y - ly) < 5) {
-        rt.spots.splice(i, 1);
-        t.cleared++;
-        hit = true;
-        var cfg = ACTIONS[t.kind];
-        pet.stats[cfg.stat] = clamp(pet.stats[cfg.stat] + (t.target === 'dirt' ? DIRT_PER : TUFT_PER), 0, 100);
-        bumpLove(2);
-        addGrowth(0.5);
-        if (t.target === 'dirt') {
-          rt.foam.push({ x: s.x, y: s.y, r: 1.9, life: 0 });
-          for (var k = 0; k < 3; k++) {
-            spawn('bubble', x + (Math.random() - 0.5) * 6, y - 2, { vy: -12 - Math.random() * 8, max: 1.3 });
+    function reward(gain) {
+      pet.stats[cfg.stat] = clamp(pet.stats[cfg.stat] + gain, 0, 100);
+      bumpLove(1.5);
+      addGrowth(0.4);
+    }
+
+    if (t.target === 'dirt' || t.target === 'tuft') {
+      for (i = rt.spots.length - 1; i >= 0; i--) {
+        var s = rt.spots[i];
+        if (s.kind !== t.target) continue;
+        if (Math.abs(s.x - lx) < 5 && Math.abs(s.y - ly) < 5) {
+          rt.spots.splice(i, 1);
+          t.cleared++;
+          hit = true;
+          if (t.target === 'dirt') {
+            reward(BATH_PER);
+            rt.foam.push({ x: s.x, y: s.y, r: 1.9, life: 0 });
+            for (k = 0; k < 3; k++) {
+              spawn('bubble', x + (Math.random() - 0.5) * 6, y - 2, { vy: -12 - Math.random() * 8, max: 1.3 });
+            }
+          } else {
+            reward(TUFT_PER);
+            for (k = 0; k < 3; k++) {
+              spawn('fluff', x + (Math.random() - 0.5) * 6, y - 2,
+                { vx: (Math.random() - 0.5) * 14, vy: -10, g: 18, max: 0.9 });
+            }
           }
-        } else {
-          for (var k2 = 0; k2 < 3; k2++) {
-            spawn('fluff', x + (Math.random() - 0.5) * 6, y - 2, { vx: (Math.random() - 0.5) * 14, vy: -10, g: 18, max: 0.9 });
+          if (Math.random() < 0.5) spawn('heart', x, y - 4, { vy: -14, max: 1 });
+        }
+      }
+    } else if (t.target === 'foam') {
+      for (i = rt.foam.length - 1; i >= 0; i--) {
+        var fm = rt.foam[i];
+        if (Math.abs(fm.x - lx) < 5 && Math.abs(fm.y - ly) < 5) {
+          rt.foam.splice(i, 1);
+          rt.drips.push({ x: fm.x, y: fm.y });
+          t.cleared++;
+          hit = true;
+          reward(BATH_PER);
+          for (k = 0; k < 3; k++) {
+            spawn('drop', x + (Math.random() - 0.5) * 8, y,
+              { vx: (Math.random() - 0.5) * 16, vy: 4 + Math.random() * 8, g: 60, max: 0.7 });
           }
         }
-        if (Math.random() < 0.5) spawn('heart', x, y - 4, { vy: -14, max: 1 });
+      }
+    } else if (t.target === 'drip') {
+      for (i = rt.drips.length - 1; i >= 0; i--) {
+        var dr = rt.drips[i];
+        if (Math.abs(dr.x - lx) < 5 && Math.abs(dr.y - ly) < 5) {
+          rt.drips.splice(i, 1);
+          t.cleared++;
+          hit = true;
+          reward(BATH_PER);
+          spawn('sparkle', x, y - 3, { vy: -10, max: 0.7 });
+          if (Math.random() < 0.4) spawn('heart', x, y - 4, { vy: -14, max: 1 });
+        }
       }
     }
 
@@ -1160,21 +1390,27 @@
     var overPetNow = Math.abs(lx - Pets.SIZE / 2) < 16 && ly > 4 && ly < Pets.FEET + 2;
     if (overPetNow) {
       rt.leanTarget = clamp((x - W / 2) * 0.22, -3, 3);
-      if (t.kind === 'bath') Sfx.squeak(); else Sfx.swish();
+      if (t.kind !== 'bath') Sfx.swish();
+      else if (t.step === 1) Sfx.splash();
+      else Sfx.squeak();
       if (Math.random() < 0.12) {
-        spawn(t.kind === 'bath' ? 'bubble' : 'fluff', x + (Math.random() - 0.5) * 8, y - 3,
-          { vy: -9, max: 0.9 });
+        var puff = t.kind !== 'bath' ? 'fluff' : t.step === 1 ? 'drop' : 'bubble';
+        spawn(puff, x + (Math.random() - 0.5) * 8, y - 3, { vy: t.step === 1 ? 6 : -9, g: t.step === 1 ? 40 : 0, max: 0.9 });
       }
     }
 
-    if (hit && countSpots(t.target) === 0) t.finishing = 0.9;
+    if (hit && targetCount(t.target) === 0) {
+      if (t.kind === 'bath') advanceBath();
+      else t.finishing = 0.9;
+    }
   }
 
   function updateTool(dt) {
     var t = rt.tool;
     if (!t) return;
     t.t += dt;
-    if (t.kind === 'bath' && Math.random() < dt * 5) {
+    if (t.lock > 0) t.lock -= dt;
+    if (t.kind === 'bath' && t.step === 0 && Math.random() < dt * 5) {
       spawn('bubble', W / 2 + (Math.random() - 0.5) * 30, room.groundY - 10 - Math.random() * 6,
         { vy: -8 - Math.random() * 6, max: 1.5 });
     }
@@ -1366,6 +1602,7 @@
       mouth: currentMouth(),
       spots: rt.spots,
       foam: rt.foam,
+      drips: rt.drips,
       shine: rt.shine > 0 ? rt.shine : 0
     });
     L.blit(petLayer, Math.round(W / 2 - Pets.SIZE / 2), Math.round(room.groundY - Pets.FEET));
@@ -1397,8 +1634,11 @@
 
     if (rt.tool) {
       var tilt = Math.sin(rt.t * 9) * (rt.tool.down ? 1.2 : 0.3);
-      if (rt.tool.kind === 'bath') drawSoap(L, rt.tool.x, rt.tool.y, tilt);
-      else drawBrush(L, rt.tool.x, rt.tool.y, tilt);
+      var step = bathStep();
+      if (!step) drawBrush(L, rt.tool.x, rt.tool.y, tilt);
+      else if (step.tool === 'soap') drawSoap(L, rt.tool.x, rt.tool.y, tilt);
+      else if (step.tool === 'shower') drawShower(L, rt.tool.x, rt.tool.y, tilt, rt.tool.down);
+      else drawTowel(L, rt.tool.x, rt.tool.y, tilt);
     }
 
     if (!rt.activity && !rt.tool && !rt.sleep && !rt.angry) {
@@ -1406,7 +1646,7 @@
       for (var i = 0; i < STAT_KEYS.length; i++) {
         if (pet.stats[STAT_KEYS[i]] < lv) { lv = pet.stats[STAT_KEYS[i]]; lowest = STAT_KEYS[i]; }
       }
-      if (lv < 30) drawNeedBubble(L, W / 2 + 20, room.groundY - 40, lowest, rt.t);
+      if (lv < 30) drawNeedBubble(L, W / 2 + 17, room.groundY - 42, lowest, rt.t);
     }
 
     if (rt.growthFlash > 0 && Math.floor(rt.growthFlash * 16) % 2 === 0) {
@@ -1414,7 +1654,7 @@
       for (var y = 0; y < H; y++) for (var x = (y % 2); x < W; x += 2) L.set(x, y, white);
     }
 
-    screen.present();
+    screen.present(sky.tint);
   }
 
   /* ------------------------------------------------------------------ */
@@ -1427,6 +1667,7 @@
     var dt = Math.min(0.1, (ts - last) / 1000 || 0);
     last = ts;
     rt.t += dt;
+    updateSky();
 
     // every pet ages; the one you are looking after ages fastest
     for (var i = 0; i < db.pets.length; i++) {
@@ -1464,9 +1705,10 @@
     // foam dries off after the bath
     for (var f = rt.foam.length - 1; f >= 0; f--) {
       rt.foam[f].life += dt;
-      if (!rt.tool) rt.foam[f].r -= dt * 0.7;
+      if (!rt.tool || rt.tool.kind !== 'bath') rt.foam[f].r -= dt * 0.7;
       if (rt.foam[f].r <= 0.4) rt.foam.splice(f, 1);
     }
+    if (!rt.tool && rt.drips.length && Math.random() < dt * 2) rt.drips.pop();
 
     if (rt.petting) {
       if (rt.t - rt.lastHeart > 0.28) {
@@ -1605,7 +1847,7 @@
 
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) {
       canvas.addEventListener(t, function () {
-        if (rt.tool) { rt.tool.down = false; rt.leanTarget = 0; }
+        if (rt.tool) { rt.tool.down = false; rt.tool.needsRelease = false; rt.leanTarget = 0; }
         stopPetting();
       });
     });
@@ -1733,8 +1975,9 @@
       var scr = new PX.Screen(canvas, 48, 48);
       var L = new PX.Layer(Pets.SIZE, Pets.SIZE);
       Pets.drawPet(L, p.species, Pets.stageFor(p.growth).key, { eyes: 'open', mouth: 'smile' });
-      scr.layer.clear(C(p.species === 'fox' ? '#fff0e0' : '#eef1f8'));
-      scr.layer.ellipse(24, 44, 15, 3, C(p.species === 'fox' ? '#ffe0c0' : '#dfe4f0'));
+      var tsp = Pets.SPECIES[p.species] || Pets.SPECIES.cat;
+      scr.layer.clear(C(tsp.thumbBg));
+      scr.layer.ellipse(24, 44, 15, 3, C(tsp.thumbShade));
       scr.layer.blit(L, Math.round((48 - Pets.SIZE) / 2), 48 - Pets.FEET - 3);
       scr.present();
     });
@@ -1768,6 +2011,7 @@
     rt.props = {};
     rt.particles = [];
     rt.foam = [];
+    rt.drips = [];
     rt.spots = [];
     rt.shine = 0;
     rt.sleep = null;
@@ -1815,7 +2059,9 @@
   /* ------------------------------------------------------------------ */
   var NAMES = {
     cat: ['Mochi', 'Biscuit', 'Pumpkin', 'Nimbus', 'Waffles', 'Pickle', 'Sushi', 'Muffin'],
-    fox: ['Ember', 'Ginger', 'Maple', 'Sunny', 'Pepper', 'Clementine', 'Rusty', 'Nutmeg']
+    fox: ['Ember', 'Ginger', 'Maple', 'Sunny', 'Pepper', 'Clementine', 'Rusty', 'Nutmeg'],
+    blackcat: ['Shadow', 'Midnight', 'Onyx', 'Luna', 'Binx', 'Sooty', 'Pepper', 'Olive'],
+    dog: ['Spot', 'Domino', 'Patch', 'Buddy', 'Freckle', 'Pongo', 'Cookie', 'Dot']
   };
 
   var picked = 'fox';
@@ -1823,7 +2069,7 @@
   var previewRAF = null;
 
   function setupPreviews() {
-    ['cat', 'fox'].forEach(function (id) {
+    ['cat', 'fox', 'blackcat', 'dog'].forEach(function (id) {
       var canvas = document.getElementById('preview-' + id);
       if (!canvas) return;
       previews.push({
@@ -1840,8 +2086,9 @@
     for (var i = 0; i < previews.length; i++) {
       var pv = previews[i];
       var L = pv.scr.layer;
-      L.clear(C(pv.id === 'fox' ? '#fff0e0' : '#eef1f8'));
-      L.ellipse(24, 44, 15, 3, C(pv.id === 'fox' ? '#ffe0c0' : '#dfe4f0'));
+      var psp = Pets.SPECIES[pv.id];
+      L.clear(C(psp.thumbBg));
+      L.ellipse(24, 44, 15, 3, C(psp.thumbShade));
       pv.layer.clear();
       Pets.drawPet(pv.layer, pv.id, 'baby', {
         bob: Math.sin(t * 2.4 + pv.phase) * 0.9,
@@ -1937,6 +2184,7 @@
   /* ------------------------------------------------------------------ */
   function boot() {
     cacheDom();
+    updateSky();
     Icons.renderAll(document);
 
     try { Sfx.on = localStorage.getItem('pixelpals.sound') !== '0'; } catch (e) { }
@@ -1980,7 +2228,9 @@
         if (p === pet) away = a;
       });
       startLoop();
-      if (away > 120) setTimeout(function () { say('I missed you!', 2600); }, 400);
+      setTimeout(function () {
+        say(away > 120 ? 'I missed you! ' + greeting() : greeting(), 2600);
+      }, 400);
     } else {
       showStartScreen(false);
     }

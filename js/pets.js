@@ -34,7 +34,9 @@
       tailBushy: true,
       cheekPatch: true,
       foreheadStripes: false,
-      cardBg: '#ffd9b0'
+      cardBg: '#ffd9b0',
+      thumbBg: '#fff0e0',
+      thumbShade: '#ffe0c0'
     },
     cat: {
       id: 'cat',
@@ -60,7 +62,72 @@
       tailBushy: false,
       cheekPatch: false,
       foreheadStripes: true,
-      cardBg: '#d8dce8'
+      cardBg: '#d8dce8',
+      thumbBg: '#eef1f8',
+      thumbShade: '#dfe4f0'
+    },
+    blackcat: {
+      id: 'blackcat',
+      label: 'Black Cat',
+      emoji: '🐈‍⬛',
+      blurb: 'Mysterious and cuddly',
+      fur: '#3a3644',
+      furLight: '#4b4657',
+      furDark: '#2a2732',
+      cream: '#4b4657',
+      creamShade: '#413d4c',
+      innerEar: '#e08aa8',
+      earTip: null,
+      paw: '#2a2732',
+      nose: '#e08aa8',
+      blush: '#7a5068',
+      outline: '#141014',
+      eyeStyle: 'glow',
+      eyeColor: '#141014',
+      iris: '#9ef05e',
+      tailTip: '#3a3644',
+      whiskers: true,
+      earLean: 0.16,
+      tailBushy: false,
+      cheekPatch: false,
+      foreheadStripes: false,
+      cardBg: '#cfc7dd',
+      thumbBg: '#e7e3f0',
+      thumbShade: '#d5cfe4'
+    },
+    dog: {
+      id: 'dog',
+      label: 'Dalmatian',
+      emoji: '🐕',
+      blurb: 'Spotty and waggy',
+      fur: '#f6f4f2',
+      furLight: '#ffffff',
+      furDark: '#2a2732',
+      cream: '#ffffff',
+      creamShade: '#e6e3e0',
+      innerEar: '#f0a8b8',
+      earTip: null,
+      earColor: '#2a2732',
+      paw: '#f6f4f2',
+      nose: '#2a2732',
+      blush: '#f5a8b4',
+      outline: '#141014',
+      eyeStyle: 'round',
+      eyeColor: '#141014',
+      iris: '#a06a3c',
+      tailTip: '#f6f4f2',
+      whiskers: false,
+      earLean: 0.1,
+      earStyle: 'floppy',
+      muzzleScale: 1.25,
+      noseScale: 1.6,
+      tailBushy: false,
+      coatSpots: true,
+      cheekPatch: false,
+      foreheadStripes: false,
+      cardBg: '#ecebe9',
+      thumbBg: '#f3f2f0',
+      thumbShade: '#dedcda'
     }
   };
 
@@ -134,7 +201,12 @@
         break;
 
       default: // open
-        if (sp.eyeStyle === 'slit') {
+        if (sp.eyeStyle === 'glow') {
+          L.ellipse(ex, ey, r * 0.95, r * 1.1, dark);
+          L.ellipse(ex, ey, r * 0.72, r * 0.92, C(sp.iris || '#9ef05e'));
+          L.ellipse(ex, ey, r * 0.28, r * 0.78, dark);
+          L.set(ex - r * 0.45, ey - r * 0.55, white);
+        } else if (sp.eyeStyle === 'slit') {
           L.ellipse(ex, ey, r * 1.0, r * 0.62, dark);
           L.set(ex - r * 0.4, ey - r * 0.2, white);
         } else {
@@ -142,7 +214,7 @@
           L.set(ex - r * 0.35, ey - r * 0.45, white);
           L.set(ex - r * 0.35 + 1, ey - r * 0.45, white);
           L.set(ex - r * 0.35, ey - r * 0.45 + 1, white);
-          L.set(ex + r * 0.3, ey + r * 0.5, C('#7fd8b0'));
+          L.set(ex + r * 0.3, ey + r * 0.5, C(sp.iris || '#7fd8b0'));
         }
         break;
     }
@@ -268,6 +340,18 @@
     function grow(p, g2, k) {
       return { x: g2.x + (p.x - g2.x) * k, y: g2.y + (p.y - g2.y) * k };
     }
+    if (sp.earStyle === 'floppy') {
+      // hound ears hang down beside the head instead of standing up
+      var earCol = C(sp.earColor || sp.furDark);
+      for (var sf = -1; sf <= 1; sf += 2) {
+        var fex = headCX + sf * hrx * 0.92 + sf * wig * 0.35;
+        var fey = headCY - hry * 0.3 + earLen * 0.4;
+        var frx = hrx * 0.25, fry = earLen * 0.62;
+        L.ellipse(fex, fey, frx + 1, fry + 1, ink);
+        L.ellipse(fex, fey, frx, fry, earCol);
+        L.ellipse(fex - sf * frx * 0.25, fey - fry * 0.3, frx * 0.45, fry * 0.4, C(sp.innerEar));
+      }
+    } else
     for (var s3 = -1; s3 <= 1; s3 += 2) {
       var baseIn = { x: headCX + s3 * hrx * 0.16, y: headCY - hry * 0.84 };
       var baseOut = { x: headCX + s3 * hrx * 0.95, y: headCY - hry * 0.28 };
@@ -299,12 +383,25 @@
     L.ellipse(headCX, headCY - hry * 0.42, hrx * 0.62, hry * 0.38, furL);
 
     // muzzle
-    L.ellipse(headCX, headCY + hry * 0.5, hrx * 0.52, hry * 0.34, cream);
+    var mz = sp.muzzleScale || 1;
+    L.ellipse(headCX, headCY + hry * 0.5, hrx * 0.52 * mz, hry * 0.34 * mz, cream);
     if (sp.cheekPatch) {
       for (var s4 = -1; s4 <= 1; s4 += 2) {
         L.ellipse(headCX + s4 * hrx * 0.62, headCY + hry * 0.3, hrx * 0.34, hry * 0.32, cream);
       }
       L.ellipse(headCX, headCY + hry * 0.34, hrx * 0.36, hry * 0.3, cream);
+    }
+
+    // dalmatian spots — fixed positions so they never flicker
+    if (sp.coatSpots) {
+      var sc = C(sp.furDark);
+      var bodySpots = [[-0.55, -0.15], [0.5, 0.1], [0.05, 0.45], [-0.3, 0.5], [0.62, -0.3]];
+      for (var bs = 0; bs < bodySpots.length; bs++) {
+        L.ellipse(cx + bodySpots[bs][0] * brx, bodyCY + bodySpots[bs][1] * bry,
+          brx * 0.17, bry * 0.17, sc);
+      }
+      L.ellipse(headCX - hrx * 0.6, headCY - hry * 0.58, hrx * 0.19, hry * 0.17, sc);
+      L.ellipse(headCX + hrx * 0.52, headCY - hry * 0.58, hrx * 0.15, hry * 0.14, sc);
     }
 
     // forehead stripes (tabby)
@@ -331,7 +428,8 @@
 
     // nose + mouth
     var noseY = headCY + hry * 0.34;
-    L.ellipse(headCX, noseY, 1.1, 0.9, C(sp.nose));
+    var ns = sp.noseScale || 1;
+    L.ellipse(headCX, noseY, 1.1 * ns, 0.9 * ns, C(sp.nose));
     drawMouth(L, sp, headCX, noseY + 2.4, opts.mouth || 'smile');
 
     // whiskers — kept inside the silhouette so the outline pass leaves them thin
@@ -369,6 +467,16 @@
         var fm = opts.foam[f];
         L.disc(fm.x, fm.y + bob * 0.5, fm.r, C('#ffffff'));
         L.set(fm.x - 1, fm.y - 1 + bob * 0.5, C('#eaf9ff'));
+      }
+    }
+
+    /* ---- rinse water still clinging on, waiting to be towelled off ---- */
+    if (opts.drips && opts.drips.length) {
+      for (var dp = 0; dp < opts.drips.length; dp++) {
+        var dr = opts.drips[dp];
+        var dy2 = dr.y + bob * 0.5;
+        L.ellipse(dr.x, dy2, 1.5, 2, C('#7fd8ff'));
+        L.set(dr.x - 1, dy2 - 1, C('#d6f2ff'));
       }
     }
 

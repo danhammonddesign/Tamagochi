@@ -151,10 +151,29 @@
     this.layer = new Layer(w, h);
   }
 
-  Screen.prototype.present = function () {
-    var d = this.img.data, L = this.layer.data, P = Palette.colors;
+  /* `tint` is an optional [r, g, b, amount] wash applied to every colour —
+     used for the night-time and golden-hour lighting. It is folded into a
+     copy of the palette once per frame rather than per pixel. */
+  Screen.prototype.present = function (tint) {
+    var P = Palette.colors;
+    var pal = P;
+    if (tint && tint[3] > 0.002) {
+      var a = tint[3], ia = 1 - a;
+      pal = this._tinted || (this._tinted = [null]);
+      pal.length = P.length;
+      for (var j = 1; j < P.length; j++) {
+        var src = P[j];
+        var t = pal[j];
+        if (!t) t = pal[j] = [0, 0, 0];
+        t[0] = src[0] * ia + tint[0] * a;
+        t[1] = src[1] * ia + tint[1] * a;
+        t[2] = src[2] * ia + tint[2] * a;
+      }
+      pal[0] = null;
+    }
+    var d = this.img.data, L = this.layer.data;
     for (var i = 0, p = 0; i < L.length; i++, p += 4) {
-      var c = P[L[i]];
+      var c = pal[L[i]];
       if (!c) {
         d[p] = 0; d[p + 1] = 0; d[p + 2] = 0; d[p + 3] = 0;
       } else {

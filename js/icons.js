@@ -62,6 +62,22 @@
       L.disc(8, 3, 1.6, C('#ffd93d'));
     },
 
+    shower: function (L) {                     // hand shower with jets
+      L.line(9, 5, 13.5, 1.5, C('#b9c2d0'), 2.4);
+      L.ellipse(6.5, 5.5, 4.6, 2.6, C('#d8dee8'));
+      L.ellipse(6.5, 4.6, 4, 1.8, C('#eef2f8'));
+      for (var i = 0; i < 4; i++) {
+        L.rect(3 + i * 2.2, 8, 1, 2 + (i % 2) * 2, C('#5fc8ff'));
+        L.set(3 + i * 2.2, 12 + (i % 2) * 2, C('#7fd8ff'));
+      }
+    },
+    towel: function (L) {                      // folded towel
+      L.rect(2, 4, 12, 9, C('#ffd0e6'));
+      L.rect(2, 4, 12, 2, C('#ff8fb8'));
+      L.rect(2, 8, 12, 1, C('#ffb3d0'));
+      for (var t = 0; t < 4; t++) L.rect(3 + t * 3, 13, 2, 2, C('#ffe4f0'));
+    },
+
     // ---- chrome -------------------------------------------------------
     paw: function (L) {
       L.disc(4, 5, 2, C('#ff8fb0'));

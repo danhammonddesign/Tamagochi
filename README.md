@@ -1,8 +1,8 @@
 # 🦊 Pixel Pals
 
-A Tamagotchi-style pet game for kids. Adopt baby **cats** and **foxes**, look
-after them, and watch them grow up from Baby to Adult. Keep a whole shelf of
-pets and switch between them whenever you like.
+A Tamagotchi-style pet game for kids. Adopt a baby **cat**, **fox**,
+**black cat** or **Dalmatian**, look after it, and watch it grow up from Baby
+to Adult. Keep a whole shelf of pets and switch between them whenever you like.
 
 No build step, no dependencies, no network — just open `index.html`.
 
@@ -33,7 +33,7 @@ thumb-sized targets along the bottom, and everything is saved to
    | Feed | Food | A bowl slides in and your pet tucks in |
    | Water | Water | A water bowl to lap from |
    | Play | Fun | Pick one of three mini games |
-   | Bath | Clean | **Hands on:** drag the soap over your pet to scrub the mud off |
+   | Bath | Clean | **Hands on:** scrub, rinse and dry your pet in three steps |
    | Brush | Brush | **Hands on:** swipe the brush over the fur to smooth the tufts out |
 
 3. **Stroke your pet** anywhere on screen to give it cuddles — hearts float up
@@ -65,6 +65,15 @@ gritted teeth, red pops over its head, and it sulks for a few seconds before
 forgiving you. It only naps when it doesn't need anything, so a sleeping pet
 never blocks you from looking after it.
 
+### Day and night
+
+The room runs on your real clock. It is bright through the middle of the day,
+warms into a **sunrise between 7 and 9 in the morning**, and sinks through a
+**sunset between 7 and 9 in the evening** into night. After dark the whole
+room takes a deep blue wash, the moon rides across the window with a field of
+twinkling stars, and a night light comes on in the corner. Your pet dozes off
+far more readily at night, and it greets you differently depending on the hour.
+
 ### Accidents
 
 Every so often your pet has an accident on the floor — a poop or a puddle. It
@@ -73,13 +82,26 @@ up**. Leave it and the room gets dirty roughly twice as fast per mess, and
 flies turn up after a while. Come back after a long time away and you may find
 one or two waiting for you.
 
-### Bath and brush
+### Bath time
 
-These two are not animations you watch — you do them. The mud on your pet and
-the scruffy tufts in its fur are real objects on the sprite: drag the soap or
-the brush across one and it comes off, with foam or fur flying and the gauge
-ticking up. When the last spot is gone your pet sparkles clean. Press **Done**
-any time to stop early and keep what you have cleaned so far.
+Bath time is a proper three-step job, and every step is hands on:
+
+1. **Scrub** — drag the bar of soap over your pet. Each patch of mud you find
+   comes off and leaves a blob of foam behind.
+2. **Rinse** — pick up the shower and wash all that foam away. Every blob you
+   rinse leaves the fur dripping wet.
+3. **Dry** — rub the towel over your pet until every last drip is gone.
+
+Each step needs a fresh press, so you lift your finger, pick up the next thing
+and start again. Your pet sparkles clean once the last drip is towelled off.
+There are always at least seven patches of mud, so a bath is never a two-second
+job. Press **Done** any time to stop early and keep what you have cleaned.
+
+### Brushing
+
+Same idea, one step: the scruffy tufts in your pet's fur are real objects on
+the sprite. Swipe the brush over one and it works out, with fur flying and the
+gauge ticking up.
 
 Because the number of spots is derived from the Clean and Brush stats, the mess
 you can see always matches the gauges — a pet on 40% Clean has exactly five

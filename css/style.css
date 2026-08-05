@@ -403,7 +403,7 @@ body {
 }
 .tagline { margin: 4px 0 14px; font-size: 14px; font-weight: 800; color: var(--muted); }
 
-.picker { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.picker { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 .pick-card {
   display: flex;
@@ -419,16 +419,18 @@ body {
   transition: transform .1s, border-color .15s, background .15s;
 }
 .pick-card[data-species="fox"] { background: #fff1e2; }
+.pick-card[data-species="blackcat"] { background: #ece8f5; }
+.pick-card[data-species="dog"] { background: #f4f3f1; }
 .pick-card.selected { border-color: var(--pink-deep); transform: translateY(-3px); }
 
 .preview {
-  width: 96px;
-  height: 96px;
+  width: 76px;
+  height: 76px;
   image-rendering: pixelated;
   border-radius: 16px;
   background: #fff;
 }
-.pick-name { font-size: 16px; font-weight: 900; }
+.pick-name { font-size: 14px; font-weight: 900; }
 
 .name-input {
   font-family: inherit;
