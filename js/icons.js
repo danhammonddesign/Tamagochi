@@ -86,11 +86,13 @@
       L.set(5, 5, C('#8ee86a')); L.set(10, 4.6, C('#ffe07a'));
       L.set(11.6, 9, C('#7fd8ff')); L.set(4.6, 10.4, C('#ffffff'));
     },
-    foodCandy: function (L) {
-      L.disc(8, 8, 3.8, C('#ff5f8f'));
-      L.ellipse(6.6, 6.8, 1.4, 1, C('#ffb3cc'));
-      L.tri(4.4, 8, 1, 4.6, 1, 11.4, C('#ffd93d'));
-      L.tri(11.6, 8, 15, 4.6, 15, 11.4, C('#ffd93d'));
+    foodFish: function (L) {
+      L.ellipse(8.5, 8, 5.4, 3.4, C('#7fd8ff'));
+      L.ellipse(7.5, 7, 3.4, 1.8, C('#c8f0ff'));
+      L.tri(3.4, 8, 0.6, 4.4, 0.6, 11.6, C('#5fc8ff'));
+      L.tri(9, 4.8, 12, 1.6, 12.6, 5.4, C('#5fc8ff'));
+      L.set(11, 6.6, C('#141014'));
+      L.set(9.5, 9.5, C('#5fc8ff'));
     },
     foodLolly: function (L) {
       L.rect(7.5, 9, 1.5, 6, C('#f4efe6'));

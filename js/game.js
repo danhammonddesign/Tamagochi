@@ -46,12 +46,12 @@
   /* Six things to eat. Proper food fills you up; treats fill you up less but
      are a lot more fun. */
   var FOODS = {
-    meal:  { label: 'Meal',     gain: 42, fun: 0,  say: 'Yum yum!' },
-    steak: { label: 'Steak',    gain: 46, fun: 4,  say: 'Delicious!' },
-    bone:  { label: 'Bone',     gain: 34, fun: 8,  say: 'Crunch crunch!' },
-    donut: { label: 'Donut',    gain: 26, fun: 14, say: 'So sweet!' },
-    candy: { label: 'Candy',    gain: 18, fun: 18, say: 'Sugar rush!' },
-    lolly: { label: 'Lollipop', gain: 16, fun: 20, say: 'Slurp!' }
+    meal:  { label: 'Meal',     gain: 75, fun: 0,  say: 'Yum yum!' },
+    steak: { label: 'Steak',    gain: 75, fun: 4,  say: 'Delicious!' },
+    bone:  { label: 'Bone',     gain: 75, fun: 8,  say: 'Crunch crunch!' },
+    donut: { label: 'Donut',    gain: 25, fun: 15, say: 'So sweet!' },
+    fish:  { label: 'Fish',     gain: 25, fun: 10, say: 'Tasty!' },
+    lolly: { label: 'Lollipop', gain: 25, fun: 20, say: 'Slurp!' }
   };
 
   var HINTS = {
@@ -133,6 +133,10 @@
     plop: function () { this.tone(200, 0.12, 'triangle', 0.05, 0, 90); },
     pop: function () { this.tone(1100, 0.06, 'sine', 0.05, 0, 1700); },
     whoosh: function () { this.tone(500, 0.14, 'sine', 0.03, 0, 260); },
+    snip: function () {
+      this.tone(1400, 0.05, 'square', 0.035);
+      this.tone(1200, 0.05, 'square', 0.035, 0.09);
+    },
     delight: function () {          // the happy trill after lots of fuss
       var notes = [660, 880, 990, 1320];
       for (var i = 0; i < notes.length; i++) this.tone(notes[i], 0.16, 'sine', 0.05, i * 0.09);
@@ -147,7 +151,9 @@
   /* ------------------------------------------------------------------ */
   /* save data — a shelf of pets                                         */
   /* ------------------------------------------------------------------ */
-  var db = { v: 2, activeId: '', pets: [] };
+  var db = { v: 2, activeId: '', pets: [], plant: 20 };
+  var PLANT_FULL = 900;       // seconds from a fresh trim to fully overgrown
+  var PLANT_WILD = 70;        // needs a trim above this
   var pet = null;               // the pet currently on screen
 
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -184,6 +190,7 @@
 
   function save() {
     db.pets.forEach(function (p) { p.saved = Date.now(); });
+    db.plantSaved = Date.now();
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(db)); } catch (e) { /* private mode */ }
   }
 
@@ -194,7 +201,14 @@
       try {
         var d = JSON.parse(raw);
         if (d && d.pets && d.pets.length) {
-          db = { v: 2, activeId: d.activeId, pets: d.pets.map(normalise) };
+          db = {
+            v: 2, activeId: d.activeId, pets: d.pets.map(normalise),
+            plant: typeof d.plant === 'number' ? d.plant : 20,
+            plantSaved: d.plantSaved || Date.now()
+          };
+          // the plant keeps growing while you are away
+          var grew = Math.min(MAX_OFFLINE, (Date.now() - db.plantSaved) / 1000);
+          db.plant = clamp(db.plant + grew / PLANT_FULL * 100, 0, 100);
           if (!byId(db.activeId)) db.activeId = db.pets[0].id;
           return true;
         }
@@ -338,7 +352,8 @@
     anger: { rows: ['.#.#.', '.###.', '#####', '.###.', '.#.#.'], color: '#ff3b3b' },
     poof: { rows: ['.##.', '####', '####', '.##.'], color: '#e6ded4' },
     star: { rows: ['..#..', '.###.', '#####', '.###.', '..#..'], color: '#ffd93d' },
-    sick: { rows: ['.##.', '#..#', '#..#', '.##.'], color: '#8fd66a' }
+    sick: { rows: ['.##.', '#..#', '#..#', '.##.'], color: '#8fd66a' },
+    leaf: { rows: ['.##', '###', '##.'], color: '#7ed957' }
   };
 
   function updateParticles(dt) {
@@ -511,30 +526,54 @@
     L.rect(wx + 2, wy + 10, 20, 1, frame);
 
     // framed heart
-    var px2 = W - 19, py2 = Math.round(H * 0.22);
+    var py2 = Math.round(H * 0.22);
+    var px2 = W - 19;
     L.rect(px2, py2, 13, 12, C('#f7b955'));
     L.rect(px2 + 2, py2 + 2, 9, 8, C('#fff6e0'));
     L.stamp(Pets.HEART, { '#': C('#ff6f9c') }, px2 + 4, py2 + 3);
 
     // wall shelf with a jar and a book, filling the middle of the wall
-    var sy = fy - 20, sx = W - 26;
+    var sy = fy - 20, sx = W - 40;
     if (sy > py2 + 15) {
-      L.rect(sx, sy, 22, 2, C('#d9954f'));
+      L.rect(sx, sy, 15, 2, C('#d9954f'));
       L.rect(sx + 3, sy - 6, 5, 6, C('#8ee86a'));
       L.rect(sx + 2, sy - 8, 7, 2, C('#63c93f'));
-      L.rect(sx + 12, sy - 7, 3, 7, C('#ff8fb0'));
-      L.rect(sx + 15, sy - 6, 3, 6, C('#9ad0ff'));
-      L.rect(sx + 18, sy - 8, 3, 8, C('#ffd93d'));
+      L.rect(sx + 9, sy - 7, 3, 7, C('#ff8fb0'));
+      L.rect(sx + 12, sy - 6, 3, 6, C('#9ad0ff'));
     }
 
-    // potted plant standing against the wall
-    stampOutlined(L, W - 9, fy - 4, function (b, bx, by) {
+    // potted plant — it keeps growing until you give it a trim
+    var lv = clamp(db.plant / 100, 0, 1);
+    var wild = db.plant >= PLANT_WILD;
+    var sway = Math.sin(t * 1.3) * (0.4 + lv);
+    // never let it grow up into the picture frame on a short room
+    var stemCap = Math.max(4, (fy - 4) - (py2 + 16));
+    stampOutlined(L, W - 13, fy - 4, function (b, bx, by) {
       b.rect(bx - 4, by - 3, 9, 9, C('#e58f6a'));
       b.rect(bx - 5, by - 5, 11, 3, C('#f2a682'));
-      b.disc(bx, by - 9, 4, C('#7ed957'));
-      b.disc(bx - 4, by - 7, 3, C('#63c93f'));
-      b.disc(bx + 4, by - 7, 3, C('#63c93f'));
-      b.disc(bx, by - 13, 2.5, C('#8ee86a'));
+      var stem = Math.min(5 + lv * 9, stemCap);
+      var top = by - 4 - stem;
+      b.rect(bx - 0.5, top, 1.5, stem, C('#4ea832'));
+      var r = 2.6 + lv * 2.2;
+      b.disc(bx + sway * 0.3, top, r, C('#7ed957'));
+      b.disc(bx - 3 - lv * 1.6, top + 2.5, r * 0.8, C('#63c93f'));
+      b.disc(bx + 3 + lv * 1.6, top + 2.5, r * 0.8, C('#63c93f'));
+      b.disc(bx + sway * 0.5, top - 3 - lv * 2, r * 0.7, C('#8ee86a'));
+      if (lv > 0.45) {
+        b.disc(bx - 4.5 - lv * 2, top - 1, r * 0.6, C('#8ee86a'));
+        b.disc(bx + 4.5 + lv * 2, top - 1, r * 0.6, C('#7ed957'));
+      }
+      if (wild) {
+        // straggly shoots poking well clear of the leaves: time for a trim
+        b.line(bx - 2, top + 1, bx - 11 + sway, top - 7, C('#4ea832'), 1);
+        b.ellipse(bx - 11 + sway, top - 7.5, 2.2, 1.4, C('#8ee86a'));
+        b.line(bx + 2, top, bx + 11 - sway, top - 8, C('#4ea832'), 1);
+        b.ellipse(bx + 11 - sway, top - 8.5, 2.2, 1.4, C('#63c93f'));
+        b.line(bx, top - 2, bx + 2 + sway, top - 11, C('#4ea832'), 1);
+        b.ellipse(bx + 2 + sway, top - 11.5, 1.8, 1.3, C('#8ee86a'));
+        b.line(bx - 1, top + 4, bx - 9, top + 9, C('#4ea832'), 1);
+        b.ellipse(bx - 9.5, top + 9, 2, 1.3, C('#63c93f'));
+      }
     });
 
     // toy box
@@ -627,11 +666,12 @@
         b.set(bx - 3 * k, by - 3 * k, C('#8ee86a'));
         b.set(bx + 2 * k, by - 3.4 * k, C('#ffe07a'));
         b.set(bx + 3.4 * k, by + 1 * k, C('#7fd8ff'));
-      } else if (kind === 'candy') {
-        b.disc(bx, by, 4 * k, C('#ff5f8f'));
-        b.ellipse(bx - 1.4 * k, by - 1.2 * k, 1.4 * k, 1 * k, C('#ffb3cc'));
-        b.tri(bx - 3.6 * k, by, bx - 7 * k, by - 3.4 * k, bx - 7 * k, by + 3.4 * k, C('#ffd93d'));
-        b.tri(bx + 3.6 * k, by, bx + 7 * k, by - 3.4 * k, bx + 7 * k, by + 3.4 * k, C('#ffd93d'));
+      } else if (kind === 'fish') {
+        b.ellipse(bx + 0.5 * k, by, 5.6 * k, 3.4 * k, C('#7fd8ff'));
+        b.ellipse(bx - 0.5 * k, by - 1 * k, 3.4 * k, 1.8 * k, C('#c8f0ff'));
+        b.tri(bx - 4.6 * k, by, bx - 8 * k, by - 3.6 * k, bx - 8 * k, by + 3.6 * k, C('#5fc8ff'));
+        b.tri(bx + 1 * k, by - 3.2 * k, bx + 4 * k, by - 6.4 * k, bx + 4.6 * k, by - 2.6 * k, C('#5fc8ff'));
+        b.set(bx + 3 * k, by - 1.4 * k, C('#141014'));
       } else {  // lollipop
         b.rect(bx - 0.5, by + 1, 1.5, 7 * k, C('#f4efe6'));
         b.disc(bx, by - 1 * k, 5 * k, C('#ff5f8f'));
@@ -842,6 +882,33 @@
       }
     }
     if (pp.t >= pp.dur) rt.pooping = null;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* the houseplant                                                      */
+  /* ------------------------------------------------------------------ */
+  function plantBounds() {
+    var lv = clamp(db.plant / 100, 0, 1);
+    var cx = W - 13;
+    var top = room.floorY - 8 - (5 + lv * 9) - (6 + lv * 6);
+    return { x0: cx - 14, x1: cx + 14, y0: top, y1: room.floorY + 3 };
+  }
+
+  function trimPlant(x, y) {
+    if (db.plant < PLANT_WILD) return false;
+    var bb = plantBounds();
+    if (x < bb.x0 || x > bb.x1 || y < bb.y0 || y > bb.y1) return false;
+    db.plant = 18;
+    Sfx.snip();
+    for (var i = 0; i < 10; i++) {
+      spawn('leaf', W - 13 + (Math.random() - 0.5) * 14, bb.y0 + Math.random() * 10,
+        { vx: (Math.random() - 0.5) * 20, vy: -6 - Math.random() * 8, g: 40, max: 1.4 });
+    }
+    say('Nice and tidy!', 1800);
+    bumpLove(4);
+    addGrowth(1.5);
+    save();
+    return true;
   }
 
   /* ------------------------------------------------------------------ */
@@ -1825,6 +1892,7 @@
       else if (rt.angry > 0) setHint('Uh oh — you woke it up!');
       else if (pet.sickT > SICK_AFTER * 0.5) setHint("Your pet doesn't look well — feed it!");
       else if (pet.messes.length) setHint('Tap the mess to clean it up!');
+      else if (db.plant >= PLANT_WILD) setHint('The plant needs a trim — tap it!');
       else if (lowVal < 30) setHint(HINTS[lowest]);
       else setHint('Stroke your pet to give it cuddles!');
     }
@@ -2012,6 +2080,8 @@
     }
     pet.love = clamp((pet.love || 0) - dt * 1.6, 0, 100);
 
+    db.plant = clamp(db.plant + dt / PLANT_FULL * 100, 0, 100);
+
     growthClock += dt;
     if (growthClock > 10) {
       growthClock = 0;
@@ -2151,8 +2221,9 @@
         return;
       }
 
-      // tidy up an accident
+      // tidy up an accident, or give the plant a haircut
       if (!rt.tool && cleanMessAt(p.x, p.y)) return;
+      if (!rt.tool && !rt.activity && trimPlant(p.x, p.y)) return;
 
       // a sleeping pet does not want to be prodded
       if (rt.sleep) {

@@ -48,11 +48,12 @@ thumb-sized targets along the bottom, and everything is saved to
 
 ### Dinner time
 
-Feed opens a menu of six things: a proper **meal**, a **steak**, a **bone**, a
-**donut**, a **candy** or a **lollipop**. Real food fills your pet up the most;
-treats fill it up less but are far more fun, so a lollipop is a poor dinner and
-a lovely snack. Whatever you pick slides in and shrinks bite by bite as your
-pet works through it.
+Feed opens a menu of six things. A proper **meal**, a **steak** or a **bone**
+is a real dinner and fills about three quarters of the Food ring. A **donut**,
+a **fish** or a **lollipop** is a snack and only fills about a quarter — but
+snacks give a good helping of Fun, so a lollipop is a poor dinner and a lovely
+treat. Whatever you pick slides in and shrinks bite by bite as your pet works
+through it.
 
 ### Mini games
 
@@ -93,6 +94,13 @@ a sun or moon rides an arc across the panes, stars come out after dark and a
 night light switches on in the corner. Your pet dozes off far more readily at
 night — and once it is properly dark it curls up in its own little bed — and it
 greets you differently depending on the hour.
+
+### The houseplant
+
+The plant in the corner grows on its own, a little every minute, whether the
+game is open or not. Left long enough it turns into a sprawling thing with
+shoots poking out in all directions — then **tap it to give it a trim**.
+Clippings fly, it snips back to a tidy size, and it starts growing again.
 
 ### Accidents
 
