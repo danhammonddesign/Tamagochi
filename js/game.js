@@ -452,6 +452,7 @@
   var W = 88, H = 64, scale = 6, screen = null;
   var petLayer = new PX.Layer(Pets.SIZE, Pets.SIZE);
   var fx = new PX.Layer(44, 44);
+  var fxBig = new PX.Layer(80, 80);       // for stamps too tall for the small one
   var room = { floorY: 36, groundY: 48 };
 
   function sizeScene() {
@@ -475,12 +476,15 @@
   /* outlined stamps                                                     */
   /* ------------------------------------------------------------------ */
   /* outline() only fills empty pixels, and the room covers the whole scene,
-     so anything needing its own black edge is drawn on a scratch layer. */
-  function stampOutlined(L, x, y, draw) {
-    fx.clear();
-    draw(fx, 22, 22);
-    fx.outline(C('#141014'));
-    L.blit(fx, Math.round(x) - 22, Math.round(y) - 22);
+     so anything needing its own black edge is drawn on a scratch layer. The
+     scratch layer is what limits how far a stamp may reach from its anchor —
+     pass `big` for anything taller than 22 pixels, or it gets clipped. */
+  function stampOutlined(L, x, y, draw, big) {
+    var b = big ? fxBig : fx, half = big ? 40 : 22;
+    b.clear();
+    draw(b, half, half);
+    b.outline(C('#141014'));
+    L.blit(b, Math.round(x) - half, Math.round(y) - half);
   }
 
   /* ------------------------------------------------------------------ */
@@ -703,7 +707,7 @@
     L.rect(wx + 2, wy + 10, 20, 1, frame);
 
     // framed heart
-    var py2 = Math.round(H * 0.22);
+    var py2 = pictureY();
     var px2 = W - 19;
     L.rect(px2, py2, 13, 12, C('#f7b955'));
     L.rect(px2 + 2, py2 + 2, 9, 8, C('#fff6e0'));
@@ -720,15 +724,13 @@
     }
 
     // potted plant — it keeps growing until you give it a trim
-    var lv = clamp(db.plant / 100, 0, 1);
-    var wild = db.plant >= PLANT_WILD;
+    var pl = plantShape();
+    var lv = pl.lv, wild = pl.wild;
     var sway = Math.sin(t * 1.3) * (0.4 + lv);
-    // never let it grow up into the picture frame on a short room
-    var stemCap = Math.max(4, (fy - 4) - (py2 + 16));
-    stampOutlined(L, W - 13, fy - 4, function (b, bx, by) {
+    stampOutlined(L, pl.cx, pl.baseY, function (b, bx, by) {
       b.rect(bx - 4, by - 3, 9, 9, C('#e58f6a'));
       b.rect(bx - 5, by - 5, 11, 3, C('#f2a682'));
-      var stem = Math.min(5 + lv * 9, stemCap);
+      var stem = pl.stem;
       var top = by - 4 - stem;
       b.rect(bx - 0.5, top, 1.5, stem, C('#4ea832'));
       var r = 2.6 + lv * 2.2;
@@ -751,7 +753,7 @@
         b.line(bx - 1, top + 4, bx - 9, top + 9, C('#4ea832'), 1);
         b.ellipse(bx - 9.5, top + 9, 2, 1.3, C('#63c93f'));
       }
-    });
+    }, true);
 
     // toy box, where the prizes are kept. With something new inside it
     // rattles and its colours brighten — the glow around it is drawn later,
@@ -1163,11 +1165,36 @@
   /* ------------------------------------------------------------------ */
   /* the houseplant                                                      */
   /* ------------------------------------------------------------------ */
-  function plantBounds() {
+  /* The framed heart on the wall, which the plant has to grow up towards but
+     never into. Kept clear of the bunting above it. */
+  function pictureY() {
+    return Math.max(Math.round(H * 0.18), Math.round(H * 0.1) + 10);
+  }
+
+  /* How big the houseplant has got. The drawing and the tap target both come
+     from here, so they can never drift apart, and the stem is capped so the
+     whole plant — leaves, straggly shoots and all — still fits on the wall
+     below the picture instead of being cut off at the top. */
+  function plantShape() {
     var lv = clamp(db.plant / 100, 0, 1);
-    var cx = W - 13;
-    var top = room.floorY - 8 - (5 + lv * 9) - (6 + lv * 6);
-    return { x0: cx - 14, x1: cx + 14, y0: top, y1: room.floorY + 3 };
+    var wild = db.plant >= PLANT_WILD;
+    var crown = wild ? 14 : 9;          // how far the leaves reach above the stem
+    var baseY = room.floorY - 4;        // the rim of the pot
+    var cap = Math.max(3, (baseY - 4) - (pictureY() + 13) - crown);
+    var stem = Math.min(5 + lv * 9, cap);
+    return {
+      // far enough in from the wall that the straggly shoots stay on screen
+      lv: lv, wild: wild, crown: crown, cx: W - 15,
+      baseY: baseY, stem: stem, top: baseY - 4 - stem
+    };
+  }
+
+  function plantBounds() {
+    var s = plantShape();
+    return {
+      x0: s.cx - 15, x1: s.cx + 15,
+      y0: s.top - s.crown - 2, y1: room.floorY + 3
+    };
   }
 
   function trimPlant(x, y) {
@@ -1177,7 +1204,7 @@
     db.plant = 18;
     Sfx.snip();
     for (var i = 0; i < 10; i++) {
-      spawn('leaf', W - 13 + (Math.random() - 0.5) * 14, bb.y0 + Math.random() * 10,
+      spawn('leaf', plantShape().cx + (Math.random() - 0.5) * 14, bb.y0 + Math.random() * 10,
         { vx: (Math.random() - 0.5) * 20, vy: -6 - Math.random() * 8, g: 40, max: 1.4 });
     }
     say('Nice and tidy!', 1800);
