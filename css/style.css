@@ -523,6 +523,49 @@ body {
 .game-card .g-name { font-size: 17px; font-weight: 900; }
 .game-card .g-sub { font-size: 12px; font-weight: 800; color: var(--muted); margin-left: auto; }
 
+/* ---------------- toy box ---------------- */
+.screen-sub {
+  margin: -4px 0 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.prize-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 10px;
+  align-content: start;
+  max-width: 520px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.prize-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 6px 10px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--panel-solid);
+  box-shadow: var(--shadow);
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform .1s;
+}
+.prize-card:active { transform: scale(.96); }
+.prize-card canvas { image-rendering: pixelated; width: 52px; height: 52px; display: block; }
+.prize-card .pz-name { font-size: 13px; font-weight: 900; margin-top: 4px; }
+.prize-card .pz-tag { font-size: 11px; font-weight: 800; color: var(--muted); }
+.prize-card.worn { outline: 4px solid var(--pink-deep); }
+.prize-card.worn .pz-tag { color: var(--pink-deep); }
+.prize-card.locked { background: rgba(255, 255, 255, .55); cursor: default; }
+.prize-card.locked canvas { opacity: .45; }
+.prize-card.locked .pz-name { color: var(--muted); }
+
 /* ---------------- food picker ---------------- */
 .food-grid {
   display: grid;

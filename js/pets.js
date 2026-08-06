@@ -494,6 +494,8 @@
       L.rect(iceX - 1, iceY - hry * 0.24 - 2, 2, 1, C('#7fb8d8'));
     }
 
+    if (opts.hat) drawHat(L, opts.hat, headCX, headCY, hrx, hry, ink);
+
     if (opts.shine) {
       var sh = C('#ffffff');
       var pts = [[headCX - hrx * 0.55, headCY - hry * 0.6], [cx + brx * 0.5, bodyCY - bry * 0.5],
@@ -515,6 +517,52 @@
       headY: headCY,
       headR: hrx
     };
+  }
+
+  /* Prize hats, drawn on top of the finished sprite with their own outline so
+     they read as something sitting on the pet rather than part of it. */
+  function drawHat(L, id, hx, hy, hrx, hry, ink) {
+    var top = hy - hry * 0.92;
+    if (id === 'party') {
+      var ax = hx + 1, ay = top - hry * 0.85;
+      L.tri(ax - 5, top + 1, ax + 5, top + 1, ax + 1, ay - 1, ink);
+      L.tri(ax - 4, top, ax + 4, top, ax + 1, ay, C('#ff5f8f'));
+      L.tri(ax - 4, top, ax, top, ax + 1, ay, C('#ff8fb8'));
+      L.rect(ax - 4, top - 1, 8, 2, C('#ffd93d'));
+      L.disc(ax + 1, ay, 1.9, ink);
+      L.disc(ax + 1, ay, 1.4, C('#ffd93d'));
+    } else if (id === 'crown') {
+      L.rect(hx - 6, top - 3, 12, 5, ink);
+      L.tri(hx - 6, top - 2, hx - 6, top - 8, hx - 2, top - 3, ink);
+      L.tri(hx, top - 9, hx - 3, top - 2, hx + 3, top - 2, ink);
+      L.tri(hx + 6, top - 2, hx + 6, top - 8, hx + 2, top - 3, ink);
+      L.rect(hx - 5, top - 2, 10, 3, C('#ffb01a'));
+      L.rect(hx - 5, top - 2, 10, 1, C('#ffe07a'));
+      L.tri(hx - 5, top - 2, hx - 5, top - 7, hx - 2, top - 3, C('#ffd93d'));
+      L.tri(hx, top - 8, hx - 2.5, top - 2, hx + 2.5, top - 2, C('#ffd93d'));
+      L.tri(hx + 5, top - 2, hx + 5, top - 7, hx + 2, top - 3, C('#ffd93d'));
+      L.set(hx - 3, top, C('#ff5f8f'));
+      L.set(hx, top, C('#7fd8ff'));
+      L.set(hx + 3, top, C('#8ee86a'));
+    } else if (id === 'cap') {
+      L.ellipse(hx, top - 1, 6.5, 4.5, ink);
+      L.rect(hx - 10, top + 1, 8, 3, ink);
+      L.ellipse(hx, top - 1, 5.5, 3.7, C('#3fa9ff'));
+      L.rect(hx - 9, top + 2, 7, 1.6, C('#2f89d8'));
+      L.ellipse(hx - 2, top - 2.4, 2, 1.3, C('#7fc6ff'));
+      L.disc(hx, top - 5, 1.5, ink);
+      L.disc(hx, top - 5, 1, C('#ffd93d'));
+    } else if (id === 'bow') {
+      var bx = hx - hrx * 0.7, by = top + 1;
+      L.tri(bx, by, bx - 6, by - 4, bx - 6, by + 4, ink);
+      L.tri(bx, by, bx + 6, by - 4, bx + 6, by + 4, ink);
+      L.tri(bx, by, bx - 5, by - 3, bx - 5, by + 3, C('#ff5f8f'));
+      L.tri(bx, by, bx + 5, by - 3, bx + 5, by + 3, C('#ff5f8f'));
+      L.ellipse(bx - 3, by, 1.6, 1.9, C('#ff8fb8'));
+      L.ellipse(bx + 3, by, 1.6, 1.9, C('#ff8fb8'));
+      L.disc(bx, by, 2.1, ink);
+      L.disc(bx, by, 1.5, C('#e8629a'));
+    }
   }
 
   /* Geometry of a stage, in layer coordinates — used to scatter dirt and
@@ -542,6 +590,7 @@
     metrics: metrics,
     stageIndex: stageIndex,
     drawPet: drawPet,
+    drawHat: drawHat,
     HEART: HEART
   };
 })(window);

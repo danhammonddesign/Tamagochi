@@ -58,6 +58,23 @@
   // what each animal says when it is thoroughly pleased with you
   var HAPPY_SAY = { dog: 'Woof woof!', fox: 'Yip yip!', cat: 'Purrrrr!', blackcat: 'Purrrrr!' };
 
+  /* Prizes live in the toy box in the corner. Two full meters at once wins one. */
+  var PRIZES = [
+    { id: 'party', kind: 'hat', label: 'Party Hat', icon: 'hatParty' },
+    { id: 'crown', kind: 'hat', label: 'Crown', icon: 'hatCrown' },
+    { id: 'cap', kind: 'hat', label: 'Cap', icon: 'hatCap' },
+    { id: 'bow', kind: 'hat', label: 'Bow', icon: 'hatBow' },
+    { id: 'mouse', kind: 'toy', label: 'Toy Mouse', icon: 'toyMouse', game: 'mouse' },
+    { id: 'frisbee', kind: 'toy', label: 'Frisbee', icon: 'toyFrisbee', game: 'frisbee' }
+  ];
+
+  function prizeById(id) {
+    for (var i = 0; i < PRIZES.length; i++) if (PRIZES[i].id === id) return PRIZES[i];
+    return null;
+  }
+
+  function hasPrize(id) { return db.prizes.indexOf(id) >= 0; }
+
   var HINTS = {
     food: 'Your pet is hungry — tap Feed!',
     water: 'Your pet is thirsty — tap Water!',
@@ -259,7 +276,7 @@
   /* ------------------------------------------------------------------ */
   /* save data — a shelf of pets                                         */
   /* ------------------------------------------------------------------ */
-  var db = { v: 2, activeId: '', pets: [], plant: 20 };
+  var db = { v: 2, activeId: '', pets: [], plant: 20, prizes: [], prizeNew: 0 };
   var PLANT_FULL = 900;       // seconds from a fresh trim to fully overgrown
   var PLANT_WILD = 70;        // needs a trim above this
   var pet = null;               // the pet currently on screen
@@ -273,7 +290,7 @@
       growth: 0, stage: 'baby',
       stats: { food: 75, water: 75, fun: 75, clean: 95, groom: 92 },
       love: 40, born: Date.now(), saved: Date.now(), cuddles: 0,
-      messes: [], sick: false, sickT: 0
+      messes: [], sick: false, sickT: 0, hat: null, prizeArmed: false
     };
   }
 
@@ -289,6 +306,7 @@
     if (!p.id) p.id = uid();
     if (!Pets.SPECIES[p.species]) p.species = 'cat';
     p.sick = !!p.sick;
+    if (p.hat && !prizeById(p.hat)) p.hat = null;
     if (typeof p.sickT !== 'number') p.sickT = 0;
     if (!Array.isArray(p.messes)) p.messes = [];
     p.messes = p.messes.slice(0, MAX_MESS);
@@ -312,7 +330,9 @@
           db = {
             v: 2, activeId: d.activeId, pets: d.pets.map(normalise),
             plant: typeof d.plant === 'number' ? d.plant : 20,
-            plantSaved: d.plantSaved || Date.now()
+            plantSaved: d.plantSaved || Date.now(),
+            prizes: Array.isArray(d.prizes) ? d.prizes : [],
+            prizeNew: d.prizeNew || 0
           };
           // the plant keeps growing while you are away
           var grew = Math.min(MAX_OFFLINE, (Date.now() - db.plantSaved) / 1000);
@@ -684,13 +704,21 @@
       }
     });
 
-    // toy box
+    // toy box, where the prizes are kept
+    var boxNew = db.prizeNew > 0;
+    var lid = boxNew ? Math.sin(t * 3) * 1.2 - 1.5 : 0;
     stampOutlined(L, 8, fy - 3, function (b, bx, by) {
       b.rect(bx - 6, by - 4, 13, 9, C('#9ad0ff'));
-      b.rect(bx - 6, by - 4, 13, 2, C('#77b8f0'));
+      b.rect(bx - 6, by - 4 + lid, 13, 2, C('#77b8f0'));
       b.disc(bx - 2, by + 1, 1.7, C('#ff8fb0'));
       b.disc(bx + 3, by + 1, 1.7, C('#ffe07a'));
     });
+    if (boxNew) {
+      var sp3 = ['..#..', '.###.', '#####', '.###.', '..#..'];
+      var tw2 = Math.sin(t * 4);
+      if (tw2 > -0.3) L.stamp(sp3, { '#': C('#ffe98a') }, 12, fy - 14 + Math.round(tw2));
+      if (tw2 < 0.4) L.set(3, fy - 12 - Math.round(tw2 * 2), C('#fff6d0'));
+    }
 
     // pet bed cushion on the floor
     stampOutlined(L, 12, fy + 13, function (b, bx, by) {
@@ -993,6 +1021,56 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* prizes                                                              */
+  /* ------------------------------------------------------------------ */
+  function fullMeters(p) {
+    var n = 0;
+    for (var i = 0; i < STAT_KEYS.length; i++) if (p.stats[STAT_KEYS[i]] >= 99) n++;
+    return n;
+  }
+
+  /* Two meters full at the same time wins a prize. It only fires on the way
+     up, so it cannot pay out twice for the same pair. */
+  function checkPrize() {
+    var n = fullMeters(pet);
+    if (n < 2) { pet.prizeArmed = false; return; }
+    if (pet.prizeArmed) return;
+    pet.prizeArmed = true;
+
+    var left = PRIZES.filter(function (p) { return !hasPrize(p.id); });
+    if (!left.length) return;
+    var won = left[Math.floor(Math.random() * left.length)];
+    db.prizes.push(won.id);
+    db.prizeNew++;
+
+    Sfx.grow();
+    rt.prizeFly = { t: 0, icon: won.icon };
+    for (var i = 0; i < 20; i++) {
+      spawn(i % 2 ? 'sparkle' : 'heart', W / 2 + (Math.random() - 0.5) * 24, room.groundY - 30,
+        { vx: (Math.random() - 0.5) * 26, vy: -20 - Math.random() * 16, g: 30, max: 1.5 });
+    }
+    el.celebrateText.innerHTML =
+      '<div class="celebrate-emoji">🎁</div>' +
+      '<div class="celebrate-title">You won a prize!</div>' +
+      '<div class="celebrate-sub">' + escapeHtml(won.label) + ' — it is in the toy box</div>';
+    el.celebrate.classList.add('show');
+    setTimeout(function () { el.celebrate.classList.remove('show'); }, 2800);
+    save();
+  }
+
+  function toyBoxBounds() {
+    return { x0: 1, x1: 16, y0: room.floorY - 9, y1: room.floorY + 4 };
+  }
+
+  function tapToyBox(x, y) {
+    var bb = toyBoxBounds();
+    if (x < bb.x0 || x > bb.x1 || y < bb.y0 || y > bb.y1) return false;
+    Sfx.click();
+    openPrizes();
+    return true;
+  }
+
+  /* ------------------------------------------------------------------ */
   /* the houseplant                                                      */
   /* ------------------------------------------------------------------ */
   function plantBounds() {
@@ -1091,11 +1169,26 @@
     if (rt.sleep.t >= rt.sleep.dur) wake(false);
   }
 
+  /* Tucking the pet in on purpose: it stays down until you wake it, or until
+     it has had a good long rest. */
+  function tuckIn() {
+    if (!pet || rt.activity || rt.tool || rt.intro || rt.pooping) return;
+    if (rt.sleep) { wake(false); return; }
+    if (rt.angry > 0) { say('Hmph!', 1200); return; }
+    rt.sleep = { t: 0, dur: 180, byPlayer: true };
+    rt.petting = false;
+    say('Night night…', 2000);
+    Sfx.yawn();
+    save();
+  }
+
   /* Waking the pet yourself is rude, and it will let you know. */
   function wake(rude) {
     if (!rt.sleep) return false;
+    rt.sleepByPlayer = !!rt.sleep.byPlayer;
     rt.sleep = null;
     rt.lastWake = rt.t;
+    if (rude && rt.sleepByPlayer) rude = false;   // you put it down, you may wake it
     if (rude) {
       rt.angry = 9;
       bumpLove(-14);
@@ -1138,7 +1231,10 @@
   var GAMES = {
     ball: { label: 'Bounce', dur: 9, hint: 'Tap the ball!', per: 4 },
     bubble: { label: 'Bubbles', dur: 14, hint: 'Pop the bubbles!', per: 3 },
-    treat: { label: 'Find It', dur: 0, hint: 'Which cup hides the treat?', per: 14 }
+    treat: { label: 'Find It', dur: 0, hint: 'Which cup hides the treat?', per: 14 },
+    // unlocked by winning the matching toy from the toy box
+    mouse: { label: 'Chase', dur: 14, hint: 'Catch the mouse!', per: 4, prize: 'mouse' },
+    frisbee: { label: 'Fetch', dur: 14, hint: 'Keep it flying!', per: 5, prize: 'frisbee' }
   };
 
   function cupGap() { return Math.min(20, Math.max(14, Math.round(W * 0.26))); }
@@ -1161,6 +1257,28 @@
       b.disc(bx - 1.5, by - 1, 0.9, C('#8a5a2a'));
       b.disc(bx + 1.5, by + 0.5, 0.9, C('#8a5a2a'));
       b.disc(bx, by + 2, 0.9, C('#8a5a2a'));
+    });
+  }
+
+  function drawMouseToy(L, x, y, t) {
+    stampOutlined(L, x, y, function (b, bx, by) {
+      var hop = Math.abs(Math.sin(t * 12)) * 1.2;
+      b.ellipse(bx, by - hop, 5, 3, C('#b9b3c8'));
+      b.ellipse(bx - 1.4, by - 1 - hop, 3, 1.8, C('#d4cfe0'));
+      b.disc(bx - 3, by - 2.6 - hop, 2.2, C('#b9b3c8'));
+      b.disc(bx - 3, by - 2.6 - hop, 1.1, C('#ff9ec4'));
+      b.set(bx + 2.6, by - 0.6 - hop, C('#141014'));
+      b.ellipse(bx + 4.6, by + 0.4 - hop, 1.2, 0.9, C('#ff9ec4'));
+      b.line(bx + 4, by + 1.6 - hop, bx + 8, by + 3 - hop, C('#b9b3c8'), 1);
+    });
+  }
+
+  function drawFrisbee(L, x, y, spin) {
+    var squash = 0.45 + 0.55 * Math.abs(Math.cos(spin));
+    stampOutlined(L, x, y, function (b, bx, by) {
+      b.ellipse(bx, by + 1, 6.5, 3.2 * squash, C('#ff9f3d'));
+      b.ellipse(bx, by, 6.5, 3 * squash, C('#ffd93d'));
+      b.ellipse(bx, by - 0.2, 3.6, 1.7 * squash, C('#fff3a8'));
     });
   }
 
@@ -1291,6 +1409,12 @@
     } else if (id === 'treat') {
       rt.activity.round = 0;
       newTreatRound();
+    } else if (id === 'mouse') {
+      rt.props.mouse = { x: W * 0.75, y: room.groundY - 3, vx: -26, turn: 1.2 };
+      Sfx.pickup();
+    } else if (id === 'frisbee') {
+      rt.props.frisbee = { x: 12, y: room.groundY - 26, vx: 30, vy: -14, spin: 0 };
+      Sfx.whoosh();
     }
     el.dock.classList.add('hide');
     el.toolBar.classList.add('show');
@@ -1479,7 +1603,12 @@
     }
 
     if (cfg.kind === 'tool') return startTool(name);
-    if (name === 'play') { el.gamePicker.classList.add('show'); return; }
+    if (name === 'play') {
+      el.gameMouse.classList.toggle('hidden', !hasPrize('mouse'));
+      el.gameFrisbee.classList.toggle('hidden', !hasPrize('frisbee'));
+      el.gamePicker.classList.add('show');
+      return;
+    }
     if (name === 'feed') { el.foodPicker.classList.add('show'); return; }
 
     rt.activity = { kind: name, t: 0, dur: cfg.dur, given: 0, beat: 0 };
@@ -1587,6 +1716,31 @@
       } else if (a.game === 'treat') {
         updateTreatGame(dt);
         rt.leanTarget = 0;
+      } else if (a.game === 'mouse') {
+        var mo = rt.props.mouse;
+        mo.turn -= dt;
+        if (mo.turn <= 0) {                       // darts off in a new direction
+          mo.turn = 0.7 + Math.random() * 1.4;
+          mo.vx = (Math.random() < 0.5 ? -1 : 1) * (22 + Math.random() * 18);
+        }
+        mo.x += mo.vx * dt;
+        if (mo.x < 8) { mo.x = 8; mo.vx = Math.abs(mo.vx); }
+        if (mo.x > W - 8) { mo.x = W - 8; mo.vx = -Math.abs(mo.vx); }
+        rt.leanTarget = clamp((mo.x - W / 2) * 0.18, -5, 5);
+      } else if (a.game === 'frisbee') {
+        var fr = rt.props.frisbee;
+        fr.vy += 34 * dt;
+        fr.x += fr.vx * dt;
+        fr.y += fr.vy * dt;
+        fr.spin += dt * 9;
+        if (fr.y > room.groundY - 6) {            // skims off the floor
+          fr.y = room.groundY - 6;
+          fr.vy = -Math.abs(fr.vy) * 0.7 - 8;
+        }
+        if (fr.y < 8) { fr.y = 8; fr.vy = Math.abs(fr.vy); }
+        if (fr.x < 9) { fr.x = 9; fr.vx = Math.abs(fr.vx); }
+        if (fr.x > W - 9) { fr.x = W - 9; fr.vx = -Math.abs(fr.vx); }
+        rt.leanTarget = clamp((fr.x - W / 2) * 0.16, -5, 5);
       }
       if (a.game !== 'treat' && Math.random() < dt * 3) {
         spawn('note', W / 2 + (Math.random() - 0.5) * 16, room.groundY - 30, { vy: -10, max: 1.2 });
@@ -1972,7 +2126,9 @@
       'dock', 'toolBar', 'toolText', 'doneBtn', 'petsBtn', 'soundBtn', 'petsScreen',
       'petsClose', 'petGrid', 'startScreen', 'nameInput', 'startBtn', 'startBack',
       'confirmModal', 'confirmText', 'confirmYes', 'confirmNo', 'celebrate', 'celebrateText',
-      'gamePicker', 'gameCancel', 'toolFill', 'medBtn', 'foodPicker', 'foodCancel'
+      'gamePicker', 'gameCancel', 'toolFill', 'medBtn', 'foodPicker', 'foodCancel',
+      'prizeScreen', 'prizeClose', 'prizeGrid', 'prizeSub', 'sleepBtn',
+      'gameMouse', 'gameFrisbee'
     ].forEach(function (id) { el[id] = $(id); });
 
     el.actionBtns = Array.prototype.slice.call(document.querySelectorAll('[data-action]'));
@@ -2072,6 +2228,7 @@
       else if (rt.angry > 0) setHint('Uh oh — you woke it up!');
       else if (pet.sickT > SICK_AFTER * 0.5) setHint("Your pet doesn't look well — feed it!");
       else if (pet.messes.length) setHint('Tap the mess to clean it up!');
+      else if (db.prizeNew > 0) setHint('A prize is in the toy box — tap it!');
       else if (db.plant >= PLANT_WILD) setHint('The plant needs a trim — tap it!');
       else if (lowVal < 30) setHint(HINTS[lowest]);
       else setHint('Stroke your pet to give it cuddles!');
@@ -2125,7 +2282,7 @@
     // so it is flagged to keep its own colours whatever the light is doing
     L.record(screen.mask);
 
-    var inBed = rt.sleep && sky.night > 0.45;
+    var inBed = rt.sleep && (sky.night > 0.45 || rt.sleep.byPlayer);
     if (inBed) drawBedBack(L, W / 2, room.groundY + 3);
 
     if (rt.props.tub) drawTub(L, rt.props.tub.x, rt.props.tub.y, true, rt.t);
@@ -2158,6 +2315,7 @@
       foam: rt.foam,
       drips: rt.drips,
       sick: pet.sick,
+      hat: pet.hat,
       shine: rt.shine > 0 ? rt.shine : 0
     });
     if (!rt.intro || rt.intro.popped) {
@@ -2182,6 +2340,8 @@
     if (rt.props.bowl) drawBowl(L, rt.props.bowl.x, rt.props.bowl.y, rt.props.bowl.fill, rt.props.bowl.level);
     if (rt.props.tub) drawTub(L, rt.props.tub.x, rt.props.tub.y, false, rt.t);
     if (rt.props.ball) drawBall(L, rt.props.ball.x, rt.props.ball.y, rt.props.ball.spin);
+    if (rt.props.mouse) drawMouseToy(L, rt.props.mouse.x, rt.props.mouse.y, rt.t);
+    if (rt.props.frisbee) drawFrisbee(L, rt.props.frisbee.x, rt.props.frisbee.y, rt.props.frisbee.spin);
     if (rt.props.bubbles) {
       for (var bi = 0; bi < rt.props.bubbles.length; bi++) drawGameBubble(L, rt.props.bubbles[bi]);
     }
@@ -2193,6 +2353,13 @@
         var cup = g.cups[order[ci]];
         drawCup(L, cup.x, cupY(), cup.lift);
       }
+    }
+
+    if (rt.prizeFly) {
+      var fk = clamp(rt.prizeFly.t / 1.1, 0, 1);
+      var fx2 = W / 2 + (8 - W / 2) * fk;
+      var fy2 = (room.groundY - 30) + ((room.floorY - 3) - (room.groundY - 30)) * fk - Math.sin(fk * Math.PI) * 12;
+      L.blit(Icons.layer(rt.prizeFly.icon), Math.round(fx2 - 8), Math.round(fy2 - 8));
     }
 
     drawParticles(L);
@@ -2270,6 +2437,8 @@
     pet.love = clamp((pet.love || 0) - dt * 1.6, 0, 100);
 
     db.plant = clamp(db.plant + dt / PLANT_FULL * 100, 0, 100);
+    if (!rt.intro) checkPrize();
+    if (rt.prizeFly) { rt.prizeFly.t += dt; if (rt.prizeFly.t > 1.1) rt.prizeFly = null; }
 
     growthClock += dt;
     if (growthClock > 10) {
@@ -2413,6 +2582,34 @@
           }
           return;
         }
+        if (g.game === 'mouse' && rt.props.mouse) {
+          var mo2 = rt.props.mouse;
+          if (Math.abs(p.x - mo2.x) < 9 && Math.abs(p.y - mo2.y) < 9) {
+            mo2.vx = (mo2.x < W / 2 ? 1 : -1) * (30 + Math.random() * 20);
+            mo2.turn = 0.9;
+            g.score++;
+            pet.stats.fun = clamp(pet.stats.fun + GAMES.mouse.per, 0, 100);
+            addGrowth(0.4);
+            Sfx.squeak();
+            for (var mi = 0; mi < 3; mi++) {
+              spawn('sparkle', mo2.x, mo2.y - 3, { vx: (Math.random() - 0.5) * 18, vy: -12, g: 30, max: 0.6 });
+            }
+          }
+          return;
+        }
+        if (g.game === 'frisbee' && rt.props.frisbee) {
+          var fr2 = rt.props.frisbee;
+          if (Math.abs(p.x - fr2.x) < 10 && Math.abs(p.y - fr2.y) < 9) {
+            fr2.vx = (fr2.x < W / 2 ? 1 : -1) * (28 + Math.random() * 16);
+            fr2.vy = -26;
+            g.score++;
+            pet.stats.fun = clamp(pet.stats.fun + GAMES.frisbee.per, 0, 100);
+            addGrowth(0.45);
+            Sfx.whoosh();
+            spawn('sparkle', fr2.x, fr2.y, { vy: -12, max: 0.6 });
+          }
+          return;
+        }
         if (g.game === 'treat') { pickCup(p.x, p.y); return; }
         return;
       }
@@ -2420,6 +2617,7 @@
       // tidy up an accident, or give the plant a haircut
       if (!rt.tool && cleanMessAt(p.x, p.y)) return;
       if (!rt.tool && !rt.activity && trimPlant(p.x, p.y)) return;
+      if (!rt.tool && !rt.activity && tapToyBox(p.x, p.y)) return;
 
       // a sleeping pet does not want to be prodded
       if (rt.sleep) {
@@ -2529,6 +2727,15 @@
       Sfx.click();
       el.petsScreen.classList.add('hidden');
     });
+    el.prizeClose.addEventListener('click', function () {
+      Sfx.click();
+      el.prizeScreen.classList.add('hidden');
+    });
+    el.sleepBtn.addEventListener('click', function () {
+      Sfx.init();
+      Sfx.click();
+      tuckIn();
+    });
 
     el.celebrate.addEventListener('click', function () { el.celebrate.classList.remove('show'); });
   }
@@ -2597,7 +2804,8 @@
       // thumbnail
       var scr = new PX.Screen(canvas, 48, 48);
       var L = new PX.Layer(Pets.SIZE, Pets.SIZE);
-      Pets.drawPet(L, p.species, Pets.stageFor(p.growth).key, { eyes: 'open', mouth: 'smile' });
+      Pets.drawPet(L, p.species, Pets.stageFor(p.growth).key,
+        { eyes: 'open', mouth: 'smile', hat: p.hat });
       var tsp = Pets.SPECIES[p.species] || Pets.SPECIES.cat;
       scr.layer.clear(C(tsp.thumbBg));
       scr.layer.ellipse(24, 44, 15, 3, C(tsp.thumbShade));
@@ -2624,6 +2832,58 @@
     }
 
     el.petsScreen.classList.remove('hidden');
+  }
+
+  function openPrizes() {
+    db.prizeNew = 0;
+    save();
+    el.prizeGrid.innerHTML = '';
+    var owned = db.prizes.length;
+    el.prizeSub.textContent = owned
+      ? owned + ' of ' + PRIZES.length + ' prizes — tap a hat to wear it'
+      : 'Fill up two meters at once to win a prize!';
+
+    PRIZES.forEach(function (pz) {
+      var got = hasPrize(pz.id);
+      var card = document.createElement(got ? 'button' : 'div');
+      card.className = 'prize-card' + (got ? '' : ' locked') +
+        (pet && pet.hat === pz.id ? ' worn' : '');
+
+      var canvas = document.createElement('canvas');
+      card.appendChild(canvas);
+
+      var name = document.createElement('span');
+      name.className = 'pz-name';
+      name.textContent = got ? pz.label : '???';
+      card.appendChild(name);
+
+      var tag = document.createElement('span');
+      tag.className = 'pz-tag';
+      if (!got) tag.textContent = 'Not won yet';
+      else if (pz.kind === 'hat') tag.textContent = (pet && pet.hat === pz.id) ? 'Wearing it' : 'Tap to wear';
+      else tag.textContent = 'Use it in Play';
+      card.appendChild(tag);
+
+      el.prizeGrid.appendChild(card);
+      Icons.render(canvas, got ? pz.icon : 'lock', 52);
+
+      if (got && pz.kind === 'hat') {
+        card.addEventListener('click', function () {
+          Sfx.click();
+          pet.hat = pet.hat === pz.id ? null : pz.id;
+          save();
+          openPrizes();
+        });
+      } else if (got) {
+        card.addEventListener('click', function () {
+          Sfx.click();
+          say('Tap Play to use it!', 1800);
+          el.prizeScreen.classList.add('hidden');
+        });
+      }
+    });
+
+    el.prizeScreen.classList.remove('hidden');
   }
 
   function switchTo(id) {

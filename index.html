@@ -34,6 +34,9 @@
       </div>
     </div>
 
+    <button id="sleepBtn" class="hud-btn" aria-label="Put your pet to bed">
+      <canvas data-icon="moon" data-icon-size="26"></canvas>
+    </button>
     <button id="soundBtn" class="hud-btn" aria-label="Turn sound off">
       <canvas data-icon="soundOn" data-icon-size="26"></canvas>
     </button>
@@ -94,6 +97,18 @@
     </button>
   </div>
   <div id="petGrid" class="pet-grid"></div>
+</div>
+
+<!-- ------------- toy box ------------- -->
+<div id="prizeScreen" class="screen hidden">
+  <div class="screen-head">
+    <h2>Toy Box</h2>
+    <button id="prizeClose" class="hud-btn" aria-label="Close">
+      <canvas data-icon="close" data-icon-size="24"></canvas>
+    </button>
+  </div>
+  <p id="prizeSub" class="screen-sub">Fill up two meters to win a prize!</p>
+  <div id="prizeGrid" class="prize-grid"></div>
 </div>
 
 <!-- ------------- new pet ------------- -->
@@ -184,6 +199,16 @@
         <canvas data-icon="treat" data-icon-size="34"></canvas>
         <span class="g-name">Find It</span>
         <span class="g-sub">Where's the treat?</span>
+      </button>
+      <button class="game-card hidden" data-game="mouse" id="gameMouse">
+        <canvas data-icon="toyMouse" data-icon-size="34"></canvas>
+        <span class="g-name">Chase</span>
+        <span class="g-sub">Catch the mouse</span>
+      </button>
+      <button class="game-card hidden" data-game="frisbee" id="gameFrisbee">
+        <canvas data-icon="toyFrisbee" data-icon-size="34"></canvas>
+        <span class="g-name">Fetch</span>
+        <span class="g-sub">Keep it flying</span>
       </button>
     </div>
     <div class="modal-btns">

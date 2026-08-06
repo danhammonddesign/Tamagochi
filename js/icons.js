@@ -144,6 +144,71 @@
       for (var t = 0; t < 4; t++) L.rect(3 + t * 3, 13, 2, 2, C('#ffe4f0'));
     },
 
+    // ---- prizes --------------------------------------------------------
+    hatParty: function (L) {
+      L.tri(8, 0.5, 3, 13, 13, 13, C('#ff5f8f'));
+      L.tri(8, 0.5, 3, 13, 8, 13, C('#ff8fb8'));
+      L.rect(3, 12, 10, 2, C('#ffd93d'));
+      L.disc(8, 1.5, 2, C('#ffd93d'));
+      L.set(6, 8, C('#ffe07a')); L.set(9, 6, C('#7fd8ff')); L.set(7, 10, C('#8ee86a'));
+    },
+    hatCrown: function (L) {
+      L.rect(2, 9, 12, 4, C('#ffb01a'));
+      L.rect(2, 9, 12, 1, C('#ffe07a'));
+      L.tri(2, 9, 2, 3, 5.5, 8, C('#ffd93d'));
+      L.tri(8, 2, 5, 8.5, 11, 8.5, C('#ffd93d'));
+      L.tri(14, 9, 14, 3, 10.5, 8, C('#ffd93d'));
+      L.set(4, 11, C('#ff5f8f')); L.set(8, 11, C('#7fd8ff')); L.set(11, 11, C('#8ee86a'));
+    },
+    hatCap: function (L) {
+      L.ellipse(8, 8, 6, 5, C('#3fa9ff'));
+      L.rect(2, 8, 12, 3, C('#3fa9ff'));
+      L.rect(1, 10, 9, 2, C('#2f89d8'));
+      L.disc(8, 3.4, 1.4, C('#ffd93d'));
+      L.ellipse(6, 5.4, 2, 1.4, C('#7fc6ff'));
+    },
+    hatBow: function (L) {
+      L.tri(8, 8, 1, 3.5, 1, 12.5, C('#ff5f8f'));
+      L.tri(8, 8, 15, 3.5, 15, 12.5, C('#ff5f8f'));
+      L.ellipse(4, 8, 2, 2.4, C('#ff8fb8'));
+      L.ellipse(12, 8, 2, 2.4, C('#ff8fb8'));
+      L.disc(8, 8, 2.4, C('#e8629a'));
+    },
+    toyMouse: function (L) {
+      L.ellipse(7.5, 9.5, 5.4, 3.6, C('#b9b3c8'));
+      L.ellipse(6, 8.4, 3, 2, C('#d4cfe0'));
+      L.disc(4, 6.4, 2.4, C('#b9b3c8'));
+      L.disc(4, 6.4, 1.2, C('#ff9ec4'));
+      L.set(10.4, 8.6, C('#141014'));
+      L.ellipse(12.4, 10.6, 1.4, 1, C('#ff9ec4'));
+      L.line(12, 12, 15, 13.5, C('#b9b3c8'), 1);
+    },
+    toyFrisbee: function (L) {
+      L.ellipse(8, 9, 7, 3.4, C('#ff9f3d'));
+      L.ellipse(8, 8, 7, 3.2, C('#ffd93d'));
+      L.ellipse(8, 7.8, 4, 1.8, C('#fff3a8'));
+      L.ellipse(8, 7.8, 1.6, 0.8, C('#ff9f3d'));
+    },
+    gift: function (L) {
+      L.rect(2, 7, 12, 7, C('#ff8fb8'));
+      L.rect(1, 5, 14, 3, C('#ff5f8f'));
+      L.rect(7, 5, 2, 9, C('#ffd93d'));
+      L.disc(6.4, 3.4, 2, C('#ffd93d'));
+      L.disc(9.6, 3.4, 2, C('#ffd93d'));
+    },
+    moon: function (L) {                       // crescent: a disc with a bite out
+      L.disc(8, 8, 6.4, C('#ffe98a'));
+      L.disc(12, 5, 5.8, 0);
+      L.set(4.5, 10, C('#fff6d0'));
+      L.set(5.5, 5, C('#fff6d0'));
+    },
+    lock: function (L) {
+      L.rect(4, 7, 8, 7, C('#b9b3c8'));
+      L.rect(5, 3, 6, 4, C('#8f8aa0'));
+      L.rect(6.5, 4.5, 3, 3, 0);
+      L.rect(7, 9, 2, 3, C('#6d6880'));
+    },
+
     // ---- chrome -------------------------------------------------------
     paw: function (L) {
       L.disc(4, 5, 2, C('#ff8fb0'));

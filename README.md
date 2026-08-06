@@ -46,6 +46,9 @@ thumb-sized targets along the bottom, and everything is saved to
    **Baby → Kid → Teen → Adult**, each with a little celebration.
 5. Tap the **paw** button (top left) for *My Pets*: switch between pets, add a
    new one (up to six), or say goodbye to one.
+6. Tap the **moon** button (top right) to tuck your pet into bed, and again to
+   wake it. Waking it this way is gentle — it is prodding a sleeping pet that
+   makes it cross.
 
 ### Dinner time
 
@@ -56,6 +59,17 @@ about a quarter but give a good helping of Fun. So a lollipop makes a poor
 dinner and a lovely snack. Whatever you pick slides in and shrinks bite by bite
 as your pet works through it.
 
+### Prizes and the toy box
+
+Get **two meters full at the same time** and you win a prize. It flies across
+the room into the toy box in the back left corner, which starts rattling with a
+sparkle to say something new is inside. **Tap the toy box** to open it.
+
+There are six prizes: four **hats** — a party hat, a crown, a cap and a bow —
+and two **toys**. Tap a hat to put it on your pet; it wears it everywhere,
+including on its card in My Pets. Tap it again to take it off. The toys unlock
+two extra mini games.
+
 ### Mini games
 
 Tapping **Play** lets you pick what to play:
@@ -65,13 +79,22 @@ Tapping **Play** lets you pick what to play:
   time runs out. Your pet follows them with its eyes.
 * **Find It** — a treat goes under one of three cups, the cups shuffle, and you
   pick the one you think is hiding it. Three rounds.
+* **Chase** *(needs the toy mouse)* — a mouse darts about the floor changing
+  direction; tap it to send it scurrying off again.
+* **Fetch** *(needs the frisbee)* — a frisbee sails around the room; tap it to
+  fling it back before it lands.
 
 Each game shows your score in the bar at the bottom and tops up the Fun ring
 as you play. **Done** ends a game early.
 
-### Naps
+### Naps and bedtime
 
-Your pet nods off by itself now and then — closed eyes, drooped ears, Zzz
+Press the **moon** button any time to put your pet to bed. It curls up in its
+basket and stays there until you press the moon again, or until it has had a
+good long rest. Waking it with the moon button is gentle, because you were the
+one who put it down.
+
+Your pet also nods off by itself now and then — closed eyes, drooped ears, Zzz
 floating up. Let it sleep and it wakes on its own in a better mood. Poke it, or
 press a care button while it's asleep, and it wakes up **cross**: angry brows,
 gritted teeth, red pops over its head, and it sulks for a few seconds before
