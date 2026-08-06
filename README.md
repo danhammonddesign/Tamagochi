@@ -48,7 +48,7 @@ thumb-sized targets along the bottom, and everything is saved to
    new one (up to six), or say goodbye to one.
 6. Tap the **moon** button (top right) to tuck your pet into bed, and again to
    wake it. Waking it this way is gentle — it is prodding a sleeping pet that
-   makes it cross.
+   makes it cross. If you do make it cross, tuck it back in to say sorry.
 
 ### Dinner time
 
@@ -80,8 +80,12 @@ screen, so whatever you were doing carries on underneath. **Tap the toy box**
 to open it and the light goes out. Prizes also wait until you are between
 things, so one never lands in the middle of a bath or a game.
 
-There are six prizes: four **hats** — a party hat, a crown, a cap and a bow —
-and two **toys**. Tap a hat to put it on your pet; it wears it everywhere,
+**Prizes belong to the pet that won them.** Every pet has its own toy box and
+its own best scores, so a second pet starts with an empty box and earns its
+own collection from scratch.
+
+There are six prizes: four **hats** — a party hat, a crown, a witch hat and a
+bow — and two **toys**. Tap a hat to put it on your pet; it wears it everywhere,
 including on its card in My Pets. Tap it again to take it off. **Tap a toy and
 your pet starts playing with it there and then** — the box closes and the game
 begins, no need to go back out through the Play menu. The toys also show up in
@@ -96,7 +100,7 @@ Tapping **Play** lets you pick what to play:
 | **Bounce** | A ball ricochets around the room; tap it to keep it flying. | 8 |
 | **Bubbles** | Bubbles drift up from the floor; pop as many as you can before time runs out. Your pet follows them with its eyes. | 12 |
 | **Find It** | A treat goes under one of three cups, the cups shuffle, and you pick the one you think is hiding it. Three rounds. | 3 |
-| **Chase** *(needs the toy mouse)* | A mouse darts about the floor changing direction; tap it to send it scurrying off again. | 10 |
+| **Chase** *(needs the cat wand)* | A little cat dangles from a string on a stick. Drag it about the room and your pet stalks it and pounces; you score each time it grabs it. | 8 |
 | **Fetch** *(needs the frisbee)* | A frisbee sails around the room; tap it to fling it back before it lands. | 8 |
 
 Each game shows your score in the bar at the bottom, counting up towards that
@@ -115,8 +119,10 @@ Your pet also nods off by itself now and then — closed eyes, drooped ears, Zzz
 floating up. Let it sleep and it wakes on its own in a better mood. Poke it, or
 press a care button while it's asleep, and it wakes up **cross**: angry brows,
 gritted teeth, red pops over its head, and it sulks for a few seconds before
-forgiving you. It only naps when it doesn't need anything, so a sleeping pet
-never blocks you from looking after it.
+forgiving you. To make up for it, **press the moon and tuck it straight back
+in** — it settles down happily, hearts float up and it forgives you on the
+spot instead of sulking it out. It only naps when it doesn't need anything, so
+a sleeping pet never blocks you from looking after it.
 
 ### Day and night
 

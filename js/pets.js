@@ -544,14 +544,17 @@
       L.set(hx - 3, top, C('#ff5f8f'));
       L.set(hx, top, C('#7fd8ff'));
       L.set(hx + 3, top, C('#8ee86a'));
-    } else if (id === 'cap') {
-      L.ellipse(hx, top - 1, 6.5, 4.5, ink);
-      L.rect(hx - 10, top + 1, 8, 3, ink);
-      L.ellipse(hx, top - 1, 5.5, 3.7, C('#3fa9ff'));
-      L.rect(hx - 9, top + 2, 7, 1.6, C('#2f89d8'));
-      L.ellipse(hx - 2, top - 2.4, 2, 1.3, C('#7fc6ff'));
-      L.disc(hx, top - 5, 1.5, ink);
-      L.disc(hx, top - 5, 1, C('#ffd93d'));
+    } else if (id === 'witch') {
+      var wy = top + 1;
+      L.tri(hx - 6, wy - 1, hx + 6, wy - 1, hx + 4, wy - 12, ink);   // cone
+      L.tri(hx + 3, wy - 9, hx + 5, wy - 11, hx + 9, wy - 15, ink);  // floppy tip
+      L.ellipse(hx, wy, 9.5, 3.2, ink);                              // brim
+      L.ellipse(hx, wy - 0.6, 8.5, 2.4, C('#4a2f6e'));
+      L.tri(hx - 5, wy - 2, hx + 5, wy - 2, hx + 3.6, wy - 11, C('#4a2f6e'));
+      L.tri(hx - 4, wy - 2, hx, wy - 2, hx + 2, wy - 10, C('#63409c'));
+      L.tri(hx + 3.6, wy - 9.4, hx + 4.6, wy - 10.6, hx + 8, wy - 14, C('#4a2f6e'));
+      L.rect(hx - 5, wy - 4, 10, 2, C('#ffd93d'));                   // band
+      L.rect(hx - 1.5, wy - 4.6, 3, 3, C('#ffb01a'));                // buckle
     } else if (id === 'bow') {
       var bx = hx - hrx * 0.7, by = top + 1;
       L.tri(bx, by, bx - 6, by - 4, bx - 6, by + 4, ink);

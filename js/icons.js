@@ -160,12 +160,14 @@
       L.tri(14, 9, 14, 3, 10.5, 8, C('#ffd93d'));
       L.set(4, 11, C('#ff5f8f')); L.set(8, 11, C('#7fd8ff')); L.set(11, 11, C('#8ee86a'));
     },
-    hatCap: function (L) {
-      L.ellipse(8, 8, 6, 5, C('#3fa9ff'));
-      L.rect(2, 8, 12, 3, C('#3fa9ff'));
-      L.rect(1, 10, 9, 2, C('#2f89d8'));
-      L.disc(8, 3.4, 1.4, C('#ffd93d'));
-      L.ellipse(6, 5.4, 2, 1.4, C('#7fc6ff'));
+    hatWitch: function (L) {
+      L.tri(4, 12, 12, 12, 11.5, 4, C('#4a2f6e'));     // cone, flopping over
+      L.tri(11.5, 4.5, 10, 6, 14, 2, C('#4a2f6e'));
+      L.tri(4.5, 12, 9.5, 12, 10.5, 5, C('#63409c'));  // lit side
+      L.ellipse(8, 12.5, 7.5, 2.4, C('#4a2f6e'));      // brim
+      L.ellipse(8, 11.8, 7.2, 1.8, C('#63409c'));
+      L.rect(4, 9.6, 8, 2, C('#ffd93d'));              // band
+      L.rect(7, 9.2, 2.4, 2.8, C('#ffb01a'));          // buckle
     },
     hatBow: function (L) {
       L.tri(8, 8, 1, 3.5, 1, 12.5, C('#ff5f8f'));
@@ -174,14 +176,17 @@
       L.ellipse(12, 8, 2, 2.4, C('#ff8fb8'));
       L.disc(8, 8, 2.4, C('#e8629a'));
     },
-    toyMouse: function (L) {
-      L.ellipse(7.5, 9.5, 5.4, 3.6, C('#b9b3c8'));
-      L.ellipse(6, 8.4, 3, 2, C('#d4cfe0'));
-      L.disc(4, 6.4, 2.4, C('#b9b3c8'));
-      L.disc(4, 6.4, 1.2, C('#ff9ec4'));
-      L.set(10.4, 8.6, C('#141014'));
-      L.ellipse(12.4, 10.6, 1.4, 1, C('#ff9ec4'));
-      L.line(12, 12, 15, 13.5, C('#b9b3c8'), 1);
+    toyWand: function (L) {                    // a cat on a string, on a stick
+      L.line(0.5, 1, 7, 5.5, C('#b07a3a'), 2);
+      L.line(0.5, 1.4, 6.6, 5.6, C('#d19a54'), 1);
+      L.line(7, 5.5, 9, 8.5, C('#cfd6e6'), 1);
+      L.tri(7.6, 10, 9.6, 9.6, 7.8, 7.4, C('#8a7fb8'));   // ears
+      L.tri(13.4, 10, 11.4, 9.6, 13.2, 7.4, C('#8a7fb8'));
+      L.disc(10.5, 11.6, 3.4, C('#8a7fb8'));              // head
+      L.ellipse(10.5, 13, 2.4, 1.6, C('#d4cfe0'));        // muzzle
+      L.set(9, 11, C('#141014'));
+      L.set(12, 11, C('#141014'));
+      L.set(10.5, 12.4, C('#ff9ec4'));
     },
     toyFrisbee: function (L) {
       L.ellipse(8, 9, 7, 3.4, C('#ff9f3d'));

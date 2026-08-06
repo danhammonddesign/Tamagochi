@@ -58,24 +58,29 @@
   // what each animal says when it is thoroughly pleased with you
   var HAPPY_SAY = { dog: 'Woof woof!', fox: 'Yip yip!', cat: 'Purrrrr!', blackcat: 'Purrrrr!' };
 
-  /* Prizes live in the toy box in the corner. Two full meters at once wins one. */
+  /* Prizes live in the toy box in the corner, and belong to the pet that won
+     them — every pet fills its own toy box from scratch. */
   var PRIZES = [
     { id: 'party', kind: 'hat', label: 'Party Hat', icon: 'hatParty' },
     { id: 'crown', kind: 'hat', label: 'Crown', icon: 'hatCrown' },
-    { id: 'cap', kind: 'hat', label: 'Cap', icon: 'hatCap' },
+    { id: 'witch', kind: 'hat', label: 'Witch Hat', icon: 'hatWitch' },
     { id: 'bow', kind: 'hat', label: 'Bow', icon: 'hatBow' },
-    { id: 'mouse', kind: 'toy', label: 'Toy Mouse', icon: 'toyMouse', game: 'mouse' },
+    { id: 'wand', kind: 'toy', label: 'Cat Wand', icon: 'toyWand', game: 'wand' },
     { id: 'frisbee', kind: 'toy', label: 'Frisbee', icon: 'toyFrisbee', game: 'frisbee' }
   ];
+
+  // prizes that have been renamed since an earlier version
+  var PRIZE_ALIAS = { cap: 'witch', mouse: 'wand' };
 
   var PRIZE_LEVEL = 85;       // a meter counts as topped up at this much
 
   function prizeById(id) {
+    id = PRIZE_ALIAS[id] || id;
     for (var i = 0; i < PRIZES.length; i++) if (PRIZES[i].id === id) return PRIZES[i];
     return null;
   }
 
-  function hasPrize(id) { return db.prizes.indexOf(id) >= 0; }
+  function hasPrize(id) { return !!pet && pet.prizes.indexOf(id) >= 0; }
 
   var HINTS = {
     food: 'Your pet is hungry — tap Feed!',
@@ -278,7 +283,7 @@
   /* ------------------------------------------------------------------ */
   /* save data — a shelf of pets                                         */
   /* ------------------------------------------------------------------ */
-  var db = { v: 2, activeId: '', pets: [], plant: 20, prizes: [], prizeNew: 0, best: {} };
+  var db = { v: 2, activeId: '', pets: [], plant: 20 };
   var PLANT_FULL = 900;       // seconds from a fresh trim to fully overgrown
   var PLANT_WILD = 70;        // needs a trim above this
   var pet = null;               // the pet currently on screen
@@ -292,7 +297,8 @@
       growth: 0, stage: 'baby',
       stats: { food: 75, water: 75, fun: 75, clean: 95, groom: 92 },
       love: 40, born: Date.now(), saved: Date.now(), cuddles: 0,
-      messes: [], sick: false, sickT: 0, hat: null, prizeArmed: false
+      messes: [], sick: false, sickT: 0, hat: null, prizeArmed: false,
+      prizes: [], prizeNew: 0, best: {}
     };
   }
 
@@ -308,7 +314,15 @@
     if (!p.id) p.id = uid();
     if (!Pets.SPECIES[p.species]) p.species = 'cat';
     p.sick = !!p.sick;
-    if (p.hat && !prizeById(p.hat)) p.hat = null;
+    if (!Array.isArray(p.prizes)) p.prizes = [];
+    p.prizes = p.prizes.map(function (id) { return PRIZE_ALIAS[id] || id; })
+      .filter(function (id, i, all) { return prizeById(id) && all.indexOf(id) === i; });
+    if (typeof p.prizeNew !== 'number') p.prizeNew = 0;
+    if (!p.best || typeof p.best !== 'object') p.best = {};
+    if (p.best.mouse !== undefined && p.best.wand === undefined) p.best.wand = p.best.mouse;
+    delete p.best.mouse;
+    if (p.hat) p.hat = PRIZE_ALIAS[p.hat] || p.hat;
+    if (p.hat && p.prizes.indexOf(p.hat) < 0) p.hat = null;
     if (typeof p.sickT !== 'number') p.sickT = 0;
     if (!Array.isArray(p.messes)) p.messes = [];
     p.messes = p.messes.slice(0, MAX_MESS);
@@ -322,6 +336,20 @@
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(db)); } catch (e) { /* private mode */ }
   }
 
+  /* Prizes and best scores used to be shared by every pet. They now belong to
+     the pet that won them, so an older save hands its collection to the pet
+     that was being played and the rest start their own. */
+  function adoptSharedPrizes(d) {
+    if (!Array.isArray(d.prizes) && !d.best) return;
+    var act = null, i;
+    for (i = 0; i < d.pets.length; i++) if (d.pets[i] && d.pets[i].id === d.activeId) act = d.pets[i];
+    if (!act) act = d.pets[0];
+    if (!act) return;
+    if (Array.isArray(d.prizes) && !Array.isArray(act.prizes)) act.prizes = d.prizes.slice();
+    if (d.best && typeof d.best === 'object' && !act.best) act.best = d.best;
+    if (typeof act.prizeNew !== 'number') act.prizeNew = d.prizeNew || 0;
+  }
+
   function load() {
     var raw = null;
     try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
@@ -329,13 +357,11 @@
       try {
         var d = JSON.parse(raw);
         if (d && d.pets && d.pets.length) {
+          adoptSharedPrizes(d);
           db = {
             v: 2, activeId: d.activeId, pets: d.pets.map(normalise),
             plant: typeof d.plant === 'number' ? d.plant : 20,
-            plantSaved: d.plantSaved || Date.now(),
-            prizes: Array.isArray(d.prizes) ? d.prizes : [],
-            prizeNew: d.prizeNew || 0,
-            best: (d.best && typeof d.best === 'object') ? d.best : {}
+            plantSaved: d.plantSaved || Date.now()
           };
           // the plant keeps growing while you are away
           var grew = Math.min(MAX_OFFLINE, (Date.now() - db.plantSaved) / 1000);
@@ -357,7 +383,7 @@
             born: o.born || Date.now(), saved: o.saved || Date.now()
           });
           if (typeof p.stats.groom !== 'number') p.stats.groom = 70;
-          db = { v: 2, activeId: p.id, pets: [p] };
+          db = { v: 2, activeId: p.id, pets: [p], plant: 20, plantSaved: Date.now() };
           save();
           return true;
         }
@@ -730,7 +756,7 @@
     // toy box, where the prizes are kept. With something new inside it
     // rattles and its colours brighten — the glow around it is drawn later,
     // with the lights on.
-    var boxNew = db.prizeNew > 0;
+    var boxNew = !!pet && pet.prizeNew > 0;
     var lid = boxNew ? Math.sin(t * 3) * 1.2 - 1.5 : 0;
     stampOutlined(L, 8, fy - 3, function (b, bx, by) {
       b.rect(bx - 6, by - 4, 13, 9, C(boxNew ? '#bfe4ff' : '#9ad0ff'));
@@ -1058,8 +1084,8 @@
     var left = PRIZES.filter(function (p) { return !hasPrize(p.id); });
     if (!left.length) return null;
     var won = left[Math.floor(Math.random() * left.length)];
-    db.prizes.push(won.id);
-    db.prizeNew++;
+    pet.prizes.push(won.id);
+    pet.prizeNew++;
 
     Sfx.grow();
     rt.prizeFly = { t: 0, icon: won.icon };
@@ -1093,7 +1119,7 @@
      Drawn with the room objects rather than as part of the room, so the glow
      stays bright after dark instead of being dimmed along with the walls. */
   function drawToyBoxGlow(L, t) {
-    if (db.prizeNew <= 0) return;
+    if (!pet || pet.prizeNew <= 0) return;
     var fy = room.floorY, cx = 8, cy = fy - 2;
     var pulse = 0.5 + 0.5 * Math.sin(t * 3.4);
     var reach = 5 + pulse * 2.5;
@@ -1238,10 +1264,20 @@
   function tuckIn() {
     if (!pet || rt.activity || rt.tool || rt.intro || rt.pooping) return;
     if (rt.sleep) { wake(false); return; }
-    if (rt.angry > 0) { say('Hmph!', 1200); return; }
+    // putting it straight back to bed after waking it makes up for the shock
+    var sorry = rt.angry > 0;
+    if (sorry) {
+      rt.angry = 0;
+      bumpLove(12);
+      pet.stats.fun = clamp(pet.stats.fun + 6, 0, 100);
+      for (var i = 0; i < 5; i++) {
+        spawn('heart', W / 2 + (Math.random() - 0.5) * 16, room.groundY - 32,
+          { vy: -14, max: 1.2 });
+      }
+    }
     rt.sleep = { t: 0, dur: 180, byPlayer: true };
     rt.petting = false;
-    say('Night night…', 2000);
+    say(sorry ? 'Mmm… back to sleep!' : 'Night night…', 2000);
     Sfx.yawn();
     save();
   }
@@ -1299,7 +1335,7 @@
     bubble: { label: 'Bubbles', dur: 14, hint: 'Pop the bubbles!', per: 3, perfect: 12 },
     treat: { label: 'Find It', dur: 0, hint: 'Which cup hides the treat?', per: 14, perfect: 3 },
     // unlocked by winning the matching toy from the toy box
-    mouse: { label: 'Chase', dur: 14, hint: 'Catch the mouse!', per: 4, perfect: 10, prize: 'mouse' },
+    wand: { label: 'Chase', dur: 16, hint: 'Dangle it — let your pet grab it!', per: 6, perfect: 8, prize: 'wand' },
     frisbee: { label: 'Fetch', dur: 14, hint: 'Keep it flying!', per: 5, perfect: 8, prize: 'frisbee' }
   };
 
@@ -1326,17 +1362,37 @@
     });
   }
 
-  function drawMouseToy(L, x, y, t) {
-    stampOutlined(L, x, y, function (b, bx, by) {
-      var hop = Math.abs(Math.sin(t * 12)) * 1.2;
-      b.ellipse(bx, by - hop, 5, 3, C('#b9b3c8'));
-      b.ellipse(bx - 1.4, by - 1 - hop, 3, 1.8, C('#d4cfe0'));
-      b.disc(bx - 3, by - 2.6 - hop, 2.2, C('#b9b3c8'));
-      b.disc(bx - 3, by - 2.6 - hop, 1.1, C('#ff9ec4'));
-      b.set(bx + 2.6, by - 0.6 - hop, C('#141014'));
-      b.ellipse(bx + 4.6, by + 0.4 - hop, 1.2, 0.9, C('#ff9ec4'));
-      b.line(bx + 4, by + 1.6 - hop, bx + 8, by + 3 - hop, C('#b9b3c8'), 1);
+  var WAND_STRING = 13;       // how far the toy hangs below the end of the stick
+
+  /* The teaser wand: a stick you hold, a string, and a little cat on the end
+     that swings after your hand. */
+  function drawWand(L, wd) {
+    // the stick runs off toward your hand, past the bottom corner of the room
+    var handX = W + 10, handY = room.groundY + 16;
+    L.line(wd.hx, wd.hy, handX, handY, C('#141014'), 2);
+    L.line(wd.hx, wd.hy - 0.6, handX, handY - 0.6, C('#c98f4b'), 1);
+    // string
+    L.line(wd.hx, wd.hy, wd.tx, wd.ty - 4, C('#141014'), 1);
+    var wiggle = wd.cool > 0.5 ? Math.sin(rt.t * 30) * 1.2 : 0;
+    stampOutlined(L, wd.tx + wiggle, wd.ty, function (b, bx, by) {
+      b.tri(bx - 3.4, by - 1, bx - 0.8, by - 1.6, bx - 3.2, by - 5, C('#8a7fb8'));
+      b.tri(bx + 3.4, by - 1, bx + 0.8, by - 1.6, bx + 3.2, by - 5, C('#8a7fb8'));
+      b.disc(bx, by, 4, C('#8a7fb8'));
+      b.ellipse(bx, by + 1.6, 2.6, 1.8, C('#d4cfe0'));
+      b.set(bx - 1.8, by - 0.6, C('#141014'));
+      b.set(bx + 1.8, by - 0.6, C('#141014'));
+      b.set(bx, by + 0.8, C('#ff9ec4'));
+      b.line(bx - 5, by + 1, bx - 2.6, by + 1.4, C('#d4cfe0'), 1);
+      b.line(bx + 5, by + 1, bx + 2.6, by + 1.4, C('#d4cfe0'), 1);
     });
+  }
+
+  function moveWand(p) {
+    var wd = rt.props.wand;
+    if (!wd) return;
+    wd.touched = true;
+    wd.hx = clamp(p.x, 7, W - 7);
+    wd.hy = clamp(p.y, 7, room.groundY - 10);
   }
 
   function drawFrisbee(L, x, y, spin) {
@@ -1475,8 +1531,12 @@
     } else if (id === 'treat') {
       rt.activity.round = 0;
       newTreatRound();
-    } else if (id === 'mouse') {
-      rt.props.mouse = { x: W * 0.75, y: room.groundY - 3, vx: -26, turn: 1.2 };
+    } else if (id === 'wand') {
+      rt.props.wand = {
+        hx: W * 0.72, hy: room.groundY - 46,
+        tx: W * 0.72, ty: room.groundY - 46 + WAND_STRING,
+        vx: 0, vy: 0, charge: 0, cool: 0, touched: false
+      };
       Sfx.pickup();
     } else if (id === 'frisbee') {
       rt.props.frisbee = { x: 12, y: room.groundY - 26, vx: 30, vy: -14, spin: 0 };
@@ -1499,11 +1559,11 @@
 
     // three ways a round is worth a prize: a clean sweep, a new record, or
     // matching the record you already hold
-    var had = db.best[g.game];
+    var had = pet.best[g.game];
     var isPerfect = !!cfg.perfect && g.score >= cfg.perfect;
     var beatIt = had !== undefined && g.score > had;
     var matched = had !== undefined && g.score === had && g.score > 0;
-    if (had === undefined || g.score > had) db.best[g.game] = g.score;
+    if (had === undefined || g.score > had) pet.best[g.game] = g.score;
 
     if (isPerfect || beatIt || matched) {
       say(isPerfect ? 'Perfect! ' + g.score + '!' : beatIt ? 'New best: ' + g.score + '!'
@@ -1685,7 +1745,7 @@
 
     if (cfg.kind === 'tool') return startTool(name);
     if (name === 'play') {
-      el.gameMouse.classList.toggle('hidden', !hasPrize('mouse'));
+      el.gameWand.classList.toggle('hidden', !hasPrize('wand'));
       el.gameFrisbee.classList.toggle('hidden', !hasPrize('frisbee'));
       el.gamePicker.classList.add('show');
       return;
@@ -1797,17 +1857,48 @@
       } else if (a.game === 'treat') {
         updateTreatGame(dt);
         rt.leanTarget = 0;
-      } else if (a.game === 'mouse') {
-        var mo = rt.props.mouse;
-        mo.turn -= dt;
-        if (mo.turn <= 0) {                       // darts off in a new direction
-          mo.turn = 0.7 + Math.random() * 1.4;
-          mo.vx = (Math.random() < 0.5 ? -1 : 1) * (22 + Math.random() * 18);
+      } else if (a.game === 'wand') {
+        var wd = rt.props.wand;
+        // until you take hold of it the wand waves itself about, so the game
+        // is never just a still toy hanging in mid air
+        if (!wd.touched) {
+          wd.hx = W / 2 + Math.sin(a.t * 1.3) * (W * 0.24);
+          wd.hy = room.groundY - 44 + Math.sin(a.t * 2.3) * 5;
         }
-        mo.x += mo.vx * dt;
-        if (mo.x < 8) { mo.x = 8; mo.vx = Math.abs(mo.vx); }
-        if (mo.x > W - 8) { mo.x = W - 8; mo.vx = -Math.abs(mo.vx); }
-        rt.leanTarget = clamp((mo.x - W / 2) * 0.18, -5, 5);
+        // the toy chases the end of the string, so it swings as you move
+        wd.vx += ((wd.hx - wd.tx) * 40 - wd.vx * 5) * dt;
+        wd.vy += ((wd.hy + WAND_STRING - wd.ty) * 40 - wd.vy * 5) * dt;
+        wd.tx += wd.vx * dt;
+        wd.ty += wd.vy * dt;
+        wd.tx = clamp(wd.tx, 5, W - 5);
+        wd.ty = clamp(wd.ty, 6, room.groundY - 2);
+        rt.leanTarget = clamp((wd.tx - W / 2) * 0.2, -5, 5);
+
+        // your pet stalks it, and pounces once it is close enough for long enough
+        wd.cool -= dt;
+        var reach = Math.max(Math.abs(wd.tx - W / 2) / 17, Math.abs(wd.ty - (room.groundY - 28)) / 15);
+        if (reach < 1 && wd.cool <= 0) {
+          wd.charge += dt;
+          if (wd.charge >= 0.35) {
+            wd.charge = 0;
+            wd.cool = 1;
+            a.score++;
+            rt.pounce = { t: 0, dir: wd.tx < W / 2 ? -1 : 1 };
+            wd.vx += (wd.tx < W / 2 ? -1 : 1) * 70;
+            wd.vy -= 45;
+            pet.stats.fun = clamp(pet.stats.fun + GAMES.wand.per, 0, 100);
+            addGrowth(0.5);
+            bumpLove(2);
+            Sfx.squeak();
+            say('Got it!', 900);
+            for (var wi = 0; wi < 4; wi++) {
+              spawn(wi % 2 ? 'heart' : 'sparkle', wd.tx, wd.ty - 4,
+                { vx: (Math.random() - 0.5) * 20, vy: -14, g: 26, max: 0.9 });
+            }
+          }
+        } else if (wd.charge > 0) {
+          wd.charge = Math.max(0, wd.charge - dt * 2);
+        }
       } else if (a.game === 'frisbee') {
         var fr = rt.props.frisbee;
         fr.vy += 34 * dt;
@@ -2214,7 +2305,7 @@
       'confirmModal', 'confirmText', 'confirmYes', 'confirmNo', 'celebrate', 'celebrateText',
       'gamePicker', 'gameCancel', 'toolFill', 'medBtn', 'foodPicker', 'foodCancel',
       'prizeScreen', 'prizeClose', 'prizeGrid', 'prizeSub', 'sleepBtn',
-      'gameMouse', 'gameFrisbee', 'toolMeter', 'prizePop'
+      'gameWand', 'gameFrisbee', 'toolMeter', 'prizePop'
     ].forEach(function (id) { el[id] = $(id); });
 
     el.actionBtns = Array.prototype.slice.call(document.querySelectorAll('[data-action]'));
@@ -2311,10 +2402,10 @@
     else if (!rt.tool && !rt.activity) {
       if (rt.sleep) setHint('Shhh… your pet is asleep.');
       else if (pet.sick) setHint('Your pet is poorly — give it Medicine!');
-      else if (rt.angry > 0) setHint('Uh oh — you woke it up!');
+      else if (rt.angry > 0) setHint('Uh oh — tap the moon to tuck it back in!');
       else if (pet.sickT > SICK_AFTER * 0.5) setHint("Your pet doesn't look well — feed it!");
       else if (pet.messes.length) setHint('Tap the mess to clean it up!');
-      else if (db.prizeNew > 0) setHint('A prize is in the toy box — tap it!');
+      else if (pet.prizeNew > 0) setHint('A prize is in the toy box — tap it!');
       else if (db.plant >= PLANT_WILD) setHint('The plant needs a trim — tap it!');
       else if (lowVal < 30) setHint(HINTS[lowest]);
       else setHint('Stroke your pet to give it cuddles!');
@@ -2406,9 +2497,12 @@
       hat: pet.hat,
       shine: rt.shine > 0 ? rt.shine : 0
     });
+    // a pounce at the wand throws the whole pet toward the toy for a moment
+    var lunge = rt.pounce ? Math.sin(clamp(rt.pounce.t / 0.4, 0, 1) * Math.PI) : 0;
+    var petDX = rt.pounce ? rt.pounce.dir * 8 * lunge : 0;
     if (!rt.intro || rt.intro.popped) {
-      L.blit(petLayer, Math.round(W / 2 - Pets.SIZE / 2),
-        Math.round(room.groundY - Pets.FEET + blitDY));
+      L.blit(petLayer, Math.round(W / 2 - Pets.SIZE / 2 + petDX),
+        Math.round(room.groundY - Pets.FEET + blitDY - lunge * 7));
     }
     if (inBed) drawBedFront(L, W / 2, room.groundY + 3);
     if (rt.intro) {
@@ -2428,7 +2522,7 @@
     if (rt.props.bowl) drawBowl(L, rt.props.bowl.x, rt.props.bowl.y, rt.props.bowl.fill, rt.props.bowl.level);
     if (rt.props.tub) drawTub(L, rt.props.tub.x, rt.props.tub.y, false, rt.t);
     if (rt.props.ball) drawBall(L, rt.props.ball.x, rt.props.ball.y, rt.props.ball.spin);
-    if (rt.props.mouse) drawMouseToy(L, rt.props.mouse.x, rt.props.mouse.y, rt.t);
+    if (rt.props.wand) drawWand(L, rt.props.wand);
     if (rt.props.frisbee) drawFrisbee(L, rt.props.frisbee.x, rt.props.frisbee.y, rt.props.frisbee.spin);
     if (rt.props.bubbles) {
       for (var bi = 0; bi < rt.props.bubbles.length; bi++) drawGameBubble(L, rt.props.bubbles[bi]);
@@ -2527,6 +2621,7 @@
     db.plant = clamp(db.plant + dt / PLANT_FULL * 100, 0, 100);
     if (!rt.intro) checkPrize();
     if (rt.prizeFly) { rt.prizeFly.t += dt; if (rt.prizeFly.t > 1.1) rt.prizeFly = null; }
+    if (rt.pounce) { rt.pounce.t += dt; if (rt.pounce.t > 0.4) rt.pounce = null; }
 
     growthClock += dt;
     if (growthClock > 10) {
@@ -2670,21 +2765,7 @@
           }
           return;
         }
-        if (g.game === 'mouse' && rt.props.mouse) {
-          var mo2 = rt.props.mouse;
-          if (Math.abs(p.x - mo2.x) < 9 && Math.abs(p.y - mo2.y) < 9) {
-            mo2.vx = (mo2.x < W / 2 ? 1 : -1) * (30 + Math.random() * 20);
-            mo2.turn = 0.9;
-            g.score++;
-            pet.stats.fun = clamp(pet.stats.fun + GAMES.mouse.per, 0, 100);
-            addGrowth(0.4);
-            Sfx.squeak();
-            for (var mi = 0; mi < 3; mi++) {
-              spawn('sparkle', mo2.x, mo2.y - 3, { vx: (Math.random() - 0.5) * 18, vy: -12, g: 30, max: 0.6 });
-            }
-          }
-          return;
-        }
+        if (g.game === 'wand' && rt.props.wand) { moveWand(p); return; }
         if (g.game === 'frisbee' && rt.props.frisbee) {
           var fr2 = rt.props.frisbee;
           if (Math.abs(p.x - fr2.x) < 10 && Math.abs(p.y - fr2.y) < 9) {
@@ -2734,6 +2815,7 @@
         if (rt.tool.down) scrubAt(p.x, p.y);
         return;
       }
+      if (rt.props.wand) { moveWand(p); return; }
       if (!rt.petting) return;
       if (!overPet(p)) { stopPetting(); return; }
       rt.leanTarget = clamp((p.x - W / 2) * 0.3, -3, 3);
@@ -2932,13 +3014,15 @@
   }
 
   function openPrizes() {
-    db.prizeNew = 0;
+    pet.prizeNew = 0;
     save();
     el.prizeGrid.innerHTML = '';
-    var owned = db.prizes.length;
+    var owned = pet.prizes.length;
     el.prizeSub.textContent = owned
-      ? owned + ' of ' + PRIZES.length + ' prizes — tap a hat to wear it, or a toy to play'
-      : 'Top up two meters at once, or do well in a game, to win a prize!';
+      ? pet.name + ' has ' + owned + ' of ' + PRIZES.length +
+        ' — tap a hat to wear it, or a toy to play'
+      : pet.name + ' has not won anything yet. Top up two meters at once, ' +
+        'or do well in a game, to win a prize!';
 
     PRIZES.forEach(function (pz) {
       var got = hasPrize(pz.id);
