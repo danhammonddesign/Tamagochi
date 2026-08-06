@@ -2878,13 +2878,22 @@
     el.petsScreen.classList.remove('hidden');
   }
 
+  /* Tapping a toy in the box gets it straight out and starts its game, so a
+     player never has to close the box and go back through the Play menu. */
+  function playWithToy(pz) {
+    if (rt.intro || rt.tool || rt.activity) { say('Let me finish this first!', 1800); return; }
+    if (rt.sleep) { wake(true); return; }
+    if (pet.sick) { say('I am too poorly to play…', 2200); Sfx.sad(); return; }
+    startGame(pz.game);
+  }
+
   function openPrizes() {
     db.prizeNew = 0;
     save();
     el.prizeGrid.innerHTML = '';
     var owned = db.prizes.length;
     el.prizeSub.textContent = owned
-      ? owned + ' of ' + PRIZES.length + ' prizes — tap a hat to wear it'
+      ? owned + ' of ' + PRIZES.length + ' prizes — tap a hat to wear it, or a toy to play'
       : 'Top up two meters at once, or do well in a game, to win a prize!';
 
     PRIZES.forEach(function (pz) {
@@ -2905,7 +2914,7 @@
       tag.className = 'pz-tag';
       if (!got) tag.textContent = 'Not won yet';
       else if (pz.kind === 'hat') tag.textContent = (pet && pet.hat === pz.id) ? 'Wearing it' : 'Tap to wear';
-      else tag.textContent = 'Use it in Play';
+      else tag.textContent = 'Tap to play';
       card.appendChild(tag);
 
       el.prizeGrid.appendChild(card);
@@ -2921,8 +2930,8 @@
       } else if (got) {
         card.addEventListener('click', function () {
           Sfx.click();
-          say('Tap Play to use it!', 1800);
           el.prizeScreen.classList.add('hidden');
+          playWithToy(pz);
         });
       }
     });

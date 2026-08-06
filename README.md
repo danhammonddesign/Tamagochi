@@ -79,8 +79,10 @@ one never lands in the middle of a bath or a game.
 
 There are six prizes: four **hats** — a party hat, a crown, a cap and a bow —
 and two **toys**. Tap a hat to put it on your pet; it wears it everywhere,
-including on its card in My Pets. Tap it again to take it off. The toys unlock
-two extra mini games.
+including on its card in My Pets. Tap it again to take it off. **Tap a toy and
+your pet starts playing with it there and then** — the box closes and the game
+begins, no need to go back out through the Play menu. The toys also show up in
+the Play menu once you have won them.
 
 ### Mini games
 
