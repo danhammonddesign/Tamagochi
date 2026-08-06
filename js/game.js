@@ -467,8 +467,20 @@
       vx: opts.vx !== undefined ? opts.vx : (Math.random() - 0.5) * 8,
       vy: opts.vy !== undefined ? opts.vy : -(8 + Math.random() * 8),
       g: opts.g || 0, life: 0, max: opts.max || 1.1,
-      wob: Math.random() * 6
+      wob: Math.random() * 6, color: opts.color || null
     });
+  }
+
+  var CONFETTI_COLORS = ['#ff5f8f', '#ffd93d', '#5fc8ff', '#7ed957', '#b78bff', '#ff9f3d'];
+
+  function confettiBurst(x, y, n) {
+    for (var i = 0; i < n; i++) {
+      spawn('confetti', x + (Math.random() - 0.5) * 26, y + (Math.random() - 0.5) * 8, {
+        vx: (Math.random() - 0.5) * 46, vy: -(18 + Math.random() * 34), g: 58,
+        max: 1.5 + Math.random() * 0.8,
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)]
+      });
+    }
   }
 
   var PARTICLE_ART = {
@@ -484,8 +496,12 @@
     poof: { rows: ['.##.', '####', '####', '.##.'], color: '#e6ded4' },
     star: { rows: ['..#..', '.###.', '#####', '.###.', '..#..'], color: '#ffd93d' },
     sick: { rows: ['.##.', '#..#', '#..#', '.##.'], color: '#8fd66a' },
-    leaf: { rows: ['.##', '###', '##.'], color: '#7ed957' }
+    leaf: { rows: ['.##', '###', '##.'], color: '#7ed957' },
+    confetti: { rows: ['##', '##'], color: '#ff5f8f' }
   };
+
+  // confetti tumbles as it falls: edge-on one moment, flat the next
+  var CONFETTI_FLAT = ['##', '##'], CONFETTI_EDGE = ['#', '#'];
 
   function updateParticles(dt) {
     for (var i = rt.particles.length - 1; i >= 0; i--) {
@@ -504,9 +520,13 @@
       var art = PARTICLE_ART[p.kind];
       if (!art) continue;
       if (p.life > p.max * 0.75 && Math.floor(p.life * 14) % 2 === 0) continue;
-      var col = art.color;
+      var col = p.color || art.color;
       if (p.kind === 'fluff' && pet) col = Pets.SPECIES[pet.species].furLight;
-      L.stamp(art.rows, { '#': C(col) }, Math.round(p.x), Math.round(p.y));
+      var rows = art.rows;
+      if (p.kind === 'confetti') {
+        rows = Math.sin((p.life + p.wob) * 9) > 0 ? CONFETTI_FLAT : CONFETTI_EDGE;
+      }
+      L.stamp(rows, { '#': C(col) }, Math.round(p.x), Math.round(p.y));
     }
   }
 
@@ -707,21 +727,17 @@
       }
     });
 
-    // toy box, where the prizes are kept
+    // toy box, where the prizes are kept. With something new inside it
+    // rattles and its colours brighten — the glow around it is drawn later,
+    // with the lights on.
     var boxNew = db.prizeNew > 0;
     var lid = boxNew ? Math.sin(t * 3) * 1.2 - 1.5 : 0;
     stampOutlined(L, 8, fy - 3, function (b, bx, by) {
-      b.rect(bx - 6, by - 4, 13, 9, C('#9ad0ff'));
-      b.rect(bx - 6, by - 4 + lid, 13, 2, C('#77b8f0'));
+      b.rect(bx - 6, by - 4, 13, 9, C(boxNew ? '#bfe4ff' : '#9ad0ff'));
+      b.rect(bx - 6, by - 4 + lid, 13, 2, C(boxNew ? '#9ad0ff' : '#77b8f0'));
       b.disc(bx - 2, by + 1, 1.7, C('#ff8fb0'));
       b.disc(bx + 3, by + 1, 1.7, C('#ffe07a'));
     });
-    if (boxNew) {
-      var sp3 = ['..#..', '.###.', '#####', '.###.', '..#..'];
-      var tw2 = Math.sin(t * 4);
-      if (tw2 > -0.3) L.stamp(sp3, { '#': C('#ffe98a') }, 12, fy - 14 + Math.round(tw2));
-      if (tw2 < 0.4) L.set(3, fy - 12 - Math.round(tw2 * 2), C('#fff6d0'));
-    }
 
     // pet bed cushion on the floor
     stampOutlined(L, 12, fy + 13, function (b, bx, by) {
@@ -1032,9 +1048,13 @@
     return n;
   }
 
-  /* Hands out one prize the player has not got yet, with a bit of a fanfare
-     and the prize flying across the room into the toy box. */
-  function awardPrize(title, sub) {
+  var prizePopTimer = null;
+
+  /* Hands out one prize the player has not got yet: "New Prize!" pops up over
+     your pet in a shower of confetti, the prize itself flies across the room
+     into the toy box, and the box lights up until you go and look. Nothing
+     covers the screen, so play is never interrupted. */
+  function awardPrize() {
     var left = PRIZES.filter(function (p) { return !hasPrize(p.id); });
     if (!left.length) return null;
     var won = left[Math.floor(Math.random() * left.length)];
@@ -1043,17 +1063,14 @@
 
     Sfx.grow();
     rt.prizeFly = { t: 0, icon: won.icon };
-    for (var i = 0; i < 20; i++) {
-      spawn(i % 2 ? 'sparkle' : 'heart', W / 2 + (Math.random() - 0.5) * 24, room.groundY - 30,
-        { vx: (Math.random() - 0.5) * 26, vy: -20 - Math.random() * 16, g: 30, max: 1.5 });
+    confettiBurst(W / 2, room.groundY - 40, 26);
+    for (var i = 0; i < 8; i++) {
+      spawn('sparkle', W / 2 + (Math.random() - 0.5) * 24, room.groundY - 30,
+        { vx: (Math.random() - 0.5) * 26, vy: -20 - Math.random() * 16, g: 30, max: 1.2 });
     }
-    el.celebrateText.innerHTML =
-      '<div class="celebrate-emoji">🎁</div>' +
-      '<div class="celebrate-title">' + escapeHtml(title) + '</div>' +
-      '<div class="celebrate-sub">' + escapeHtml(sub || '') +
-      escapeHtml(won.label) + ' — it is in the toy box</div>';
-    el.celebrate.classList.add('show');
-    setTimeout(function () { el.celebrate.classList.remove('show'); }, 2800);
+    el.prizePop.classList.add('show');
+    clearTimeout(prizePopTimer);
+    prizePopTimer = setTimeout(function () { el.prizePop.classList.remove('show'); }, 2400);
     save();
     return won;
   }
@@ -1068,7 +1085,41 @@
     // mid-game and steals the moment
     if (rt.activity || rt.tool || rt.intro || pickerOpen()) return;
     pet.prizeArmed = true;
-    awardPrize('You won a prize!', 'Two meters topped up! ');
+    say('All topped up!', 2000);
+    awardPrize();
+  }
+
+  /* The light spilling out of the toy box when a prize is waiting inside.
+     Drawn with the room objects rather than as part of the room, so the glow
+     stays bright after dark instead of being dimmed along with the walls. */
+  function drawToyBoxGlow(L, t) {
+    if (db.prizeNew <= 0) return;
+    var fy = room.floorY, cx = 8, cy = fy - 2;
+    var pulse = 0.5 + 0.5 * Math.sin(t * 3.4);
+    var reach = 5 + pulse * 2.5;
+    var lit = C('#fff3c8'), warm = C('#ffe98a');
+    var shim = Math.floor(t * 6);
+    // measured out from the sides of the box rather than from its middle, so
+    // the light hugs the box in a halo instead of pooling behind it
+    for (var y = Math.floor(cy - 7 - reach); y <= Math.ceil(cy + 7 + reach); y++) {
+      for (var x = Math.floor(cx - 9 - reach); x <= Math.ceil(cx + 9 + reach); x++) {
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        if (x <= 17 && y >= fy - 9 && y <= fy + 4) continue;   // the box itself
+        var ex = Math.max(0, Math.abs(x - cx) - 8.5);
+        var ey = Math.max(0, Math.abs(y - cy) - 6);
+        var d = Math.sqrt(ex * ex + ey * ey);
+        if (d > reach) continue;
+        // solid right against the box, thinning to a shimmer further out
+        if (d >= 2 && (x + y + shim) % (d < 3.6 ? 2 : 3) !== 0) continue;
+        L.set(x, y, d < 2.6 ? lit : warm);
+      }
+    }
+    var tw = Math.sin(t * 4);
+    if (tw > -0.3) {
+      L.stamp(['..#..', '.###.', '#####', '.###.', '..#..'], { '#': C('#fffbe6') },
+        13, fy - 15 + Math.round(tw));
+    }
+    if (tw < 0.4) L.stamp(['.#.', '###', '.#.'], { '#': C('#fff6d0') }, 2, fy - 13 - Math.round(tw * 2));
   }
 
   function toyBoxBounds() {
@@ -1454,20 +1505,11 @@
     var matched = had !== undefined && g.score === had && g.score > 0;
     if (had === undefined || g.score > had) db.best[g.game] = g.score;
 
-    var title = null, blurb = null;
-    if (isPerfect) {
-      title = 'Perfect score!';
-      blurb = cfg.label + ': ' + g.score +
-        (g.score === cfg.perfect ? ' out of ' + cfg.perfect : '') + '. ';
-    }
-    else if (beatIt) { title = 'New best score!'; blurb = cfg.label + ': ' + g.score + '. '; }
-    else if (matched) { title = 'You matched your best!'; blurb = cfg.label + ': ' + g.score + '. '; }
-
-    if (title) {
+    if (isPerfect || beatIt || matched) {
       say(isPerfect ? 'Perfect! ' + g.score + '!' : beatIt ? 'New best: ' + g.score + '!'
         : 'Matched your best!', 2400);
       Sfx.ding();
-      setTimeout(function () { awardPrize(title, blurb); }, 700);
+      setTimeout(function () { awardPrize(); }, 700);
     } else {
       say(g.score > 0 ? 'Score: ' + g.score + '!' : 'That was fun!', 2200);
     }
@@ -2172,7 +2214,7 @@
       'confirmModal', 'confirmText', 'confirmYes', 'confirmNo', 'celebrate', 'celebrateText',
       'gamePicker', 'gameCancel', 'toolFill', 'medBtn', 'foodPicker', 'foodCancel',
       'prizeScreen', 'prizeClose', 'prizeGrid', 'prizeSub', 'sleepBtn',
-      'gameMouse', 'gameFrisbee', 'toolMeter'
+      'gameMouse', 'gameFrisbee', 'toolMeter', 'prizePop'
     ].forEach(function (id) { el[id] = $(id); });
 
     el.actionBtns = Array.prototype.slice.call(document.querySelectorAll('[data-action]'));
@@ -2325,6 +2367,8 @@
     // everything from here on is an object in the room, not the room itself,
     // so it is flagged to keep its own colours whatever the light is doing
     L.record(screen.mask);
+
+    drawToyBoxGlow(L, rt.t);
 
     var inBed = rt.sleep && (sky.night > 0.45 || rt.sleep.byPlayer);
     if (inBed) drawBedBack(L, W / 2, room.groundY + 3);

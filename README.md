@@ -72,10 +72,13 @@ There are four ways to win a prize:
   can't quite go one better.
 
 A round only ever wins one prize, so a perfect run that is also a new record
-pays out once. However you win it, the prize flies across the room into the toy box in the back left
-corner, which starts rattling with a sparkle to say something new is inside.
-**Tap the toy box** to open it. Prizes wait until you are between things, so
-one never lands in the middle of a bath or a game.
+pays out once. However you win it, the same thing happens: **"New Prize!"**
+pops up over your pet in a shower of confetti, the prize itself sails across
+the room into the toy box in the back left corner, and **the box lights up** —
+glowing, rattling and twinkling — until you go and look. Nothing covers the
+screen, so whatever you were doing carries on underneath. **Tap the toy box**
+to open it and the light goes out. Prizes also wait until you are between
+things, so one never lands in the middle of a bath or a game.
 
 There are six prizes: four **hats** — a party hat, a crown, a cap and a bow —
 and two **toys**. Tap a hat to put it on your pet; it wears it everywhere,
