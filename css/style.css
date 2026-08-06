@@ -250,7 +250,7 @@ body {
   background: var(--panel);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  padding: 7px 14px 8px;
+  padding: 9px 14px;
   border-radius: 18px;
   box-shadow: var(--shadow);
   min-width: 168px;
@@ -258,20 +258,42 @@ body {
 
 .tool-text { font-size: 13px; font-weight: 900; text-align: center; }
 
-/* how much of the current step is done */
-.tool-meter {
-  height: 7px;
-  border-radius: 99px;
+/* how much of the current step is done — a tall gauge down the left edge */
+.tool-meter-v {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: min(210px, 42vh);
+  padding: 5px;
+  border-radius: 999px;
+  background: var(--panel);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: var(--shadow);
+  display: none;
+}
+.tool-meter-v.show { display: block; }
+
+.tool-meter-v .track {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
   background: rgba(58, 43, 64, .14);
   overflow: hidden;
 }
-.tool-meter i {
-  display: block;
-  height: 100%;
-  width: 0;
-  border-radius: 99px;
-  background: linear-gradient(90deg, #7fe0ff, #3fd6a0);
-  transition: width .2s;
+.tool-meter-v i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  border-radius: 999px;
+  background: linear-gradient(0deg, #3fd6a0, #7fe0ff);
+  transition: height .2s;
 }
 
 /* ---------------- buttons ---------------- */
@@ -311,7 +333,8 @@ body {
   pointer-events: none;
   transition: opacity .25s;
 }
-.celebrate.show { opacity: 1; pointer-events: auto; }
+/* the banner never swallows a tap — it fades on its own */
+.celebrate.show { opacity: 1; }
 .celebrate-emoji { font-size: 46px; animation: pop .5s cubic-bezier(.2, 1.8, .5, 1); }
 .celebrate-title { font-size: 26px; font-weight: 900; }
 .celebrate-sub { font-size: 16px; font-weight: 800; color: var(--muted); }

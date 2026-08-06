@@ -61,9 +61,15 @@ as your pet works through it.
 
 ### Prizes and the toy box
 
-Get **two meters full at the same time** and you win a prize. It flies across
-the room into the toy box in the back left corner, which starts rattling with a
-sparkle to say something new is inside. **Tap the toy box** to open it.
+There are two ways to win a prize:
+
+* **Top up two meters to 85% or more at the same time.**
+* **Beat your own best score** in any of the mini games.
+
+Either way the prize flies across the room into the toy box in the back left
+corner, which starts rattling with a sparkle to say something new is inside.
+**Tap the toy box** to open it. Prizes wait until you are between things, so
+one never lands in the middle of a bath or a game.
 
 There are six prizes: four **hats** — a party hat, a crown, a cap and a bow —
 and two **toys**. Tap a hat to put it on your pet; it wears it everywhere,
@@ -85,7 +91,8 @@ Tapping **Play** lets you pick what to play:
   fling it back before it lands.
 
 Each game shows your score in the bar at the bottom and tops up the Fun ring
-as you play. **Done** ends a game early.
+as you play. **Done** ends a game early. Your best score in each game is
+remembered — beat it and you win a prize from the toy box.
 
 ### Naps and bedtime
 
@@ -144,8 +151,8 @@ Bath time is a proper three-step job, and every step is hands on:
    dripping wet.
 3. **Dry** — finally the towel, until every last drip is gone.
 
-Each step takes **five seconds of work with the tool on your pet**, shown by
-the meter under the step name. When the meter fills you get a happy chime, the
+Each step takes **three seconds of work with the tool on your pet**, shown by
+the tall gauge down the left of the screen. When the meter fills you get a happy chime, the
 thing you were holding puffs away, and the next one pops in beside the tub
 ready to be picked up — so each step is its own little job with a clear start
 and finish. Press **Done** any time to stop early and keep what you've done so

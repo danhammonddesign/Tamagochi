@@ -28,7 +28,7 @@
     { key: 'rinse', target: 'foam', tool: 'shower', grab: 'Step 2 of 3 · Grab the shower!', text: 'Step 2 of 3 · Rinse the soap off!' },
     { key: 'dry', target: 'drip', tool: 'towel', grab: 'Step 3 of 3 · Grab the towel!', text: 'Step 3 of 3 · Rub your pet dry!' }
   ];
-  var STEP_SECONDS = 5;       // how long a step takes with the tool on the pet
+  var STEP_SECONDS = 3;       // how long a step takes with the tool on the pet
 
   var STARVING = 15;          // a stat this low starts making the pet unwell
   var SICK_AFTER = 80;        // seconds of going without before it gets sick
@@ -67,6 +67,8 @@
     { id: 'mouse', kind: 'toy', label: 'Toy Mouse', icon: 'toyMouse', game: 'mouse' },
     { id: 'frisbee', kind: 'toy', label: 'Frisbee', icon: 'toyFrisbee', game: 'frisbee' }
   ];
+
+  var PRIZE_LEVEL = 85;       // a meter counts as topped up at this much
 
   function prizeById(id) {
     for (var i = 0; i < PRIZES.length; i++) if (PRIZES[i].id === id) return PRIZES[i];
@@ -276,7 +278,7 @@
   /* ------------------------------------------------------------------ */
   /* save data — a shelf of pets                                         */
   /* ------------------------------------------------------------------ */
-  var db = { v: 2, activeId: '', pets: [], plant: 20, prizes: [], prizeNew: 0 };
+  var db = { v: 2, activeId: '', pets: [], plant: 20, prizes: [], prizeNew: 0, best: {} };
   var PLANT_FULL = 900;       // seconds from a fresh trim to fully overgrown
   var PLANT_WILD = 70;        // needs a trim above this
   var pet = null;               // the pet currently on screen
@@ -332,7 +334,8 @@
             plant: typeof d.plant === 'number' ? d.plant : 20,
             plantSaved: d.plantSaved || Date.now(),
             prizes: Array.isArray(d.prizes) ? d.prizes : [],
-            prizeNew: d.prizeNew || 0
+            prizeNew: d.prizeNew || 0,
+            best: (d.best && typeof d.best === 'object') ? d.best : {}
           };
           // the plant keeps growing while you are away
           var grew = Math.min(MAX_OFFLINE, (Date.now() - db.plantSaved) / 1000);
@@ -1025,20 +1028,15 @@
   /* ------------------------------------------------------------------ */
   function fullMeters(p) {
     var n = 0;
-    for (var i = 0; i < STAT_KEYS.length; i++) if (p.stats[STAT_KEYS[i]] >= 99) n++;
+    for (var i = 0; i < STAT_KEYS.length; i++) if (p.stats[STAT_KEYS[i]] >= PRIZE_LEVEL) n++;
     return n;
   }
 
-  /* Two meters full at the same time wins a prize. It only fires on the way
-     up, so it cannot pay out twice for the same pair. */
-  function checkPrize() {
-    var n = fullMeters(pet);
-    if (n < 2) { pet.prizeArmed = false; return; }
-    if (pet.prizeArmed) return;
-    pet.prizeArmed = true;
-
+  /* Hands out one prize the player has not got yet, with a bit of a fanfare
+     and the prize flying across the room into the toy box. */
+  function awardPrize(title, sub) {
     var left = PRIZES.filter(function (p) { return !hasPrize(p.id); });
-    if (!left.length) return;
+    if (!left.length) return null;
     var won = left[Math.floor(Math.random() * left.length)];
     db.prizes.push(won.id);
     db.prizeNew++;
@@ -1051,11 +1049,26 @@
     }
     el.celebrateText.innerHTML =
       '<div class="celebrate-emoji">🎁</div>' +
-      '<div class="celebrate-title">You won a prize!</div>' +
-      '<div class="celebrate-sub">' + escapeHtml(won.label) + ' — it is in the toy box</div>';
+      '<div class="celebrate-title">' + escapeHtml(title) + '</div>' +
+      '<div class="celebrate-sub">' + escapeHtml(sub || '') +
+      escapeHtml(won.label) + ' — it is in the toy box</div>';
     el.celebrate.classList.add('show');
     setTimeout(function () { el.celebrate.classList.remove('show'); }, 2800);
     save();
+    return won;
+  }
+
+  /* Two meters topped up at once wins a prize. It only fires on the way up,
+     so a single pair cannot pay out twice. */
+  function checkPrize() {
+    var n = fullMeters(pet);
+    if (n < 2) { pet.prizeArmed = false; return; }
+    if (pet.prizeArmed) return;
+    // wait until nothing is going on, so a prize never lands mid-bath or
+    // mid-game and steals the moment
+    if (rt.activity || rt.tool || rt.intro || pickerOpen()) return;
+    pet.prizeArmed = true;
+    awardPrize('You won a prize!', 'Two meters topped up! ');
   }
 
   function toyBoxBounds() {
@@ -1430,7 +1443,20 @@
     pet.stats.fun = clamp(pet.stats.fun + 12, 0, 100);
     addGrowth(4 + Math.min(4, g.score * 0.4));
     bumpLove(8);
-    say(g.score > 0 ? 'Score: ' + g.score + '!' : 'That was fun!', 2200);
+
+    // beating the record you set last time is worth a prize
+    var had = db.best[g.game];
+    var beatIt = had !== undefined && g.score > had;
+    if (had === undefined || g.score > had) db.best[g.game] = g.score;
+    if (beatIt) {
+      say('New best: ' + g.score + '!', 2400);
+      Sfx.ding();
+      setTimeout(function () {
+        awardPrize('New best score!', cfg.label + ': ' + g.score + '. ');
+      }, 700);
+    } else {
+      say(g.score > 0 ? 'Score: ' + g.score + '!' : 'That was fun!', 2200);
+    }
     for (var i = 0; i < 5; i++) {
       spawn('heart', W / 2 + (Math.random() - 0.5) * 14, room.groundY - 28, { vy: -14, max: 1.2 });
     }
@@ -1809,11 +1835,12 @@
     }
     el.dock.classList.add('hide');
     el.toolBar.classList.add('show');
+    el.toolMeter.classList.add('show');
     var park0 = parkSpot();
     rt.tool.x = park0.x;
     rt.tool.y = park0.y;
     el.toolText.textContent = name === 'bath' ? BATH_STEPS[0].grab : 'Grab the brush!';
-    el.toolFill.style.width = '0%';
+    el.toolFill.style.height = '0%';
     setHint('');
   }
 
@@ -1825,7 +1852,7 @@
   function updateToolMeter() {
     var t = rt.tool;
     if (!t) return;
-    el.toolFill.style.width = (clamp(t.stepTime / STEP_SECONDS, 0, 1) * 100).toFixed(1) + '%';
+    el.toolFill.style.height = (clamp(t.stepTime / STEP_SECONDS, 0, 1) * 100).toFixed(1) + '%';
   }
 
   function stepCount() {
@@ -1908,7 +1935,7 @@
     t.popT = 0.45;
     t.x = park.x;
     t.y = park.y;
-    el.toolFill.style.width = '0%';
+    el.toolFill.style.height = '0%';
     el.toolText.textContent = BATH_STEPS[t.step].grab;
     say(t.step === 1 ? 'All soapy!' : 'Nice and rinsed!', 1800);
     if (t.step === 1) Sfx.splash();
@@ -1941,6 +1968,7 @@
     rt.leanTarget = 0;
     el.dock.classList.remove('hide');
     el.toolBar.classList.remove('show');
+    el.toolMeter.classList.remove('show');
     refreshDock();
     syncSpots();
     save();
@@ -2128,7 +2156,7 @@
       'confirmModal', 'confirmText', 'confirmYes', 'confirmNo', 'celebrate', 'celebrateText',
       'gamePicker', 'gameCancel', 'toolFill', 'medBtn', 'foodPicker', 'foodCancel',
       'prizeScreen', 'prizeClose', 'prizeGrid', 'prizeSub', 'sleepBtn',
-      'gameMouse', 'gameFrisbee'
+      'gameMouse', 'gameFrisbee', 'toolMeter'
     ].forEach(function (id) { el[id] = $(id); });
 
     el.actionBtns = Array.prototype.slice.call(document.querySelectorAll('[data-action]'));
@@ -2841,7 +2869,7 @@
     var owned = db.prizes.length;
     el.prizeSub.textContent = owned
       ? owned + ' of ' + PRIZES.length + ' prizes — tap a hat to wear it'
-      : 'Fill up two meters at once to win a prize!';
+      : 'Top up two meters at once, or beat your best score, to win a prize!';
 
     PRIZES.forEach(function (pz) {
       var got = hasPrize(pz.id);
