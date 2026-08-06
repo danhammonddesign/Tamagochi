@@ -61,12 +61,18 @@ as your pet works through it.
 
 ### Prizes and the toy box
 
-There are two ways to win a prize:
+There are four ways to win a prize:
 
 * **Top up two meters to 85% or more at the same time.**
+* **Get a perfect score** in any of the mini games — every game has a target
+  score, shown next to your score while you play, and a ★ appears when you
+  reach it.
 * **Beat your own best score** in any of the mini games.
+* **Match your own best score**, so a great run still counts even when you
+  can't quite go one better.
 
-Either way the prize flies across the room into the toy box in the back left
+A round only ever wins one prize, so a perfect run that is also a new record
+pays out once. However you win it, the prize flies across the room into the toy box in the back left
 corner, which starts rattling with a sparkle to say something new is inside.
 **Tap the toy box** to open it. Prizes wait until you are between things, so
 one never lands in the middle of a bath or a game.
@@ -80,19 +86,18 @@ two extra mini games.
 
 Tapping **Play** lets you pick what to play:
 
-* **Bounce** — a ball ricochets around the room; tap it to keep it flying.
-* **Bubbles** — bubbles drift up from the floor; pop as many as you can before
-  time runs out. Your pet follows them with its eyes.
-* **Find It** — a treat goes under one of three cups, the cups shuffle, and you
-  pick the one you think is hiding it. Three rounds.
-* **Chase** *(needs the toy mouse)* — a mouse darts about the floor changing
-  direction; tap it to send it scurrying off again.
-* **Fetch** *(needs the frisbee)* — a frisbee sails around the room; tap it to
-  fling it back before it lands.
+| Game | How it works | Perfect score |
+|---|---|---|
+| **Bounce** | A ball ricochets around the room; tap it to keep it flying. | 8 |
+| **Bubbles** | Bubbles drift up from the floor; pop as many as you can before time runs out. Your pet follows them with its eyes. | 12 |
+| **Find It** | A treat goes under one of three cups, the cups shuffle, and you pick the one you think is hiding it. Three rounds. | 3 |
+| **Chase** *(needs the toy mouse)* | A mouse darts about the floor changing direction; tap it to send it scurrying off again. | 10 |
+| **Fetch** *(needs the frisbee)* | A frisbee sails around the room; tap it to fling it back before it lands. | 8 |
 
-Each game shows your score in the bar at the bottom and tops up the Fun ring
-as you play. **Done** ends a game early. Your best score in each game is
-remembered — beat it and you win a prize from the toy box.
+Each game shows your score in the bar at the bottom, counting up towards that
+game's perfect score, and tops up the Fun ring as you play. **Done** ends a
+game early. Your best score in each game is remembered — hit the target, beat
+your record or match it and you win a prize from the toy box.
 
 ### Naps and bedtime
 

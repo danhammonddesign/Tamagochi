@@ -1241,13 +1241,15 @@
   /* ------------------------------------------------------------------ */
   /* mini games                                                          */
   /* ------------------------------------------------------------------ */
+  /* `per` is the Fun each point is worth; `perfect` is the score that counts
+     as a clean sweep and wins a prize on its own. */
   var GAMES = {
-    ball: { label: 'Bounce', dur: 9, hint: 'Tap the ball!', per: 4 },
-    bubble: { label: 'Bubbles', dur: 14, hint: 'Pop the bubbles!', per: 3 },
-    treat: { label: 'Find It', dur: 0, hint: 'Which cup hides the treat?', per: 14 },
+    ball: { label: 'Bounce', dur: 9, hint: 'Tap the ball!', per: 4, perfect: 8 },
+    bubble: { label: 'Bubbles', dur: 14, hint: 'Pop the bubbles!', per: 3, perfect: 12 },
+    treat: { label: 'Find It', dur: 0, hint: 'Which cup hides the treat?', per: 14, perfect: 3 },
     // unlocked by winning the matching toy from the toy box
-    mouse: { label: 'Chase', dur: 14, hint: 'Catch the mouse!', per: 4, prize: 'mouse' },
-    frisbee: { label: 'Fetch', dur: 14, hint: 'Keep it flying!', per: 5, prize: 'frisbee' }
+    mouse: { label: 'Chase', dur: 14, hint: 'Catch the mouse!', per: 4, perfect: 10, prize: 'mouse' },
+    frisbee: { label: 'Fetch', dur: 14, hint: 'Keep it flying!', per: 5, perfect: 8, prize: 'frisbee' }
   };
 
   function cupGap() { return Math.min(20, Math.max(14, Math.round(W * 0.26))); }
@@ -1444,16 +1446,28 @@
     addGrowth(4 + Math.min(4, g.score * 0.4));
     bumpLove(8);
 
-    // beating the record you set last time is worth a prize
+    // three ways a round is worth a prize: a clean sweep, a new record, or
+    // matching the record you already hold
     var had = db.best[g.game];
+    var isPerfect = !!cfg.perfect && g.score >= cfg.perfect;
     var beatIt = had !== undefined && g.score > had;
+    var matched = had !== undefined && g.score === had && g.score > 0;
     if (had === undefined || g.score > had) db.best[g.game] = g.score;
-    if (beatIt) {
-      say('New best: ' + g.score + '!', 2400);
+
+    var title = null, blurb = null;
+    if (isPerfect) {
+      title = 'Perfect score!';
+      blurb = cfg.label + ': ' + g.score +
+        (g.score === cfg.perfect ? ' out of ' + cfg.perfect : '') + '. ';
+    }
+    else if (beatIt) { title = 'New best score!'; blurb = cfg.label + ': ' + g.score + '. '; }
+    else if (matched) { title = 'You matched your best!'; blurb = cfg.label + ': ' + g.score + '. '; }
+
+    if (title) {
+      say(isPerfect ? 'Perfect! ' + g.score + '!' : beatIt ? 'New best: ' + g.score + '!'
+        : 'Matched your best!', 2400);
       Sfx.ding();
-      setTimeout(function () {
-        awardPrize('New best score!', cfg.label + ': ' + g.score + '. ');
-      }, 700);
+      setTimeout(function () { awardPrize(title, blurb); }, 700);
     } else {
       say(g.score > 0 ? 'Score: ' + g.score + '!' : 'That was fun!', 2200);
     }
@@ -1467,7 +1481,6 @@
     el.toolBar.classList.remove('show');
     refreshDock();
     save();
-    void cfg;
   }
 
   /* ------------------------------------------------------------------ */
@@ -1771,7 +1784,10 @@
       if (a.game !== 'treat' && Math.random() < dt * 3) {
         spawn('note', W / 2 + (Math.random() - 0.5) * 16, room.groundY - 30, { vy: -10, max: 1.2 });
       }
-      el.toolText.textContent = GAMES[a.game].hint + (a.score ? '  ' + a.score : '');
+      // the bar counts up to the clean-sweep target, then just shows a star
+      var gcfg = GAMES[a.game];
+      el.toolText.textContent = gcfg.hint + '  ' + a.score +
+        (a.score >= gcfg.perfect ? '  ★' : ' / ' + gcfg.perfect);
       if (a.dur > 0 && a.t >= a.dur) endGame();
       return;
     }
@@ -2869,7 +2885,7 @@
     var owned = db.prizes.length;
     el.prizeSub.textContent = owned
       ? owned + ' of ' + PRIZES.length + ' prizes — tap a hat to wear it'
-      : 'Top up two meters at once, or beat your best score, to win a prize!';
+      : 'Top up two meters at once, or do well in a game, to win a prize!';
 
     PRIZES.forEach(function (pz) {
       var got = hasPrize(pz.id);
