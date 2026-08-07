@@ -80,7 +80,8 @@
     { id: 'skull', kind: 'picture', label: 'Skull Picture', icon: 'picSkull' },
     { id: 'pumpkin', kind: 'wallpaper', label: 'Pumpkin Wallpaper', icon: 'wallPumpkin' },
     { id: 'cactus', kind: 'plant', label: 'Cactus', icon: 'plantCactus' },
-    { id: 'skullbanner', kind: 'banner', label: 'Skull Banner', icon: 'bannerSkull' }
+    { id: 'skullbanner', kind: 'banner', label: 'Skull Banner', icon: 'bannerSkull' },
+    { id: 'candyrug', kind: 'rug', label: 'Candy Corn Rug', icon: 'rugCandy' }
   ];
 
   /* Wallpaper the room can be redecorated with. `rose` is what a room starts
@@ -424,7 +425,7 @@
       stats: { food: 75, water: 75, fun: 75, clean: 95, groom: 92 },
       love: 40, born: Date.now(), saved: Date.now(), cuddles: 0,
       messes: [], sick: false, sickT: 0, milkRun: 0,
-      hat: null, picture: null, wallpaper: null, plantStyle: null, banner: null,
+      hat: null, picture: null, wallpaper: null, plantStyle: null, banner: null, rug: null,
       // a new pet arrives spotless, so it starts with the two-full-meters
       // prize already claimed — one has to be earned by looking after it
       prizeArmed: true, gv: GROWTH_V,
@@ -460,7 +461,7 @@
     if (p.hat) p.hat = PRIZE_ALIAS[p.hat] || p.hat;
     if (p.hat && p.prizes.indexOf(p.hat) < 0) p.hat = null;
     // decorations only stay up while the pet still owns the prize
-    ['picture', 'wallpaper', 'plantStyle', 'banner'].forEach(function (slot) {
+    ['picture', 'wallpaper', 'plantStyle', 'banner', 'rug'].forEach(function (slot) {
       if (p[slot] && p.prizes.indexOf(PRIZE_ALIAS[p[slot]] || p[slot]) < 0) p[slot] = null;
       else if (p[slot]) p[slot] = PRIZE_ALIAS[p[slot]] || p[slot];
     });
@@ -582,6 +583,7 @@
     tool: null,                 // bath / brush
     dose: null,                 // the medicine timing game
     witch: null, winTaps: 0, winTapT: -10,
+    needLoo: null, loo: null,
     props: {}, particles: [],
     spots: [], foam: [], drips: [],
     petting: false, lastHeart: 0,
@@ -801,12 +803,15 @@
     L.rect(0, fy + 8, W, 1, plank);
     L.rect(0, fy + 20, W, 1, plank);
 
-    // rug under the pet
+    // rug under the pet — candy corn stripes if that prize is down
     var rugY = room.groundY + 2;
     var rugR = Math.min(Math.round(W * 0.36), 34);
-    L.ellipse(W / 2, rugY, rugR, Math.max(4, rugR * 0.22), C('#bfe9ff'));
-    L.ellipse(W / 2, rugY, rugR * 0.68, Math.max(3, rugR * 0.15), C('#9adcf8'));
-    L.ellipse(W / 2, rugY, rugR * 0.34, Math.max(2, rugR * 0.08), C('#bfe9ff'));
+    var rugCols = (pet && pet.rug === 'candyrug')
+      ? ['#ffc61f', '#ff9f3d', '#fff6e0']
+      : ['#bfe9ff', '#9adcf8', '#bfe9ff'];
+    L.ellipse(W / 2, rugY, rugR, Math.max(4, rugR * 0.22), C(rugCols[0]));
+    L.ellipse(W / 2, rugY, rugR * 0.68, Math.max(3, rugR * 0.15), C(rugCols[1]));
+    L.ellipse(W / 2, rugY, rugR * 0.34, Math.max(2, rugR * 0.08), C(rugCols[2]));
 
     // bunting, hung below the status card — skulls if that prize is up
     var by = Math.round(H * 0.1);
@@ -1178,9 +1183,17 @@
         b.disc(bx + 1, by - 5.4, 1, C('#a3835a'));
       });
     } else {
+      // an uneven blob with a splash or two, so it reads as a puddle
       stampOutlined(L, p.x, p.y, function (b, bx, by) {
-        b.ellipse(bx, by, 6.5, 2.6, C('#ffd83d'));
-        b.ellipse(bx - 1, by - 0.5, 3.4, 1.2, C('#ffeb9a'));
+        var wee = C('#ffd83d'), lit = C('#ffeb9a');
+        b.ellipse(bx, by, 4.4, 2.4, wee);
+        b.ellipse(bx - 2.8, by + 0.6, 2.6, 1.6, wee);
+        b.ellipse(bx + 2.6, by - 0.8, 2.6, 1.6, wee);
+        b.ellipse(bx + 0.6, by + 1.4, 2.8, 1.3, wee);
+        b.ellipse(bx + 5.2, by + 1, 1.3, 0.9, wee);      // a stray splash
+        b.ellipse(bx - 1.6, by - 0.9, 1.9, 0.8, lit);
+        b.set(bx + 2, by + 0.6, lit);
+        b.set(bx + 2.6, by - 1.4, lit);
       });
     }
     // a fly turns up once the mess has been sitting a while
@@ -1219,21 +1232,81 @@
     return false;
   }
 
-  /* The pet quietly excuses itself now and then. */
+  /* The pet asks first. You get LOO_WAIT seconds to let it out; miss that and
+     it has an accident on the floor as before. */
+  var LOO_WAIT = 5;           // seconds to answer the call
+  var LOO_TRIP = 3.4;         // how long a trip outside takes
+
   function updateMesses(dt) {
     var i;
     for (i = 0; i < pet.messes.length; i++) {
       var key = messKey(pet.messes[i]);
       rt.messAge[key] = (rt.messAge[key] || 0) + dt;
     }
-    if (rt.activity || rt.tool || rt.sleep || rt.pooping || rt.angry > 0 || rt.intro) return;
+
+    if (rt.needLoo) {
+      rt.needLoo.t += dt;
+      if (rt.needLoo.t >= LOO_WAIT) {          // too late
+        rt.needLoo = null;
+        el.looBtn.classList.remove('show');
+        rt.pooping = { t: 0, dur: 2.4, dropped: false };
+      }
+      return;
+    }
+    if (rt.loo) {
+      rt.loo.t += dt;
+      if (rt.loo.t >= LOO_TRIP) {
+        rt.loo = null;
+        say('All done!', 1800);
+        pet.stats.clean = clamp(pet.stats.clean + 4, 0, 100);
+        bumpLove(4);
+        addGrowth(1.5);
+        refreshDock();
+        save();
+      }
+      return;
+    }
+
+    if (rt.activity || rt.tool || rt.dose || rt.sleep || rt.pooping) return;
+    if (rt.angry > 0 || rt.intro || pickerOpen()) return;
     if (pet.messes.length >= MAX_MESS) return;
 
     rt.messTimer -= dt;
     if (rt.messTimer <= 0) {
       rt.messTimer = 55 + Math.random() * 70;
-      rt.pooping = { t: 0, dur: 2.4, dropped: false };
+      askForLoo();
     }
+  }
+
+  function askForLoo() {
+    rt.needLoo = { t: 0 };
+    el.looBtn.classList.add('show');
+    say('I need to go!', 2200);
+    Sfx.click();
+  }
+
+  /* Tapping the button in time: the pet trots off screen and comes back
+     pleased with itself, and there is no mess to clear up. */
+  function goOutside() {
+    if (!rt.needLoo) return;
+    rt.needLoo = null;
+    el.looBtn.classList.remove('show');
+    rt.loo = { t: 0 };
+    rt.petting = false;
+    rt.leanTarget = 0;
+    say('Back in a moment!', 1800);
+    Sfx.pickup();
+    refreshDock();
+  }
+
+  /* How far off to the side the pet has trotted, mid-trip. */
+  function looOffset() {
+    if (!rt.loo) return 0;
+    var k = clamp(rt.loo.t / LOO_TRIP, 0, 1);
+    var away = W / 2 + 34;
+    if (k < 0.26) return away * (k / 0.26);
+    if (k < 0.74) return away;
+    return away * (1 - (k - 0.74) / 0.26);
   }
 
   function updatePooping(dt) {
@@ -1297,7 +1370,7 @@
     if (pet.prizeArmed) return;
     // wait until nothing is going on, so a prize never lands mid-bath or
     // mid-game and steals the moment
-    if (rt.activity || rt.tool || rt.dose || rt.intro || pickerOpen()) return;
+    if (rt.activity || rt.tool || rt.dose || rt.loo || rt.intro || pickerOpen()) return;
     pet.prizeArmed = true;
     say('All topped up!', 2000);
     awardPrize();
@@ -1358,10 +1431,6 @@
       Sfx.whoosh();
       say('A witch!', 2400);
       bumpLove(2);
-      for (var i = 0; i < 6; i++) {
-        spawn('star', 16 + (Math.random() - 0.5) * 16, bb.y0 + 4 + Math.random() * 12,
-          { vx: (Math.random() - 0.5) * 14, vy: -8, g: 14, max: 1.1 });
-      }
     }
     return true;
   }
@@ -1625,7 +1694,7 @@
   }
 
   function maybeSleep(dt) {
-    if (rt.sleep || rt.activity || rt.tool || rt.dose) return;
+    if (rt.sleep || rt.activity || rt.tool || rt.dose || rt.loo || rt.needLoo) return;
     if (rt.pooping || rt.petting || rt.angry > 0) return;
     if (pet.sick || rt.intro || pickerOpen()) return;
     if (minStat(pet) < 32) return;              // never nap while something is needed
@@ -2063,6 +2132,14 @@
       b.ellipse(x - 1, y, 3, 1.9, C('#d9954f'));
       b.ellipse(x - 1, y - 0.6, 2.6, 1.2, C('#eab275'));
       for (var i = -3; i <= 1; i += 2) b.rect(x + i, y + 1.6, 1, 2, C('#fbf3e6'));
+    },
+    loo: function (b, x, y) {                  // "I need the toilet!"
+      b.rect(x - 2.5, y - 4, 5, 1.6, C('#c9d6e2'));
+      b.rect(x - 2.5, y - 2.6, 5, 1.4, C('#eef4fa'));
+      b.ellipse(x, y - 0.6, 3.4, 1.7, C('#eef4fa'));
+      b.ellipse(x, y - 0.6, 2, 0.9, C('#7fd8ff'));
+      b.tri(x - 2.6, y + 0.4, x + 2.6, y + 0.4, x, y + 3.4, C('#eef4fa'));
+      b.rect(x - 1.2, y + 3, 2.4, 1.2, C('#c9d6e2'));
     }
   };
 
@@ -2132,7 +2209,7 @@
 
     // poking a sleeping pet into action is the rudest thing you can do
     if (rt.sleep) { wake(true); return; }
-    if (rt.pooping) return;
+    if (rt.pooping || rt.loo) return;
 
     if (name === 'medicine' && !pet.sick) { say('I feel fine!', 1600); return; }
     if (name === 'play' && pet.sick) { say('I am too poorly to play…', 2200); Sfx.sad(); return; }
@@ -2715,7 +2792,7 @@
       'petsClose', 'petGrid', 'startScreen', 'nameInput', 'startBtn', 'startBack',
       'confirmModal', 'confirmText', 'confirmYes', 'confirmNo', 'celebrate', 'celebrateText',
       'gamePicker', 'gameCancel', 'toolFill', 'medBtn', 'foodPicker', 'foodCancel',
-      'drinkPicker', 'drinkCancel',
+      'drinkPicker', 'drinkCancel', 'looBtn',
       'prizeScreen', 'prizeClose', 'prizeGrid', 'prizeSub', 'sleepBtn',
       'gameWand', 'gameFrisbee', 'toolMeter', 'prizePop'
     ].forEach(function (id) { el[id] = $(id); });
@@ -2766,7 +2843,7 @@
   }
 
   function refreshDock() {
-    var busy = !!(rt.activity || rt.tool || rt.dose);
+    var busy = !!(rt.activity || rt.tool || rt.dose || rt.loo);
     el.actionBtns.forEach(function (b) { b.disabled = busy; });
     var showMed = !!(pet && pet.sick);
     el.medBtn.classList.toggle('hidden', !showMed);
@@ -2811,6 +2888,8 @@
     }
 
     if (rt.intro) setHint(rt.intro.popped ? '' : 'Tap the present!');
+    else if (rt.needLoo) setHint('Quick — let it out before there is a puddle!');
+    else if (rt.loo) setHint('');
     else if (!rt.tool && !rt.activity && !rt.dose) {
       if (rt.sleep) setHint('Shhh… your pet is asleep.');
       else if (pet.sick) setHint('Your pet is poorly — give it Medicine!');
@@ -2865,7 +2944,8 @@
     L.record(null);
     L.clear(C('#ffe6f2'));
     drawRoom(L, rt.t);
-    L.ellipse(W / 2, room.groundY + 1, 13, 2.5, C('#e0b273'));
+    // the pet's floor shadow follows it off screen on a trip outside
+    L.ellipse(W / 2 + looOffset(), room.groundY + 1, 13, 2.5, C('#e0b273'));
 
     // everything from here on is an object in the room, not the room itself,
     // so it is flagged to keep its own colours whatever the light is doing
@@ -2911,7 +2991,7 @@
     });
     // a pounce at the wand throws the whole pet toward the toy for a moment
     var lunge = rt.pounce ? Math.sin(clamp(rt.pounce.t / 0.4, 0, 1) * Math.PI) : 0;
-    var petDX = rt.pounce ? rt.pounce.dir * 8 * lunge : 0;
+    var petDX = (rt.pounce ? rt.pounce.dir * 8 * lunge : 0) + looOffset();
     if (!rt.intro || rt.intro.popped) {
       L.blit(petLayer, Math.round(W / 2 - Pets.SIZE / 2 + petDX),
         Math.round(room.groundY - Pets.FEET + blitDY - lunge * 7));
@@ -2979,7 +3059,9 @@
 
     // the thought bubble sits right where the medicine meter goes, so it stays
     // out of the way while you are giving a dose
-    if (!rt.activity && !rt.tool && !rt.dose && !rt.sleep && !rt.angry) {
+    if (rt.needLoo) {
+      drawNeedBubble(L, W / 2 + 17, room.groundY - 42, 'loo', rt.t * 2.2);
+    } else if (!rt.activity && !rt.tool && !rt.dose && !rt.sleep && !rt.angry) {
       var lowest = null, lv = 101;
       for (var i = 0; i < STAT_KEYS.length; i++) {
         if (pet.stats[STAT_KEYS[i]] < lv) { lv = pet.stats[STAT_KEYS[i]]; lowest = STAT_KEYS[i]; }
@@ -3220,7 +3302,7 @@
         if (overPet(p)) { say('Hmph!', 1200); Sfx.growl(); }
         return;
       }
-      if (rt.pooping) return;
+      if (rt.pooping || rt.loo) return;
 
       if (!rt.activity && overPet(p)) {
         rt.petting = true;
@@ -3339,6 +3421,11 @@
       Sfx.click();
       el.prizeScreen.classList.add('hidden');
     });
+    el.looBtn.addEventListener('click', function () {
+      Sfx.init();
+      goOutside();
+    });
+
     el.sleepBtn.addEventListener('click', function () {
       Sfx.init();
       Sfx.click();
@@ -3453,26 +3540,28 @@
 
   var PRIZE_USE = {
     hat: 'Tap to wear', toy: 'Tap to play', picture: 'Tap to hang up',
-    wallpaper: 'Tap to put up', plant: 'Tap to pot it', banner: 'Tap to hang up'
+    wallpaper: 'Tap to put up', plant: 'Tap to pot it', banner: 'Tap to hang up',
+    rug: 'Tap to lay it down'
   };
   var PRIZE_ON = {
     hat: 'Wearing it', toy: 'Tap to play', picture: 'On the wall',
-    wallpaper: 'On the walls', plant: 'In the pot', banner: 'Up on the wall'
+    wallpaper: 'On the walls', plant: 'In the pot', banner: 'Up on the wall',
+    rug: 'On the floor'
   };
   // which field on the pet each kind of decoration is remembered in
   var PRIZE_SLOT = {
     hat: 'hat', picture: 'picture', wallpaper: 'wallpaper',
-    plant: 'plantStyle', banner: 'banner'
+    plant: 'plantStyle', banner: 'banner', rug: 'rug'
   };
   var PUT_UP = {
     hat: 'How do I look?', picture: 'Look at my new picture!',
     wallpaper: 'What a spooky room!', plant: 'A prickly new friend!',
-    banner: 'Spooky!'
+    banner: 'Spooky!', rug: 'What a cosy rug!'
   };
   var PUT_AWAY = {
     hat: 'Hat off!', picture: 'Back to the old one!',
     wallpaper: 'Back to the old walls!', plant: 'My plant is back!',
-    banner: 'Back to the old banner!'
+    banner: 'Back to the old banner!', rug: 'Back to the old rug!'
   };
 
   function prizeInUse(pz) {
@@ -3547,6 +3636,9 @@
     if (!p || p === pet) return;
     if (rt.tool) endTool(false);
     if (rt.dose) cancelDose();
+    rt.needLoo = null;
+    rt.loo = null;
+    el.looBtn.classList.remove('show');
     rt.activity = null;
     rt.props = {};
     rt.particles = [];

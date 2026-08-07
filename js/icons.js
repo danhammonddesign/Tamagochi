@@ -52,6 +52,20 @@
       L.disc(8, 4, 3.2, C('#fff3a8'));
       L.disc(8, 1.4, 1.1, C('#ff5f8f'));
     },
+    rugCandy: function (L) {                   // candy corn rug
+      L.ellipse(8, 8, 7.4, 5.4, C('#ffd93d'));
+      L.ellipse(8, 8, 5, 3.6, C('#ff9f3d'));
+      L.ellipse(8, 8, 2.6, 1.8, C('#fff6e0'));
+    },
+    toilet: function (L) {                     // little loo
+      L.rect(3, 1, 10, 2, C('#c9d6e2'));       // cistern
+      L.rect(3, 3, 10, 3, C('#eef4fa'));
+      L.ellipse(8, 8.5, 5.4, 3, C('#eef4fa')); // bowl rim
+      L.ellipse(8, 8.5, 3.4, 1.8, C('#7fd8ff'));
+      L.tri(3.6, 9.6, 12.4, 9.6, 8, 13.5, C('#eef4fa'));
+      L.rect(6, 13, 4, 2, C('#c9d6e2'));       // pedestal
+      L.set(12, 2, C('#8fa3b8'));
+    },
     picSkull: function (L) {                   // framed skull
       L.rect(1, 2, 14, 13, C('#4a2f6e'));
       L.rect(3, 4, 10, 9, C('#2b1f3d'));

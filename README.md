@@ -98,7 +98,7 @@ things, so one never lands in the middle of a bath or a game.
 its own best scores, so a second pet starts with an empty box and earns its
 own collection from scratch.
 
-There are ten prizes:
+There are eleven prizes:
 
 * Four **hats** — a party hat, a crown, a witch hat and a bow. Your pet wears
   one everywhere, including on its card in My Pets.
@@ -108,6 +108,7 @@ There are ten prizes:
 * A **cactus** to swap into the pot in place of the houseplant. It grows the
   same way, sprouting arms as it goes and flowering when it wants a trim.
 * A **skull banner** to string up instead of the bunting.
+* A **candy corn rug** to lay down under your pet in place of the blue one.
 
 **Tapping a prize uses it right away** — the box shuts itself so you can see
 what changed, whether that is a hat going on, a new picture on the wall, fresh
@@ -180,13 +181,18 @@ game is open or not. Left long enough it turns into a sprawling thing with
 shoots poking out in all directions — then **tap it to give it a trim**.
 Clippings fly, it snips back to a tidy size, and it starts growing again.
 
-### Accidents
+### Toilet trips
 
-Every so often your pet has an accident on the floor — a poop or a puddle. It
-squats, says "Oops!", and the mess stays there until you **tap it to clean it
-up**. Leave it and the room gets dirty roughly twice as fast per mess, and
-flies turn up after a while. Come back after a long time away and you may find
-one or two waiting for you.
+Every so often your pet needs the toilet. It says **"I need to go!"**, a
+thought bubble with a little loo pops up over its head, and a glowing **"Let
+it out!"** button appears above the controls. **You have five seconds.** Tap
+in time and your pet trots off screen, comes back a moment later saying "All
+done!", and there is nothing to clean up.
+
+Miss the window and it has an accident on the floor — a poop or a puddle. The
+mess stays there until you **tap it to clean it up**. Leave it and the room
+gets dirty roughly twice as fast per mess, and flies turn up after a while.
+Come back after a long time away and you may find one or two waiting for you.
 
 ### Bath time
 
