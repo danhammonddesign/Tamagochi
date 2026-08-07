@@ -155,6 +155,34 @@
     b.rect(bx - 5, by - 5, 11, 3, C('#f2a682'));
   }
 
+  /* A witch on a broomstick, for the window Easter egg. Drawn pixel by pixel
+     through a guard that keeps her inside the glass, so she is properly
+     framed by the window rather than flying across the wallpaper. */
+  var WITCH_ART = [
+    '....#........',
+    '...###.......',
+    '..#####......',
+    '...###.......',
+    '..%%%%%...**.',
+    '.%%%%%%%..***',
+    '..#########**',
+    '....%%.....*.'
+  ];
+
+  function drawWitch(L, x, y, gx0, gy0, gx1, gy1) {
+    var cols = { '#': C('#241a33'), '%': C('#4a2f6e'), '*': C('#c98f4b') };
+    for (var r = 0; r < WITCH_ART.length; r++) {
+      var row = WITCH_ART[r];
+      for (var c = 0; c < row.length; c++) {
+        var col = cols[row.charAt(c)];
+        if (!col) continue;
+        var px = Math.round(x + c), py = Math.round(y + r);
+        if (px < gx0 || px > gx1 || py < gy0 || py > gy1) continue;
+        L.set(px, py, col);
+      }
+    }
+  }
+
   /* A hanging skull for the Halloween banner. */
   function drawBannerSkull(L, x, y) {
     L.ellipse(x, y + 2, 2.6, 2.4, C('#f4efe6'));
@@ -553,6 +581,7 @@
     activity: null,             // feed / water / play
     tool: null,                 // bath / brush
     dose: null,                 // the medicine timing game
+    witch: null, winTaps: 0, winTapT: -10,
     props: {}, particles: [],
     spots: [], foam: [], drips: [],
     petting: false, lastHeart: 0,
@@ -825,6 +854,15 @@
     L.ellipse(c1 + 2, wy + 12, 2.5, 1.5, C(cloudCol));
     var c2 = wx + 5 + ((t * 1.3 + 8) % 15);
     L.ellipse(c2, wy + 5, 3, 1.4, C(cloudCol));
+
+    // the Easter egg: a witch sails past outside
+    if (rt.witch) {
+      var wk = clamp(rt.witch.t / WITCH_FLY, 0, 1);
+      // she keeps to the upper panes so the glazing bar does not cut her in half
+      drawWitch(L, (wx + 24) - wk * 38, wy + 3 + Math.sin(wk * Math.PI * 2) * 1.2,
+        wx + 2, wy + 2, wx + 21, wy + 19);
+    }
+
     var frame = C('#ffffff');
     L.rect(wx, wy, 24, 2, frame);
     L.rect(wx, wy + 20, 24, 2, frame);
@@ -1298,6 +1336,36 @@
     if (tw < 0.4) L.stamp(['.#.', '###', '.#.'], { '#': C('#fff6d0') }, 2, fy - 13 - Math.round(tw * 2));
   }
 
+  /* Tap the window five times and something flies past outside. */
+  var WITCH_TAPS = 5;         // taps needed
+  var WITCH_FLY = 2.8;        // seconds to cross the glass
+
+  function windowBounds() {
+    var wy = Math.round(H * 0.2);
+    return { x0: 4, x1: 28, y0: wy, y1: wy + 22 };
+  }
+
+  function tapWindow(x, y) {
+    var bb = windowBounds();
+    if (x < bb.x0 || x > bb.x1 || y < bb.y0 || y > bb.y1) return false;
+    if (rt.t - rt.winTapT > 3) rt.winTaps = 0;   // the taps have to be in a run
+    rt.winTapT = rt.t;
+    rt.winTaps++;
+    Sfx.click();
+    if (rt.winTaps >= WITCH_TAPS && !rt.witch) {
+      rt.winTaps = 0;
+      rt.witch = { t: 0 };
+      Sfx.whoosh();
+      say('A witch!', 2400);
+      bumpLove(2);
+      for (var i = 0; i < 6; i++) {
+        spawn('star', 16 + (Math.random() - 0.5) * 16, bb.y0 + 4 + Math.random() * 12,
+          { vx: (Math.random() - 0.5) * 14, vy: -8, g: 14, max: 1.1 });
+      }
+    }
+    return true;
+  }
+
   /* Once you have won a picture you can swap the two over by tapping the
      frame on the wall — no need to go through the toy box. */
   function pictureBounds() {
@@ -1456,7 +1524,8 @@
 
   function doseMeter() {
     var w = Math.min(46, W - 26);
-    return { w: w, x0: Math.round(W / 2 - w / 2), y: Math.max(14, room.groundY - 44) };
+    // just clear of the shelf above and the pet's ears below
+    return { w: w, x0: Math.round(W / 2 - w / 2), y: Math.max(14, room.groundY - 46) };
   }
 
   function startDose() {
@@ -1527,14 +1596,16 @@
     var m = doseMeter();
     var mid = Math.round(m.w * DOSE_ZONE * 2);
     stampOutlined(L, W / 2, m.y, function (b, bx, by) {
+      // a chunky opaque plate, so the shelf behind cannot be mistaken for
+      // part of the meter, in a teal the room's greens do not clash with
       var x0 = bx - m.w / 2;
-      b.rect(x0, by - 2, m.w, 5, C('#f2eef8'));
-      b.rect(x0, by - 2, m.w, 1, C('#ded6ea'));
-      b.rect(bx - mid / 2, by - 2, mid, 5, C(d.flash > 0 && d.good ? '#b9f5a0' : '#8ee86a'));
-      b.rect(bx - mid / 2, by - 2, mid, 1, C('#63c93f'));
+      b.rect(x0, by - 4, m.w, 9, C('#f2eef8'));
+      b.rect(x0, by - 4, m.w, 2, C('#ded6ea'));
+      b.rect(bx - mid / 2, by - 4, mid, 9, C(d.flash > 0 && d.good ? '#9ff5d4' : '#3fd6a0'));
+      b.rect(bx - mid / 2, by - 4, mid, 2, C('#2fb886'));
       // the sweeping marker
       var mx = Math.round(x0 + d.pos * m.w);
-      b.rect(mx - 1, by - 4, 3, 9, C(d.flash > 0 ? (d.good ? '#ffd93d' : '#ff5f5f') : '#5f4bb6'));
+      b.rect(mx - 1, by - 6, 3, 13, C(d.flash > 0 ? (d.good ? '#ffd93d' : '#ff5f5f') : '#5f4bb6'));
     }, true);
   }
 
@@ -2906,7 +2977,9 @@
       else drawTowel(L, tx, ty, tilt);
     }
 
-    if (!rt.activity && !rt.tool && !rt.sleep && !rt.angry) {
+    // the thought bubble sits right where the medicine meter goes, so it stays
+    // out of the way while you are giving a dose
+    if (!rt.activity && !rt.tool && !rt.dose && !rt.sleep && !rt.angry) {
       var lowest = null, lv = 101;
       for (var i = 0; i < STAT_KEYS.length; i++) {
         if (pet.stats[STAT_KEYS[i]] < lv) { lv = pet.stats[STAT_KEYS[i]]; lowest = STAT_KEYS[i]; }
@@ -2964,6 +3037,7 @@
     if (!rt.intro) checkPrize();
     if (rt.prizeFly) { rt.prizeFly.t += dt; if (rt.prizeFly.t > 1.1) rt.prizeFly = null; }
     if (rt.pounce) { rt.pounce.t += dt; if (rt.pounce.t > 0.4) rt.pounce = null; }
+    if (rt.witch) { rt.witch.t += dt; if (rt.witch.t > WITCH_FLY) rt.witch = null; }
 
     growthClock += dt;
     if (growthClock > 10) {
@@ -3135,6 +3209,7 @@
       if (!rt.tool && !rt.activity && trimPlant(p.x, p.y)) return;
       if (!rt.tool && !rt.activity && tapToyBox(p.x, p.y)) return;
       if (!rt.tool && !rt.activity && tapPicture(p.x, p.y)) return;
+      if (!rt.tool && !rt.activity && tapWindow(p.x, p.y)) return;
 
       // a sleeping pet does not want to be prodded
       if (rt.sleep) {

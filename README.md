@@ -169,6 +169,10 @@ night light switches on in the corner. Your pet dozes off far more readily at
 night — and once it is properly dark it curls up in its own little bed — and it
 greets you differently depending on the hour.
 
+### A secret
+
+**Tap the window five times in a row** and something sails past outside.
+
 ### The houseplant
 
 The plant in the corner grows on its own, a little every minute, whether the
@@ -214,8 +218,9 @@ patches of mud to find.
 ### Giving medicine
 
 Tapping **Medicine** starts a little steady-hand game. A marker sweeps back
-and forth along a meter with a green section in the middle — **tap anywhere to
-stop it**, and try to stop it on the green. Land it twice and the spoonful goes
+and forth along a meter above your pet's head with a green section in the
+middle — **tap anywhere to stop it**, and try to stop it on the green. The
+thought bubble steps out of the way while you are aiming. Land it twice and the spoonful goes
 down properly and your pet is better. Miss and nothing bad happens: you simply
 keep going until you have two good stops, and the marker speeds up a little
 after the first one. **Done** puts the bottle away for now.
