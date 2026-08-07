@@ -951,22 +951,6 @@
       b.disc(bx + 3, by + 1, 1.7, C('#ffe07a'));
     });
 
-    // pet bed cushion on the floor
-    stampOutlined(L, 12, fy + 13, function (b, bx, by) {
-      b.ellipse(bx, by, 9, 4, C('#ff8fb0'));
-      b.ellipse(bx, by - 1, 6.5, 2.6, C('#ffd0dd'));
-    });
-
-    // a little night light comes on once it gets dark
-    if (sky.night > 0.3) {
-      var nx = W - 13, ny = fy + 9;
-      L.ellipse(nx, ny, 7, 4, C('#fff3c8'));
-      stampOutlined(L, nx, ny, function (b, bx, by) {
-        b.rect(bx - 1, by - 2, 3, 3, C('#e6dfd6'));
-        b.disc(bx, by - 4, 3, C('#fffbe6'));
-        b.disc(bx - 1, by - 5, 1.2, C('#ffffff'));
-      });
-    }
   }
 
   /* ------------------------------------------------------------------ */

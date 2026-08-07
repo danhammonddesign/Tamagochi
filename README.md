@@ -165,9 +165,8 @@ toys and everything else you put in the room keep their own colours, so nothing
 changes shade as it passes in front of the pet.
 
 The window is where the colour lives: the sky outside changes through the day,
-a sun or moon rides an arc across the panes, stars come out after dark and a
-night light switches on in the corner. Your pet dozes off far more readily at
-night — and once it is properly dark it curls up in its own little bed — and it
+a sun or moon rides an arc across the panes, and stars come out after dark.
+Your pet dozes off far more readily at night — and once it is properly dark it curls up in its own little bed — and it
 greets you differently depending on the hour.
 
 ### A secret
