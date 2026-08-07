@@ -32,7 +32,7 @@ thumb-sized targets along the bottom, and everything is saved to
    | Button | Need | How it works |
    |---|---|---|
    | Feed | Food | Pick from six things to eat |
-   | Water | Water | A water bowl to lap from |
+   | Water | Water | Pick water, milk or orange juice |
    | Play | Fun | Pick one of three mini games |
    | Bath | Clean | **Hands on:** scrub, rinse and dry your pet in three steps |
    | Brush | Brush | **Hands on:** swipe the brush over the fur to smooth the tufts out |
@@ -49,6 +49,16 @@ thumb-sized targets along the bottom, and everything is saved to
 6. Tap the **moon** button (top right) to tuck your pet into bed, and again to
    wake it. Waking it this way is gentle — it is prodding a sleeping pet that
    makes it cross. If you do make it cross, tuck it back in to say sorry.
+
+### Drinks
+
+Water opens a little menu: **water**, **milk** or **orange juice**. Water fills
+the Water ring the most; milk and juice fill it slightly less but are a treat,
+so they top up Fun as well.
+
+Watch the milk, though: **two milks in a row give your pet a tummy ache** and
+it needs medicine to settle. Anything else in between resets the count, so
+milk, then water, then milk is perfectly fine.
 
 ### Dinner time
 
@@ -184,12 +194,22 @@ Because the number of spots is derived from the Clean and Brush stats, the mess
 you can see always matches the gauges — a pet on 40% Clean has exactly five
 patches of mud to find.
 
+### Giving medicine
+
+Tapping **Medicine** starts a little steady-hand game. A marker sweeps back
+and forth along a meter with a green section in the middle — **tap anywhere to
+stop it**, and try to stop it on the green. Land it twice and the spoonful goes
+down properly and your pet is better. Miss and nothing bad happens: you simply
+keep going until you have two good stops, and the marker speeds up a little
+after the first one. **Done** puts the bottle away for now.
+
 ### Getting poorly
 
-Leave your pet hungry or thirsty for long enough and it falls ill: an ice pack
-appears on its head, its cheeks flush, it looks miserable, everything drains
-faster and it is too under the weather to play. A **Medicine** button appears
-in the dock — a bottle and spoon slide in, your pet takes its medicine, and it
+Leave your pet hungry or thirsty for long enough — or give it milk twice in a
+row — and it falls ill: an ice pack appears on its head, its cheeks flush, it
+looks miserable, everything drains faster and it is too under the weather to
+play. A **Medicine** button appears in the dock; steady your hand on the meter
+above and the bottle and spoon slide in, your pet takes its medicine, and it
 sparkles better again.
 
 Your pet never dies, and medicine always works. If a need runs low it just

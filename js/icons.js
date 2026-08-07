@@ -44,6 +44,28 @@
       for (var x = 2; x <= 10; x += 2) L.rect(x, 11, 1, 3, C('#fbf3e6'));
     },
 
+    drinkWater: function (L) {                 // glass of water
+      L.tri(2.5, 3, 13.5, 3, 8, 15, C('#dbe9f2'));
+      L.tri(3.6, 5.4, 12.4, 5.4, 8, 14, C('#5fc8ff'));
+      L.rect(2, 2, 12, 2, C('#eef6fb'));
+      L.line(5.4, 6.6, 6.6, 10, C('#c8f0ff'), 1);
+    },
+    drinkMilk: function (L) {                  // milk carton
+      L.tri(3, 5, 13, 5, 8, 0.5, C('#e8eef5'));
+      L.rect(3, 5, 11, 10, C('#f6f9fc'));
+      L.rect(3, 5, 11, 2, C('#e8eef5'));
+      L.rect(5, 8, 7, 5, C('#5fc8ff'));
+      L.ellipse(8.5, 10.4, 2.4, 1.8, C('#ffffff'));
+      L.set(8.5, 2.6, C('#c9d6e2'));
+    },
+    drinkJuice: function (L) {                 // glass of orange juice
+      L.tri(2.5, 3, 13.5, 3, 8, 15, C('#ffd9a8'));
+      L.tri(3.6, 5.4, 12.4, 5.4, 8, 14, C('#ff9f3d'));
+      L.rect(2, 2, 12, 2, C('#ffe9c8'));
+      L.line(11, 1, 9.4, 6, C('#8ee86a'), 1);   // straw
+      L.disc(4.6, 3, 2.4, C('#ff8a3d'));        // slice on the rim
+      L.disc(4.6, 3, 1.4, C('#ffd07a'));
+    },
     medicine: function (L) {                   // bottle with a cross
       L.rect(6, 1, 4, 2, C('#b9c2d0'));
       L.rect(4, 3, 8, 3, C('#d8dee8'));

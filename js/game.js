@@ -55,8 +55,17 @@
     lolly: { label: 'Lollipop', gain: 25, fun: 20, say: 'Slurp!' }
   };
 
+  /* Three things to drink. Milk and juice are a treat, but milk twice in a
+     row gives your pet a tummy ache. */
+  var DRINKS = {
+    water: { label: 'Water',  icon: 'drinkWater', gain: 45, fun: 0,  fill: '#7fd8ff', say: 'Glug glug!' },
+    milk:  { label: 'Milk',   icon: 'drinkMilk',  gain: 40, fun: 8,  fill: '#fbf7ea', say: 'Mmm, creamy!' },
+    juice: { label: 'Juice',  icon: 'drinkJuice', gain: 38, fun: 14, fill: '#ffa53d', say: 'Yummy juice!' }
+  };
+  var MILK_LIMIT = 2;         // milks in a row before a poorly tummy
+
   // what each animal says when it is thoroughly pleased with you
-  var HAPPY_SAY = { dog: 'Woof woof!', fox: 'Yip yip!', cat: 'Purrrrr!', blackcat: 'Purrrrr!' };
+  var HAPPY_SAY ={ dog: 'Woof woof!', fox: 'Yip yip!', cat: 'Purrrrr!', blackcat: 'Purrrrr!' };
 
   /* Prizes live in the toy box in the corner, and belong to the pet that won
      them — every pet fills its own toy box from scratch. */
@@ -297,7 +306,7 @@
       growth: 0, stage: 'baby',
       stats: { food: 75, water: 75, fun: 75, clean: 95, groom: 92 },
       love: 40, born: Date.now(), saved: Date.now(), cuddles: 0,
-      messes: [], sick: false, sickT: 0, hat: null, prizeArmed: false,
+      messes: [], sick: false, sickT: 0, milkRun: 0, hat: null, prizeArmed: false,
       prizes: [], prizeNew: 0, best: {}
     };
   }
@@ -324,6 +333,7 @@
     if (p.hat) p.hat = PRIZE_ALIAS[p.hat] || p.hat;
     if (p.hat && p.prizes.indexOf(p.hat) < 0) p.hat = null;
     if (typeof p.sickT !== 'number') p.sickT = 0;
+    if (typeof p.milkRun !== 'number') p.milkRun = 0;
     if (!Array.isArray(p.messes)) p.messes = [];
     p.messes = p.messes.slice(0, MAX_MESS);
     p.stage = Pets.stageFor(p.growth).key;
@@ -437,6 +447,7 @@
     lean: 0, leanTarget: 0, bobPhase: 0,
     activity: null,             // feed / water / play
     tool: null,                 // bath / brush
+    dose: null,                 // the medicine timing game
     props: {}, particles: [],
     spots: [], foam: [], drips: [],
     petting: false, lastHeart: 0,
@@ -1111,7 +1122,7 @@
     if (pet.prizeArmed) return;
     // wait until nothing is going on, so a prize never lands mid-bath or
     // mid-game and steals the moment
-    if (rt.activity || rt.tool || rt.intro || pickerOpen()) return;
+    if (rt.activity || rt.tool || rt.dose || rt.intro || pickerOpen()) return;
     pet.prizeArmed = true;
     say('All topped up!', 2000);
     awardPrize();
@@ -1239,15 +1250,128 @@
     }
   }
 
+  /* Milk twice in a row is one milk too many. Returns true if this drink was
+     the one that did it. */
+  function countMilk(kind) {
+    if (kind !== 'milk') { pet.milkRun = 0; return false; }
+    pet.milkRun = (pet.milkRun || 0) + 1;
+    if (pet.milkRun < MILK_LIMIT || pet.sick) return false;
+    pet.milkRun = 0;
+    pet.sick = true;
+    pet.sickT = 0;
+    say('Ooh… my tummy!', 2800);
+    Sfx.sad();
+    for (var i = 0; i < 6; i++) {
+      spawn('sick', W / 2 + (Math.random() - 0.5) * 18, room.groundY - 30,
+        { vx: (Math.random() - 0.5) * 12, vy: -10, max: 1.3 });
+    }
+    save();
+    return true;
+  }
+
   function cure() {
     pet.sick = false;
     pet.sickT = 0;
+    pet.milkRun = 0;      // a clean slate on the milk after a dose of medicine
     rt.shine = 1.4;
     for (var i = 0; i < 14; i++) {
       spawn('sparkle', W / 2 + (Math.random() - 0.5) * 26, room.groundY - 32 + Math.random() * 16,
         { vx: (Math.random() - 0.5) * 20, vy: -16 - Math.random() * 12, g: 26, max: 1.2 });
     }
     save();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* giving the medicine — a little timing game                          */
+  /* ------------------------------------------------------------------ */
+  /* A marker sweeps back and forth along a meter. Stop it in the green
+     middle twice and the spoonful goes down properly. Miss and you simply
+     go again — there is no way to fail, only to keep trying. */
+  var DOSE_HITS = 2;          // good stops needed
+  var DOSE_ZONE = 0.16;       // half-width of the green middle, 0..1 of the meter
+
+  function doseMeter() {
+    var w = Math.min(46, W - 26);
+    return { w: w, x0: Math.round(W / 2 - w / 2), y: Math.max(14, room.groundY - 44) };
+  }
+
+  function startDose() {
+    if (rt.dose) return;
+    rt.dose = { pos: 0.06, dir: 1, speed: 0.82, hits: 0, flash: 0, good: false };
+    rt.props = {};
+    el.dock.classList.add('hide');
+    el.toolBar.classList.add('show');
+    doseText();
+    setHint('');
+    refreshDock();
+  }
+
+  function doseText() {
+    if (!rt.dose) return;
+    el.toolText.textContent = 'Stop it in the middle!  ' + rt.dose.hits + ' / ' + DOSE_HITS;
+  }
+
+  function updateDose(dt) {
+    var d = rt.dose;
+    if (!d) return;
+    if (d.flash > 0) d.flash = Math.max(0, d.flash - dt);
+    d.pos += d.dir * d.speed * dt;
+    if (d.pos > 1) { d.pos = 1; d.dir = -1; }
+    if (d.pos < 0) { d.pos = 0; d.dir = 1; }
+  }
+
+  function tapDose() {
+    var d = rt.dose;
+    if (!d) return;
+    d.good = Math.abs(d.pos - 0.5) <= DOSE_ZONE;
+    d.flash = 0.45;
+    if (d.good) {
+      d.hits++;
+      Sfx.ding();
+      spawn('sparkle', W / 2, room.groundY - 46, { vy: -12, max: 0.7 });
+      if (d.hits >= DOSE_HITS) {
+        rt.dose = null;
+        el.dock.classList.remove('hide');
+        el.toolBar.classList.remove('show');
+        say('Down the hatch!', 1800);
+        rt.activity = { kind: 'medicine', t: 0, dur: ACTIONS.medicine.dur, given: 0, beat: 0 };
+        rt.props = {};
+        refreshDock();
+        return;
+      }
+      say('Good one!', 1000);
+      d.speed += 0.16;                        // a touch quicker for the second
+    } else {
+      Sfx.sad();
+      say('Ooh, missed!', 1000);
+    }
+    doseText();
+  }
+
+  function cancelDose() {
+    if (!rt.dose) return;
+    rt.dose = null;
+    el.dock.classList.remove('hide');
+    el.toolBar.classList.remove('show');
+    say('Maybe later…', 1400);
+    refreshDock();
+  }
+
+  function drawDoseMeter(L) {
+    var d = rt.dose;
+    if (!d) return;
+    var m = doseMeter();
+    var mid = Math.round(m.w * DOSE_ZONE * 2);
+    stampOutlined(L, W / 2, m.y, function (b, bx, by) {
+      var x0 = bx - m.w / 2;
+      b.rect(x0, by - 2, m.w, 5, C('#f2eef8'));
+      b.rect(x0, by - 2, m.w, 1, C('#ded6ea'));
+      b.rect(bx - mid / 2, by - 2, mid, 5, C(d.flash > 0 && d.good ? '#b9f5a0' : '#8ee86a'));
+      b.rect(bx - mid / 2, by - 2, mid, 1, C('#63c93f'));
+      // the sweeping marker
+      var mx = Math.round(x0 + d.pos * m.w);
+      b.rect(mx - 1, by - 4, 3, 9, C(d.flash > 0 ? (d.good ? '#ffd93d' : '#ff5f5f') : '#5f4bb6'));
+    }, true);
   }
 
   /* ------------------------------------------------------------------ */
@@ -1260,11 +1384,14 @@
   }
 
   function pickerOpen() {
-    return el.foodPicker.classList.contains('show') || el.gamePicker.classList.contains('show');
+    return el.foodPicker.classList.contains('show') ||
+      el.drinkPicker.classList.contains('show') ||
+      el.gamePicker.classList.contains('show');
   }
 
   function maybeSleep(dt) {
-    if (rt.sleep || rt.activity || rt.tool || rt.pooping || rt.petting || rt.angry > 0) return;
+    if (rt.sleep || rt.activity || rt.tool || rt.dose) return;
+    if (rt.pooping || rt.petting || rt.angry > 0) return;
     if (pet.sick || rt.intro || pickerOpen()) return;
     if (minStat(pet) < 32) return;              // never nap while something is needed
     if (pet.messes.length) return;              // or with a mess on the floor
@@ -1544,6 +1671,18 @@
     refreshDock();
   }
 
+  function startDrinking(kind) {
+    el.drinkPicker.classList.remove('show');
+    if (rt.sleep) { wake(true); return; }
+    var drink = DRINKS[kind] || DRINKS.water;
+    rt.activity = {
+      kind: 'water', drink: kind, t: 0, dur: 4.0,
+      given: 0, beat: 0, gain: drink.gain
+    };
+    rt.props = {};
+    refreshDock();
+  }
+
   function startGame(id) {
     el.gamePicker.classList.remove('show');
     if (rt.sleep) { wake(true); return; }
@@ -1778,6 +1917,8 @@
       return;
     }
     if (name === 'feed') { el.foodPicker.classList.add('show'); return; }
+    if (name === 'water') { el.drinkPicker.classList.add('show'); return; }
+    if (name === 'medicine') return startDose();
 
     rt.activity = { kind: name, t: 0, dur: cfg.dur, given: 0, beat: 0 };
     rt.props = {};
@@ -1827,7 +1968,7 @@
       } else {
         rt.props.bowl = {
           x: propX, y: room.groundY - 1,
-          fill: isFood ? '#c98a4b' : '#7fd8ff',
+          fill: isFood ? '#c98a4b' : (DRINKS[a.drink] || DRINKS.water).fill,
           level: clamp(left, 0.12, 1)
         };
       }
@@ -1955,15 +2096,23 @@
     if (a.t >= a.dur) {
       addGrowth(!cfg.stat ? 5 : pet.stats[cfg.stat] - totalGain < 55 ? 6 : 2.5);
       bumpLove(6);
+      var tummy = false;
       if (a.kind === 'feed' && a.food) {
         var eaten = FOODS[a.food] || FOODS.meal;
         if (eaten.fun) pet.stats.fun = clamp(pet.stats.fun + eaten.fun, 0, 100);
         say(eaten.say);
+      } else if (a.kind === 'water' && a.drink) {
+        var drunk = DRINKS[a.drink] || DRINKS.water;
+        if (drunk.fun) pet.stats.fun = clamp(pet.stats.fun + drunk.fun, 0, 100);
+        tummy = countMilk(a.drink);
+        if (!tummy) say(drunk.say);
       } else {
         say(cfg.done);
       }
-      for (var i = 0; i < 5; i++) {
-        spawn('heart', W / 2 + (Math.random() - 0.5) * 14, room.groundY - 28, { vy: -14, max: 1.2 });
+      if (!tummy) {
+        for (var i = 0; i < 5; i++) {
+          spawn('heart', W / 2 + (Math.random() - 0.5) * 14, room.groundY - 28, { vy: -14, max: 1.2 });
+        }
       }
       rt.activity = null;
       rt.props = {};
@@ -2331,6 +2480,7 @@
       'petsClose', 'petGrid', 'startScreen', 'nameInput', 'startBtn', 'startBack',
       'confirmModal', 'confirmText', 'confirmYes', 'confirmNo', 'celebrate', 'celebrateText',
       'gamePicker', 'gameCancel', 'toolFill', 'medBtn', 'foodPicker', 'foodCancel',
+      'drinkPicker', 'drinkCancel',
       'prizeScreen', 'prizeClose', 'prizeGrid', 'prizeSub', 'sleepBtn',
       'gameWand', 'gameFrisbee', 'toolMeter', 'prizePop'
     ].forEach(function (id) { el[id] = $(id); });
@@ -2381,7 +2531,7 @@
   }
 
   function refreshDock() {
-    var busy = !!(rt.activity || rt.tool);
+    var busy = !!(rt.activity || rt.tool || rt.dose);
     el.actionBtns.forEach(function (b) { b.disabled = busy; });
     var showMed = !!(pet && pet.sick);
     el.medBtn.classList.toggle('hidden', !showMed);
@@ -2409,12 +2559,12 @@
       var k = ACTIONS[b.dataset.action].stat;
       if (!k) {           // medicine has no gauge of its own
         el.rings[b.dataset.action].style.setProperty('--p', '100');
-        b.classList.toggle('wants', pet.sick && !rt.activity && !rt.tool);
+        b.classList.toggle('wants', pet.sick && !rt.activity && !rt.tool && !rt.dose);
         return;
       }
       var v = pet.stats[k];
       el.rings[b.dataset.action].style.setProperty('--p', clamp(v, 0, 100).toFixed(0));
-      b.classList.toggle('wants', v < 30 && !rt.activity && !rt.tool && !pet.sick);
+      b.classList.toggle('wants', v < 30 && !rt.activity && !rt.tool && !rt.dose && !pet.sick);
       if (v < lowVal) { lowVal = v; lowest = k; }
     });
     refreshDock();
@@ -2426,7 +2576,7 @@
     }
 
     if (rt.intro) setHint(rt.intro.popped ? '' : 'Tap the present!');
-    else if (!rt.tool && !rt.activity) {
+    else if (!rt.tool && !rt.activity && !rt.dose) {
       if (rt.sleep) setHint('Shhh… your pet is asleep.');
       else if (pet.sick) setHint('Your pet is poorly — give it Medicine!');
       else if (rt.angry > 0) setHint('Uh oh — tap the moon to tuck it back in!');
@@ -2550,6 +2700,7 @@
     if (rt.props.tub) drawTub(L, rt.props.tub.x, rt.props.tub.y, false, rt.t);
     if (rt.props.ball) drawBall(L, rt.props.ball.x, rt.props.ball.y, rt.props.ball.spin);
     if (rt.props.wand) drawWand(L, rt.props.wand);
+    drawDoseMeter(L);
     if (rt.props.frisbee) drawFrisbee(L, rt.props.frisbee.x, rt.props.frisbee.y, rt.props.frisbee.spin);
     if (rt.props.bubbles) {
       for (var bi = 0; bi < rt.props.bubbles.length; bi++) drawGameBubble(L, rt.props.bubbles[bi]);
@@ -2705,6 +2856,7 @@
     updateMesses(dt);
     updatePooping(dt);
     updateActivity(dt);
+    updateDose(dt);
     updateTool(dt);
     if (!rt.tool) syncSpots();
     updateParticles(dt);
@@ -2743,6 +2895,10 @@
       var p = sceneCoords(ev);
 
       if (rt.intro) { popPresent(); return; }
+
+      // stopping the medicine meter takes a tap anywhere, so small fingers
+      // do not have to hit the bar itself
+      if (rt.dose) { tapDose(); return; }
 
       if (rt.tool) {
         if (rt.tool.parked) {
@@ -2874,7 +3030,8 @@
 
     el.doneBtn.addEventListener('click', function () {
       Sfx.click();
-      if (rt.activity && rt.activity.kind === 'play') endGame();
+      if (rt.dose) cancelDose();
+      else if (rt.activity && rt.activity.kind === 'play') endGame();
       else endTool(false);
     });
 
@@ -2904,6 +3061,20 @@
     el.foodCancel.addEventListener('click', function () {
       Sfx.click();
       el.foodPicker.classList.remove('show');
+    });
+
+    var drinkCards = document.querySelectorAll('.drink-card');
+    for (var di = 0; di < drinkCards.length; di++) {
+      (function (card) {
+        card.addEventListener('click', function () {
+          Sfx.click();
+          startDrinking(card.dataset.drink);
+        });
+      })(drinkCards[di]);
+    }
+    el.drinkCancel.addEventListener('click', function () {
+      Sfx.click();
+      el.drinkPicker.classList.remove('show');
     });
 
     el.soundBtn.addEventListener('click', function () {
@@ -3034,7 +3205,7 @@
   /* Tapping a toy in the box gets it straight out and starts its game, so a
      player never has to close the box and go back through the Play menu. */
   function playWithToy(pz) {
-    if (rt.intro || rt.tool || rt.activity) { say('Let me finish this first!', 1800); return; }
+    if (rt.intro || rt.tool || rt.activity || rt.dose) { say('Let me finish this first!', 1800); return; }
     if (rt.sleep) { wake(true); return; }
     if (pet.sick) { say('I am too poorly to play…', 2200); Sfx.sad(); return; }
     startGame(pz.game);
@@ -3098,6 +3269,7 @@
     var p = byId(id);
     if (!p || p === pet) return;
     if (rt.tool) endTool(false);
+    if (rt.dose) cancelDose();
     rt.activity = null;
     rt.props = {};
     rt.particles = [];
