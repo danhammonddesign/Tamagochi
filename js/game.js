@@ -77,19 +77,97 @@
     { id: 'bow', kind: 'hat', label: 'Bow', icon: 'hatBow' },
     { id: 'wand', kind: 'toy', label: 'Cat Wand', icon: 'toyWand', game: 'wand' },
     { id: 'frisbee', kind: 'toy', label: 'Frisbee', icon: 'toyFrisbee', game: 'frisbee' },
-    { id: 'rainbow', kind: 'picture', label: 'Rainbow Picture', icon: 'picRainbow' },
-    { id: 'mint', kind: 'wallpaper', label: 'Mint Wallpaper', icon: 'wallMint' }
+    { id: 'skull', kind: 'picture', label: 'Skull Picture', icon: 'picSkull' },
+    { id: 'pumpkin', kind: 'wallpaper', label: 'Pumpkin Wallpaper', icon: 'wallPumpkin' },
+    { id: 'cactus', kind: 'plant', label: 'Cactus', icon: 'plantCactus' },
+    { id: 'skullbanner', kind: 'banner', label: 'Skull Banner', icon: 'bannerSkull' }
   ];
 
-  /* Wallpaper and wall art the room can be redecorated with. The first entry
-     of each is what a room starts out with. */
+  /* Wallpaper the room can be redecorated with. `rose` is what a room starts
+     out with; the rest come out of the toy box. */
   var WALLPAPERS = {
-    rose: { wall: '#ffe6f2', low: '#ffd0e6', trim: '#f2a8cc', stripe: null },
-    mint: { wall: '#dff6ec', low: '#c3ecda', trim: '#7fd0ac', stripe: '#d2f0e3' }
+    rose: { wall: '#ffe6f2', low: '#ffd0e6', trim: '#f2a8cc' },
+    pumpkin: { wall: '#6b4b8f', low: '#523571', trim: '#ff9f3d', motif: 'lantern' }
   };
 
+  // a little jack-o'-lantern, repeated across the Halloween wallpaper
+  function drawLantern(L, x, y) {
+    var ink = C('#241a33');
+    L.rect(x - 0.5, y - 4.6, 1.5, 2, C('#4e8f3a'));
+    L.ellipse(x, y, 3.6, 3, C('#ff8a2b'));
+    L.ellipse(x, y, 1.8, 3, C('#ffb055'));
+    L.tri(x - 2.2, y - 0.4, x - 0.8, y - 0.4, x - 1.5, y - 1.8, ink);
+    L.tri(x + 0.8, y - 0.4, x + 2.2, y - 0.4, x + 1.5, y - 1.8, ink);
+    L.rect(x - 1.6, y + 1.2, 3.5, 1, ink);
+  }
+
+  /* The cactus that can take the houseplant's place in the pot. Same pot and
+     the same growth, but it puts out arms instead of leaves and flowers
+     instead of straggly shoots when it wants a trim. */
+  function drawCactus(b, bx, by, top, stem, lv, wild, sway) {
+    var skin = C('#63c93f'), lit = C('#8ee86a'), dark = C('#3f8f2c'), spine = C('#e8f5c8');
+    var w = 2.6 + lv * 1.1;                       // half-width of the trunk
+    var base = by - 3;                            // where it goes into the pot
+    var h = base - top;
+    b.rect(bx - w, top + 1, w * 2, h, skin);
+    b.ellipse(bx, top + 1, w, w * 0.85, skin);    // domed top
+    b.rect(bx - w + 0.6, top + 1, 1.2, h - 1, lit);
+    b.rect(bx + w - 1.6, top + 3, 1, h - 3, dark);
+
+    // arms, which sprout as it grows and there is room for them
+    var armL = lv > 0.3 && h > 8, armR = lv > 0.55 && h > 10;
+    if (armL) {
+      var ay = top + 6;
+      b.rect(bx - w - 2.6, ay, 3, 2, skin);
+      b.rect(bx - w - 2.6, ay - 3.4, 2, 4, skin);
+      b.ellipse(bx - w - 1.6, ay - 3.4, 1, 0.9, lit);
+    }
+    if (armR) {
+      var ry = top + 8;
+      b.rect(bx + w - 0.4, ry, 3, 2, skin);
+      b.rect(bx + w + 1.6, ry - 3.6, 2, 4.2, skin);
+      b.ellipse(bx + w + 2.6, ry - 3.6, 1, 0.9, lit);
+    }
+
+    // spines
+    for (var s = 0; s < 5; s++) {
+      var sy = top + 4 + s * 3;
+      if (sy > base - 2) break;
+      b.set(bx - w + 0.4, sy, spine);
+      b.set(bx + w - 1.4, sy + 1.5, spine);
+    }
+
+    if (wild) {
+      // it flowers when it is due a tidy up
+      var fx1 = bx + sway * 0.4;
+      b.disc(fx1, top - 1.4, 2.1, C('#ff5f8f'));
+      b.disc(fx1, top - 1.4, 1, C('#ffd93d'));
+      if (armL) {
+        b.disc(bx - w - 1.6, top + 1.6, 1.7, C('#ff8fb0'));
+        b.disc(bx - w - 1.6, top + 1.6, 0.8, C('#ffe07a'));
+      }
+      if (armR) {
+        b.disc(bx + w + 2.6, top + 4, 1.7, C('#ff8fb0'));
+        b.disc(bx + w + 2.6, top + 4, 0.8, C('#ffe07a'));
+      }
+    }
+    // the pot rim goes back on top, so the cactus is planted in it
+    b.rect(bx - 5, by - 5, 11, 3, C('#f2a682'));
+  }
+
+  /* A hanging skull for the Halloween banner. */
+  function drawBannerSkull(L, x, y) {
+    L.ellipse(x, y + 2, 2.6, 2.4, C('#f4efe6'));
+    L.rect(x - 1.6, y + 4, 3.5, 1.6, C('#f4efe6'));
+    L.set(x - 1, y + 2, C('#3a2b40'));
+    L.set(x + 1, y + 2, C('#3a2b40'));
+    L.set(x, y + 3.4, C('#3a2b40'));
+    L.set(x - 1, y + 5, C('#3a2b40'));
+    L.set(x + 1, y + 5, C('#3a2b40'));
+  }
+
   // prizes that have been renamed since an earlier version
-  var PRIZE_ALIAS = { cap: 'witch', mouse: 'wand' };
+  var PRIZE_ALIAS = { cap: 'witch', mouse: 'wand', rainbow: 'skull', mint: 'pumpkin' };
 
   var PRIZE_LEVEL = 85;       // a meter counts as topped up at this much
 
@@ -318,7 +396,7 @@
       stats: { food: 75, water: 75, fun: 75, clean: 95, groom: 92 },
       love: 40, born: Date.now(), saved: Date.now(), cuddles: 0,
       messes: [], sick: false, sickT: 0, milkRun: 0,
-      hat: null, picture: null, wallpaper: null,
+      hat: null, picture: null, wallpaper: null, plantStyle: null, banner: null,
       // a new pet arrives spotless, so it starts with the two-full-meters
       // prize already claimed — one has to be earned by looking after it
       prizeArmed: true, gv: GROWTH_V,
@@ -354,9 +432,11 @@
     if (p.hat) p.hat = PRIZE_ALIAS[p.hat] || p.hat;
     if (p.hat && p.prizes.indexOf(p.hat) < 0) p.hat = null;
     // decorations only stay up while the pet still owns the prize
-    if (p.picture && p.prizes.indexOf(p.picture) < 0) p.picture = null;
-    if (p.wallpaper && p.prizes.indexOf(p.wallpaper) < 0) p.wallpaper = null;
-    if (!WALLPAPERS[p.wallpaper]) p.wallpaper = null;
+    ['picture', 'wallpaper', 'plantStyle', 'banner'].forEach(function (slot) {
+      if (p[slot] && p.prizes.indexOf(PRIZE_ALIAS[p[slot]] || p[slot]) < 0) p[slot] = null;
+      else if (p[slot]) p[slot] = PRIZE_ALIAS[p[slot]] || p[slot];
+    });
+    if (p.wallpaper && !WALLPAPERS[p.wallpaper]) p.wallpaper = null;
     if (typeof p.sickT !== 'number') p.sickT = 0;
     if (typeof p.milkRun !== 'number') p.milkRun = 0;
     if (!Array.isArray(p.messes)) p.messes = [];
@@ -676,8 +756,13 @@
     var fy = room.floorY;
 
     L.rect(0, 0, W, fy, wall);
-    if (paper.stripe) {
-      for (var stx = 4; stx < W; stx += 9) L.rect(stx, 0, 2, fy - 13, C(paper.stripe));
+    if (paper.motif === 'lantern') {
+      // rows of little pumpkins, offset every other row
+      for (var my = 8; my < fy - 14; my += 13) {
+        for (var mx = 6 + ((my / 13) % 2 ? 8 : 0); mx < W - 2; mx += 16) {
+          drawLantern(L, mx, my);
+        }
+      }
     }
     L.rect(0, fy - 13, W, 13, wallLow);
     L.rect(0, fy - 14, W, 1, trim);
@@ -694,18 +779,20 @@
     L.ellipse(W / 2, rugY, rugR * 0.68, Math.max(3, rugR * 0.15), C('#9adcf8'));
     L.ellipse(W / 2, rugY, rugR * 0.34, Math.max(2, rugR * 0.08), C('#bfe9ff'));
 
-    // bunting, hung below the status card
+    // bunting, hung below the status card — skulls if that prize is up
     var by = Math.round(H * 0.1);
+    var spooky = !!(pet && pet.banner === 'skullbanner');
     var cols = ['#ff8fb0', '#ffd93d', '#8ee86a', '#9ad0ff'];
-    var n = Math.max(3, Math.floor((W - 6) / 9));
-    var string = C('#e8629a');
+    var n = Math.max(3, Math.floor((W - 6) / (spooky ? 11 : 9)));
+    var string = C(spooky ? '#4a2f6e' : '#e8629a');
     for (var sxp = 3; sxp <= W - 3; sxp++) {
       L.set(sxp, by + Math.sin(Math.PI * (sxp - 3) / (W - 6)) * 3, string);
     }
     for (var i = 0; i < n; i++) {
       var bx = 3 + (W - 6) * (i / n);
       var sag = Math.sin(Math.PI * (i / n)) * 3;
-      L.tri(bx, by + sag + 1, bx + 5, by + sag + 1, bx + 2.5, by + sag + 6, C(cols[i % cols.length]));
+      if (spooky) drawBannerSkull(L, bx + 2.5, by + sag);
+      else L.tri(bx, by + sag + 1, bx + 5, by + sag + 1, bx + 2.5, by + sag + 6, C(cols[i % cols.length]));
     }
 
     // window — the sky outside follows the real time of day
@@ -749,22 +836,16 @@
     // the picture on the wall, which a prize can swap out
     var py2 = pictureY();
     var px2 = W - 19;
-    if (pet && pet.picture === 'rainbow') {
-      L.rect(px2, py2, 13, 12, C('#8f7fd8'));
-      L.rect(px2 + 2, py2 + 2, 9, 8, C('#dff1ff'));
-      // the arc is plotted a column at a time and clipped to the frame, so it
-      // can never spill out over the wallpaper
-      var bow = [C('#ff6f9c'), C('#ffd93d'), C('#8ee86a')];
-      for (var ax = px2 + 2; ax <= px2 + 10; ax++) {
-        var tt = (ax - (px2 + 6)) / 4.6;
-        if (tt < -1 || tt > 1) continue;
-        var ay = (py2 + 10) - Math.sqrt(1 - tt * tt) * 7;
-        for (var bi2 = 0; bi2 < 3; bi2++) {
-          var yy = Math.round(ay) + bi2;
-          if (yy >= py2 + 2 && yy <= py2 + 9) L.set(ax, yy, bow[bi2]);
-        }
-      }
-      L.set(px2 + 3, py2 + 3, C('#ffe07a'));
+    if (pet && pet.picture === 'skull') {
+      L.rect(px2, py2, 13, 12, C('#4a2f6e'));
+      L.rect(px2 + 2, py2 + 2, 9, 8, C('#2b1f3d'));
+      L.ellipse(px2 + 6.5, py2 + 5.4, 3.4, 2.8, C('#f4efe6'));
+      L.rect(px2 + 5, py2 + 7.4, 4, 2.2, C('#f4efe6'));
+      L.rect(px2 + 4.5, py2 + 4.4, 1.6, 1.6, C('#2b1f3d'));
+      L.rect(px2 + 7.5, py2 + 4.4, 1.6, 1.6, C('#2b1f3d'));
+      L.set(px2 + 6.5, py2 + 6.4, C('#2b1f3d'));
+      L.set(px2 + 5.5, py2 + 8.4, C('#2b1f3d'));
+      L.set(px2 + 7.5, py2 + 8.4, C('#2b1f3d'));
     } else {
       L.rect(px2, py2, 13, 12, C('#f7b955'));
       L.rect(px2 + 2, py2 + 2, 9, 8, C('#fff6e0'));
@@ -785,11 +866,13 @@
     var pl = plantShape();
     var lv = pl.lv, wild = pl.wild;
     var sway = Math.sin(t * 1.3) * (0.4 + lv);
+    var cactus = !!(pet && pet.plantStyle === 'cactus');
     stampOutlined(L, pl.cx, pl.baseY, function (b, bx, by) {
       b.rect(bx - 4, by - 3, 9, 9, C('#e58f6a'));
       b.rect(bx - 5, by - 5, 11, 3, C('#f2a682'));
       var stem = pl.stem;
       var top = by - 4 - stem;
+      if (cactus) { drawCactus(b, bx, by, top, stem, lv, wild, sway); return; }
       b.rect(bx - 0.5, top, 1.5, stem, C('#4ea832'));
       var r = 2.6 + lv * 2.2;
       b.disc(bx + sway * 0.3, top, r, C('#7ed957'));
@@ -1213,6 +1296,33 @@
         13, fy - 15 + Math.round(tw));
     }
     if (tw < 0.4) L.stamp(['.#.', '###', '.#.'], { '#': C('#fff6d0') }, 2, fy - 13 - Math.round(tw * 2));
+  }
+
+  /* Once you have won a picture you can swap the two over by tapping the
+     frame on the wall — no need to go through the toy box. */
+  function pictureBounds() {
+    var py = pictureY();
+    return { x0: W - 20, x1: W - 5, y0: py - 1, y1: py + 13 };
+  }
+
+  function tapPicture(x, y) {
+    var pic = null;
+    for (var i = 0; i < PRIZES.length; i++) {
+      if (PRIZES[i].kind === 'picture' && hasPrize(PRIZES[i].id)) pic = PRIZES[i];
+    }
+    if (!pic) return false;
+    var bb = pictureBounds();
+    if (x < bb.x0 || x > bb.x1 || y < bb.y0 || y > bb.y1) return false;
+    var on = pet.picture === pic.id;
+    pet.picture = on ? null : pic.id;
+    Sfx.click();
+    say(on ? PUT_AWAY.picture : PUT_UP.picture, 1800);
+    for (var s = 0; s < 5; s++) {
+      spawn('sparkle', (W - 13) + (Math.random() - 0.5) * 12, bb.y0 + Math.random() * 12,
+        { vx: (Math.random() - 0.5) * 12, vy: -10, g: 20, max: 0.8 });
+    }
+    save();
+    return true;
   }
 
   function toyBoxBounds() {
@@ -3024,6 +3134,7 @@
       if (!rt.tool && cleanMessAt(p.x, p.y)) return;
       if (!rt.tool && !rt.activity && trimPlant(p.x, p.y)) return;
       if (!rt.tool && !rt.activity && tapToyBox(p.x, p.y)) return;
+      if (!rt.tool && !rt.activity && tapPicture(p.x, p.y)) return;
 
       // a sleeping pet does not want to be prodded
       if (rt.sleep) {
@@ -3266,20 +3377,32 @@
   }
 
   var PRIZE_USE = {
-    hat: 'Tap to wear', toy: 'Tap to play',
-    picture: 'Tap to hang up', wallpaper: 'Tap to put up'
+    hat: 'Tap to wear', toy: 'Tap to play', picture: 'Tap to hang up',
+    wallpaper: 'Tap to put up', plant: 'Tap to pot it', banner: 'Tap to hang up'
   };
   var PRIZE_ON = {
-    hat: 'Wearing it', toy: 'Tap to play',
-    picture: 'On the wall', wallpaper: 'On the walls'
+    hat: 'Wearing it', toy: 'Tap to play', picture: 'On the wall',
+    wallpaper: 'On the walls', plant: 'In the pot', banner: 'Up on the wall'
+  };
+  // which field on the pet each kind of decoration is remembered in
+  var PRIZE_SLOT = {
+    hat: 'hat', picture: 'picture', wallpaper: 'wallpaper',
+    plant: 'plantStyle', banner: 'banner'
+  };
+  var PUT_UP = {
+    hat: 'How do I look?', picture: 'Look at my new picture!',
+    wallpaper: 'What a spooky room!', plant: 'A prickly new friend!',
+    banner: 'Spooky!'
+  };
+  var PUT_AWAY = {
+    hat: 'Hat off!', picture: 'Back to the old one!',
+    wallpaper: 'Back to the old walls!', plant: 'My plant is back!',
+    banner: 'Back to the old banner!'
   };
 
   function prizeInUse(pz) {
-    if (!pet) return false;
-    if (pz.kind === 'hat') return pet.hat === pz.id;
-    if (pz.kind === 'picture') return pet.picture === pz.id;
-    if (pz.kind === 'wallpaper') return pet.wallpaper === pz.id;
-    return false;
+    var slot = PRIZE_SLOT[pz.kind];
+    return !!(pet && slot && pet[slot] === pz.id);
   }
 
   /* Tapping a prize uses it there and then and shuts the box, so you can see
@@ -3289,16 +3412,8 @@
     if (pz.kind === 'toy') { playWithToy(pz); return; }
 
     var wearing = prizeInUse(pz);
-    if (pz.kind === 'hat') {
-      pet.hat = wearing ? null : pz.id;
-      say(wearing ? 'Hat off!' : 'How do I look?', 1800);
-    } else if (pz.kind === 'picture') {
-      pet.picture = wearing ? null : pz.id;
-      say(wearing ? 'Back to the old one!' : 'Look at my new picture!', 2000);
-    } else if (pz.kind === 'wallpaper') {
-      pet.wallpaper = wearing ? null : pz.id;
-      say(wearing ? 'Back to the old walls!' : 'What a lovely room!', 2000);
-    }
+    pet[PRIZE_SLOT[pz.kind]] = wearing ? null : pz.id;
+    say(wearing ? PUT_AWAY[pz.kind] : PUT_UP[pz.kind], 2000);
     Sfx.ding();
     for (var i = 0; i < 6; i++) {
       spawn('sparkle', W / 2 + (Math.random() - 0.5) * 26, room.groundY - 30,

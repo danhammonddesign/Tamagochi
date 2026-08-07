@@ -52,27 +52,54 @@
       L.disc(8, 4, 3.2, C('#fff3a8'));
       L.disc(8, 1.4, 1.1, C('#ff5f8f'));
     },
-    picRainbow: function (L) {                 // framed rainbow
-      L.rect(1, 2, 14, 13, C('#8f7fd8'));
-      L.rect(3, 4, 10, 9, C('#dff1ff'));
-      var bow = [C('#ff6f9c'), C('#ffd93d'), C('#8ee86a')];
-      for (var x = 3; x <= 12; x++) {          // plotted per column, so the
-        var t = (x - 7.5) / 5.2;               // arc stays inside the frame
-        if (t < -1 || t > 1) continue;
-        var y0 = 13 - Math.sqrt(1 - t * t) * 8;
-        for (var i = 0; i < 3; i++) {
-          var y = Math.round(y0) + i;
-          if (y >= 4 && y <= 12) L.set(x, y, bow[i]);
-        }
-      }
-      L.set(4, 6, C('#ffe07a'));
+    picSkull: function (L) {                   // framed skull
+      L.rect(1, 2, 14, 13, C('#4a2f6e'));
+      L.rect(3, 4, 10, 9, C('#2b1f3d'));
+      L.ellipse(8, 7.6, 3.8, 3.2, C('#f4efe6'));
+      L.rect(6, 10, 4.4, 2.6, C('#f4efe6'));
+      L.rect(5.2, 6.4, 1.8, 1.8, C('#2b1f3d'));
+      L.rect(9, 6.4, 1.8, 1.8, C('#2b1f3d'));
+      L.set(8, 8.8, C('#2b1f3d'));
+      L.set(7, 11, C('#2b1f3d'));
+      L.set(9, 11, C('#2b1f3d'));
     },
-    wallMint: function (L) {                   // a swatch of mint wallpaper
-      L.rect(1, 1, 14, 14, C('#dff6ec'));
-      L.rect(3, 1, 2, 14, C('#c3ecda'));
-      L.rect(8, 1, 2, 14, C('#c3ecda'));
-      L.rect(13, 1, 2, 14, C('#c3ecda'));
-      L.rect(1, 11, 14, 4, C('#7fd0ac'));
+    wallPumpkin: function (L) {                // a swatch of pumpkin paper
+      L.rect(1, 1, 14, 14, C('#6b4b8f'));
+      L.rect(1, 11, 14, 4, C('#523571'));
+      [[5, 5], [11, 8]].forEach(function (p) {
+        L.ellipse(p[0], p[1], 3, 2.6, C('#ff8a2b'));
+        L.ellipse(p[0], p[1], 1, 2.6, C('#ffa53d'));
+        L.rect(p[0] - 0.5, p[1] - 3.4, 1.4, 1.4, C('#4e8f3a'));
+        L.set(p[0] - 1, p[1] - 0.6, C('#4a2f6e'));
+        L.set(p[0] + 1, p[1] - 0.6, C('#4a2f6e'));
+        L.rect(p[0] - 1.5, p[1] + 1, 3.4, 1, C('#4a2f6e'));
+      });
+    },
+    plantCactus: function (L) {                // potted cactus
+      L.rect(5.5, 2, 5, 9, C('#63c93f'));
+      L.ellipse(8, 2.4, 2.5, 2.2, C('#63c93f'));
+      L.rect(6.4, 2.4, 1.2, 8, C('#8ee86a'));
+      L.rect(1.6, 6, 4, 2, C('#63c93f'));
+      L.rect(1.6, 3.4, 2, 4.4, C('#63c93f'));
+      L.ellipse(2.6, 3.4, 1.1, 1, C('#8ee86a'));
+      L.rect(10.4, 7, 4, 2, C('#63c93f'));
+      L.rect(12.4, 4.6, 2, 4.4, C('#63c93f'));
+      L.ellipse(13.4, 4.6, 1.1, 1, C('#8ee86a'));
+      L.disc(8, 1, 1.6, C('#ff5f8f'));
+      L.rect(4, 11, 8, 5, C('#e58f6a'));
+      L.rect(3, 10, 10, 2, C('#f2a682'));
+    },
+    bannerSkull: function (L) {                // skulls on a string
+      L.rect(0, 3, 16, 1, C('#4a2f6e'));
+      [3.5, 8, 12.5].forEach(function (x) {
+        L.ellipse(x, 7, 2.6, 2.4, C('#f4efe6'));
+        L.rect(x - 1.6, 9, 3.4, 1.8, C('#f4efe6'));
+        L.set(x - 1, 6.6, C('#3a2b40'));
+        L.set(x + 1, 6.6, C('#3a2b40'));
+        L.set(x, 8.2, C('#3a2b40'));
+        L.set(x - 1, 10, C('#3a2b40'));
+        L.set(x + 1, 10, C('#3a2b40'));
+      });
     },
     drinkWater: function (L) {                 // glass of water
       L.tri(2.5, 3, 13.5, 3, 8, 15, C('#dbe9f2'));

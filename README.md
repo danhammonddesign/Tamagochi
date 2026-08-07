@@ -98,17 +98,23 @@ things, so one never lands in the middle of a bath or a game.
 its own best scores, so a second pet starts with an empty box and earns its
 own collection from scratch.
 
-There are eight prizes:
+There are ten prizes:
 
 * Four **hats** — a party hat, a crown, a witch hat and a bow. Your pet wears
   one everywhere, including on its card in My Pets.
 * Two **toys** — the cat wand and the frisbee, each unlocking a mini game.
-* A **rainbow picture** to hang on the wall in place of the framed heart.
-* **Mint wallpaper** to redecorate the whole room.
+* A **skull picture** to hang on the wall in place of the framed heart.
+* **Pumpkin wallpaper** — purple walls covered in little jack-o'-lanterns.
+* A **cactus** to swap into the pot in place of the houseplant. It grows the
+  same way, sprouting arms as it goes and flowering when it wants a trim.
+* A **skull banner** to string up instead of the bunting.
 
 **Tapping a prize uses it right away** — the box shuts itself so you can see
 what changed, whether that is a hat going on, a new picture on the wall, fresh
-wallpaper, or a game starting. Tap the same prize again to take it back off.
+wallpaper, a cactus in the pot or a game starting. Tap the same prize again to
+take it back off. Once you have won the picture you can also **tap the frame on
+the wall** to flip between the two without opening the box at all.
+
 Every pet decorates its own room, so switching pets switches the walls too.
 The toys also show up in the Play menu once you have won them.
 
