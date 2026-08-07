@@ -80,7 +80,7 @@
     { id: 'skull', kind: 'picture', label: 'Skull Picture', icon: 'picSkull' },
     { id: 'pumpkin', kind: 'wallpaper', label: 'Pumpkin Wallpaper', icon: 'wallPumpkin' },
     { id: 'cactus', kind: 'plant', label: 'Cactus', icon: 'plantCactus' },
-    { id: 'skullbanner', kind: 'banner', label: 'Skull Banner', icon: 'bannerSkull' },
+    { id: 'skullbanner', kind: 'banner', label: 'Skull Lights', icon: 'bannerSkull' },
     { id: 'candyrug', kind: 'rug', label: 'Candy Corn Rug', icon: 'rugCandy' }
   ];
 
@@ -185,14 +185,61 @@
   }
 
   /* A hanging skull for the Halloween banner. */
-  function drawBannerSkull(L, x, y) {
-    L.ellipse(x, y + 2, 2.6, 2.4, C('#f4efe6'));
-    L.rect(x - 1.6, y + 4, 3.5, 1.6, C('#f4efe6'));
-    L.set(x - 1, y + 2, C('#3a2b40'));
-    L.set(x + 1, y + 2, C('#3a2b40'));
-    L.set(x, y + 3.4, C('#3a2b40'));
-    L.set(x - 1, y + 5, C('#3a2b40'));
-    L.set(x + 1, y + 5, C('#3a2b40'));
+  /* One skull bulb on the string. Dark it is bone grey with black sockets;
+     lit it turns warm white with orange fire behind the eyes. */
+  function drawBannerSkull(L, x, y, lit) {
+    var bone = C(lit ? '#fff6e0' : '#a09aae');
+    var eye = C(lit ? '#ff7a1f' : '#3a2b40');
+    var teeth = C(lit ? '#e0a45e' : '#3a2b40');
+    L.set(x, y - 1, C('#4a2f6e'));               // the wire up to the cord
+    L.ellipse(x, y + 2, 2.6, 2.4, bone);
+    L.rect(x - 1.6, y + 4, 3.5, 1.6, bone);
+    L.set(x - 1, y + 2, eye);
+    L.set(x + 1, y + 2, eye);
+    L.set(x, y + 3.4, eye);
+    L.set(x - 1, y + 5, teeth);
+    L.set(x + 1, y + 5, teeth);
+  }
+
+  /* Where every bulb on the string hangs. Both the dark pass in the room and
+     the lit pass over the top read the positions from here. */
+  function bannerBulbs() {
+    var by = Math.round(H * 0.1);
+    var n = Math.max(3, Math.floor((W - 6) / 11));
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      var bx = 3 + (W - 6) * (i / n);
+      out.push({ x: bx + 2.5, y: by + Math.sin(Math.PI * (i / n)) * 3 });
+    }
+    return out;
+  }
+
+  // a wave of light running along the string, one bulb after the next
+  function bulbGlow(i, t) { return 0.5 + 0.5 * Math.sin(t * 2.4 - i * 0.9); }
+
+  /* The lit bulbs, drawn with the room's objects rather than as part of the
+     room, so they stay bright after dark like real fairy lights. */
+  function drawBannerLights(L, t) {
+    if (!pet || pet.banner !== 'skullbanner') return;
+    var bulbs = bannerBulbs();
+    var shim = Math.floor(t * 5);
+    for (var i = 0; i < bulbs.length; i++) {
+      var g = bulbGlow(i, t);
+      if (g < 0.5) continue;
+      var s = bulbs[i], cy = s.y + 2, r = 3 + g * 1.8;
+      for (var y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+        for (var x = Math.floor(s.x - r); x <= Math.ceil(s.x + r); x++) {
+          if (x < 0 || y < 0 || x >= W || y >= H) continue;
+          var dx = (x - s.x) / r, dy = (y - cy) / r;
+          var d = dx * dx + dy * dy;
+          if (d > 1) continue;
+          // solid against the bulb, thinning to a shimmer at the edge
+          if (d >= 0.4 && (x + y + shim) % (d < 0.72 ? 2 : 3) !== 0) continue;
+          L.set(x, y, C(d < 0.55 ? '#ffd08a' : '#ff9f3d'));
+        }
+      }
+      drawBannerSkull(L, s.x, s.y, true);
+    }
   }
 
   // prizes that have been renamed since an earlier version
@@ -813,20 +860,25 @@
     L.ellipse(W / 2, rugY, rugR * 0.68, Math.max(3, rugR * 0.15), C(rugCols[1]));
     L.ellipse(W / 2, rugY, rugR * 0.34, Math.max(2, rugR * 0.08), C(rugCols[2]));
 
-    // bunting, hung below the status card — skulls if that prize is up
+    // bunting, hung below the status card — skull string lights if that
+    // prize is up. The bulbs are drawn dark here; the lit ones go on later.
     var by = Math.round(H * 0.1);
     var spooky = !!(pet && pet.banner === 'skullbanner');
     var cols = ['#ff8fb0', '#ffd93d', '#8ee86a', '#9ad0ff'];
-    var n = Math.max(3, Math.floor((W - 6) / (spooky ? 11 : 9)));
     var string = C(spooky ? '#4a2f6e' : '#e8629a');
     for (var sxp = 3; sxp <= W - 3; sxp++) {
       L.set(sxp, by + Math.sin(Math.PI * (sxp - 3) / (W - 6)) * 3, string);
     }
-    for (var i = 0; i < n; i++) {
-      var bx = 3 + (W - 6) * (i / n);
-      var sag = Math.sin(Math.PI * (i / n)) * 3;
-      if (spooky) drawBannerSkull(L, bx + 2.5, by + sag);
-      else L.tri(bx, by + sag + 1, bx + 5, by + sag + 1, bx + 2.5, by + sag + 6, C(cols[i % cols.length]));
+    if (spooky) {
+      var bulbs = bannerBulbs();
+      for (var bi = 0; bi < bulbs.length; bi++) drawBannerSkull(L, bulbs[bi].x, bulbs[bi].y, false);
+    } else {
+      var n = Math.max(3, Math.floor((W - 6) / 9));
+      for (var i = 0; i < n; i++) {
+        var bx = 3 + (W - 6) * (i / n);
+        var sag = Math.sin(Math.PI * (i / n)) * 3;
+        L.tri(bx, by + sag + 1, bx + 5, by + sag + 1, bx + 2.5, by + sag + 6, C(cols[i % cols.length]));
+      }
     }
 
     // window — the sky outside follows the real time of day
@@ -2936,6 +2988,7 @@
     L.record(screen.mask);
 
     drawToyBoxGlow(L, rt.t);
+    drawBannerLights(L, rt.t);
 
     var inBed = rt.sleep && (sky.night > 0.45 || rt.sleep.byPlayer);
     if (inBed) drawBedBack(L, W / 2, room.groundY + 3);
@@ -3524,12 +3577,12 @@
 
   var PRIZE_USE = {
     hat: 'Tap to wear', toy: 'Tap to play', picture: 'Tap to hang up',
-    wallpaper: 'Tap to put up', plant: 'Tap to pot it', banner: 'Tap to hang up',
+    wallpaper: 'Tap to put up', plant: 'Tap to pot it', banner: 'Tap to string up',
     rug: 'Tap to lay it down'
   };
   var PRIZE_ON = {
     hat: 'Wearing it', toy: 'Tap to play', picture: 'On the wall',
-    wallpaper: 'On the walls', plant: 'In the pot', banner: 'Up on the wall',
+    wallpaper: 'On the walls', plant: 'In the pot', banner: 'Twinkling away',
     rug: 'On the floor'
   };
   // which field on the pet each kind of decoration is remembered in
@@ -3540,12 +3593,12 @@
   var PUT_UP = {
     hat: 'How do I look?', picture: 'Look at my new picture!',
     wallpaper: 'What a spooky room!', plant: 'A prickly new friend!',
-    banner: 'Spooky!', rug: 'What a cosy rug!'
+    banner: 'Spooky lights!', rug: 'What a cosy rug!'
   };
   var PUT_AWAY = {
     hat: 'Hat off!', picture: 'Back to the old one!',
     wallpaper: 'Back to the old walls!', plant: 'My plant is back!',
-    banner: 'Back to the old banner!', rug: 'Back to the old rug!'
+    banner: 'Lights out!', rug: 'Back to the old rug!'
   };
 
   function prizeInUse(pz) {

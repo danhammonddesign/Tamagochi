@@ -107,7 +107,9 @@ There are eleven prizes:
 * **Pumpkin wallpaper** — purple walls covered in little jack-o'-lanterns.
 * A **cactus** to swap into the pot in place of the houseplant. It grows the
   same way, sprouting arms as it goes and flowering when it wants a trim.
-* A **skull banner** to string up instead of the bunting.
+* **Skull string lights** to hang instead of the bunting — a row of little
+  skulls that light up one after another, warm white with orange eye sockets,
+  a wave of them chasing along the wire. They stay bright after dark.
 * A **candy corn rug** to lay down under your pet in place of the blue one.
 
 **Tapping a prize uses it right away** — the box shuts itself so you can see

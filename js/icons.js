@@ -103,16 +103,22 @@
       L.rect(4, 11, 8, 5, C('#e58f6a'));
       L.rect(3, 10, 10, 2, C('#f2a682'));
     },
-    bannerSkull: function (L) {                // skulls on a string
+    bannerSkull: function (L) {                // skull string lights, mid-twinkle
       L.rect(0, 3, 16, 1, C('#4a2f6e'));
-      [3.5, 8, 12.5].forEach(function (x) {
-        L.ellipse(x, 7, 2.6, 2.4, C('#f4efe6'));
-        L.rect(x - 1.6, 9, 3.4, 1.8, C('#f4efe6'));
-        L.set(x - 1, 6.6, C('#3a2b40'));
-        L.set(x + 1, 6.6, C('#3a2b40'));
-        L.set(x, 8.2, C('#3a2b40'));
-        L.set(x - 1, 10, C('#3a2b40'));
-        L.set(x + 1, 10, C('#3a2b40'));
+      [[3, false], [8, true], [13, false]].forEach(function (p) {
+        var x = p[0], lit = p[1];
+        if (lit) {                             // a glow behind the bright one
+          L.ellipse(x, 8, 5, 5, C('#ff9f3d'));
+          L.ellipse(x, 8, 3.6, 3.6, C('#ffd08a'));
+        }
+        L.set(x, 4, C('#4a2f6e'));
+        L.ellipse(x, 7, 2.6, 2.4, C(lit ? '#fff6e0' : '#a09aae'));
+        L.rect(x - 1.6, 9, 3.4, 1.8, C(lit ? '#fff6e0' : '#a09aae'));
+        L.set(x - 1, 6.6, C(lit ? '#ff7a1f' : '#3a2b40'));
+        L.set(x + 1, 6.6, C(lit ? '#ff7a1f' : '#3a2b40'));
+        L.set(x, 8.2, C(lit ? '#ff7a1f' : '#3a2b40'));
+        L.set(x - 1, 10, C(lit ? '#e0a45e' : '#3a2b40'));
+        L.set(x + 1, 10, C(lit ? '#e0a45e' : '#3a2b40'));
       });
     },
     drinkWater: function (L) {                 // glass of water
