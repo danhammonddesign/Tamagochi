@@ -44,6 +44,36 @@
       for (var x = 2; x <= 10; x += 2) L.rect(x, 11, 1, 3, C('#fbf3e6'));
     },
 
+    foodIce: function (L) {                    // ice cream cone
+      L.tri(4.5, 8, 11.5, 8, 8, 15.5, C('#e0a45e'));
+      L.tri(5.4, 8.6, 10.6, 8.6, 8, 14, C('#f0bd7c'));
+      L.disc(5.6, 7, 3.1, C('#ffc3dd'));
+      L.disc(10.4, 6.6, 3.1, C('#c8f0ff'));
+      L.disc(8, 4, 3.2, C('#fff3a8'));
+      L.disc(8, 1.4, 1.1, C('#ff5f8f'));
+    },
+    picRainbow: function (L) {                 // framed rainbow
+      L.rect(1, 2, 14, 13, C('#8f7fd8'));
+      L.rect(3, 4, 10, 9, C('#dff1ff'));
+      var bow = [C('#ff6f9c'), C('#ffd93d'), C('#8ee86a')];
+      for (var x = 3; x <= 12; x++) {          // plotted per column, so the
+        var t = (x - 7.5) / 5.2;               // arc stays inside the frame
+        if (t < -1 || t > 1) continue;
+        var y0 = 13 - Math.sqrt(1 - t * t) * 8;
+        for (var i = 0; i < 3; i++) {
+          var y = Math.round(y0) + i;
+          if (y >= 4 && y <= 12) L.set(x, y, bow[i]);
+        }
+      }
+      L.set(4, 6, C('#ffe07a'));
+    },
+    wallMint: function (L) {                   // a swatch of mint wallpaper
+      L.rect(1, 1, 14, 14, C('#dff6ec'));
+      L.rect(3, 1, 2, 14, C('#c3ecda'));
+      L.rect(8, 1, 2, 14, C('#c3ecda'));
+      L.rect(13, 1, 2, 14, C('#c3ecda'));
+      L.rect(1, 11, 14, 4, C('#7fd0ac'));
+    },
     drinkWater: function (L) {                 // glass of water
       L.tri(2.5, 3, 13.5, 3, 8, 15, C('#dbe9f2'));
       L.tri(3.6, 5.4, 12.4, 5.4, 8, 14, C('#5fc8ff'));

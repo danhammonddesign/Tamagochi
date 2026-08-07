@@ -31,7 +31,7 @@ thumb-sized targets along the bottom, and everything is saved to
 
    | Button | Need | How it works |
    |---|---|---|
-   | Feed | Food | Pick from six things to eat |
+   | Feed | Food | Pick from seven things to eat |
    | Water | Water | Pick water, milk or orange juice |
    | Play | Fun | Pick one of three mini games |
    | Bath | Clean | **Hands on:** scrub, rinse and dry your pet in three steps |
@@ -66,9 +66,9 @@ milk, then water, then milk is perfectly fine.
 
 Feed opens a menu split in two. The top row is **meals** — a proper meal, a
 fish or a steak — and each fills about three quarters of the Food ring. The
-bottom row is **treats** — a donut, a bone or a lollipop — which only fill
-about a quarter but give a good helping of Fun. So a lollipop makes a poor
-dinner and a lovely snack. Whatever you pick slides in and shrinks bite by bite
+bottom row is **treats** — a donut, a bone, a lollipop or an ice cream —
+which only fill about a quarter but give a good helping of Fun. So an ice
+cream makes a poor dinner and a lovely snack. Whatever you pick slides in and shrinks bite by bite
 as your pet works through it.
 
 ### Prizes and the toy box
@@ -98,12 +98,19 @@ things, so one never lands in the middle of a bath or a game.
 its own best scores, so a second pet starts with an empty box and earns its
 own collection from scratch.
 
-There are six prizes: four **hats** — a party hat, a crown, a witch hat and a
-bow — and two **toys**. Tap a hat to put it on your pet; it wears it everywhere,
-including on its card in My Pets. Tap it again to take it off. **Tap a toy and
-your pet starts playing with it there and then** — the box closes and the game
-begins, no need to go back out through the Play menu. The toys also show up in
-the Play menu once you have won them.
+There are eight prizes:
+
+* Four **hats** — a party hat, a crown, a witch hat and a bow. Your pet wears
+  one everywhere, including on its card in My Pets.
+* Two **toys** — the cat wand and the frisbee, each unlocking a mini game.
+* A **rainbow picture** to hang on the wall in place of the framed heart.
+* **Mint wallpaper** to redecorate the whole room.
+
+**Tapping a prize uses it right away** — the box shuts itself so you can see
+what changed, whether that is a hat going on, a new picture on the wall, fresh
+wallpaper, or a game starting. Tap the same prize again to take it back off.
+Every pet decorates its own room, so switching pets switches the walls too.
+The toys also show up in the Play menu once you have won them.
 
 ### Mini games
 

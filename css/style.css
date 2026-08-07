@@ -627,6 +627,8 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
+.food-grid.four { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.food-grid.four .food-card { padding: 8px 2px 6px; font-size: 10.5px; }
 
 .food-heading {
   display: flex;

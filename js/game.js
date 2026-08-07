@@ -52,7 +52,8 @@
     steak: { label: 'Steak',    gain: 75, fun: 4,  say: 'Delicious!' },
     donut: { label: 'Donut',    gain: 25, fun: 15, say: 'So sweet!' },
     bone:  { label: 'Bone',     gain: 25, fun: 18, say: 'Crunch crunch!' },
-    lolly: { label: 'Lollipop', gain: 25, fun: 20, say: 'Slurp!' }
+    lolly: { label: 'Lollipop', gain: 25, fun: 20, say: 'Slurp!' },
+    ice:   { label: 'Ice Cream', gain: 25, fun: 22, say: 'Brrr! Yummy!' }
   };
 
   /* Three things to drink. Milk and juice are a treat, but milk twice in a
@@ -75,8 +76,17 @@
     { id: 'witch', kind: 'hat', label: 'Witch Hat', icon: 'hatWitch' },
     { id: 'bow', kind: 'hat', label: 'Bow', icon: 'hatBow' },
     { id: 'wand', kind: 'toy', label: 'Cat Wand', icon: 'toyWand', game: 'wand' },
-    { id: 'frisbee', kind: 'toy', label: 'Frisbee', icon: 'toyFrisbee', game: 'frisbee' }
+    { id: 'frisbee', kind: 'toy', label: 'Frisbee', icon: 'toyFrisbee', game: 'frisbee' },
+    { id: 'rainbow', kind: 'picture', label: 'Rainbow Picture', icon: 'picRainbow' },
+    { id: 'mint', kind: 'wallpaper', label: 'Mint Wallpaper', icon: 'wallMint' }
   ];
+
+  /* Wallpaper and wall art the room can be redecorated with. The first entry
+     of each is what a room starts out with. */
+  var WALLPAPERS = {
+    rose: { wall: '#ffe6f2', low: '#ffd0e6', trim: '#f2a8cc', stripe: null },
+    mint: { wall: '#dff6ec', low: '#c3ecda', trim: '#7fd0ac', stripe: '#d2f0e3' }
+  };
 
   // prizes that have been renamed since an earlier version
   var PRIZE_ALIAS = { cap: 'witch', mouse: 'wand' };
@@ -307,7 +317,8 @@
       growth: 0, stage: 'baby',
       stats: { food: 75, water: 75, fun: 75, clean: 95, groom: 92 },
       love: 40, born: Date.now(), saved: Date.now(), cuddles: 0,
-      messes: [], sick: false, sickT: 0, milkRun: 0, hat: null,
+      messes: [], sick: false, sickT: 0, milkRun: 0,
+      hat: null, picture: null, wallpaper: null,
       // a new pet arrives spotless, so it starts with the two-full-meters
       // prize already claimed — one has to be earned by looking after it
       prizeArmed: true, gv: GROWTH_V,
@@ -342,6 +353,10 @@
     delete p.best.mouse;
     if (p.hat) p.hat = PRIZE_ALIAS[p.hat] || p.hat;
     if (p.hat && p.prizes.indexOf(p.hat) < 0) p.hat = null;
+    // decorations only stay up while the pet still owns the prize
+    if (p.picture && p.prizes.indexOf(p.picture) < 0) p.picture = null;
+    if (p.wallpaper && p.prizes.indexOf(p.wallpaper) < 0) p.wallpaper = null;
+    if (!WALLPAPERS[p.wallpaper]) p.wallpaper = null;
     if (typeof p.sickT !== 'number') p.sickT = 0;
     if (typeof p.milkRun !== 'number') p.milkRun = 0;
     if (!Array.isArray(p.messes)) p.messes = [];
@@ -655,11 +670,15 @@
   /* the room                                                            */
   /* ------------------------------------------------------------------ */
   function drawRoom(L, t) {
-    var wall = C('#ffe6f2'), wallLow = C('#ffd0e6'), trim = C('#f2a8cc');
+    var paper = WALLPAPERS[(pet && pet.wallpaper) || 'rose'] || WALLPAPERS.rose;
+    var wall = C(paper.wall), wallLow = C(paper.low), trim = C(paper.trim);
     var floor = C('#f6cf95'), plank = C('#e0b273'), floorEdge = C('#c99a5f');
     var fy = room.floorY;
 
     L.rect(0, 0, W, fy, wall);
+    if (paper.stripe) {
+      for (var stx = 4; stx < W; stx += 9) L.rect(stx, 0, 2, fy - 13, C(paper.stripe));
+    }
     L.rect(0, fy - 13, W, 13, wallLow);
     L.rect(0, fy - 14, W, 1, trim);
     L.rect(0, fy, W, 1, floorEdge);
@@ -727,12 +746,30 @@
     L.rect(wx + 11, wy + 2, 1, 18, frame);
     L.rect(wx + 2, wy + 10, 20, 1, frame);
 
-    // framed heart
+    // the picture on the wall, which a prize can swap out
     var py2 = pictureY();
     var px2 = W - 19;
-    L.rect(px2, py2, 13, 12, C('#f7b955'));
-    L.rect(px2 + 2, py2 + 2, 9, 8, C('#fff6e0'));
-    L.stamp(Pets.HEART, { '#': C('#ff6f9c') }, px2 + 4, py2 + 3);
+    if (pet && pet.picture === 'rainbow') {
+      L.rect(px2, py2, 13, 12, C('#8f7fd8'));
+      L.rect(px2 + 2, py2 + 2, 9, 8, C('#dff1ff'));
+      // the arc is plotted a column at a time and clipped to the frame, so it
+      // can never spill out over the wallpaper
+      var bow = [C('#ff6f9c'), C('#ffd93d'), C('#8ee86a')];
+      for (var ax = px2 + 2; ax <= px2 + 10; ax++) {
+        var tt = (ax - (px2 + 6)) / 4.6;
+        if (tt < -1 || tt > 1) continue;
+        var ay = (py2 + 10) - Math.sqrt(1 - tt * tt) * 7;
+        for (var bi2 = 0; bi2 < 3; bi2++) {
+          var yy = Math.round(ay) + bi2;
+          if (yy >= py2 + 2 && yy <= py2 + 9) L.set(ax, yy, bow[bi2]);
+        }
+      }
+      L.set(px2 + 3, py2 + 3, C('#ffe07a'));
+    } else {
+      L.rect(px2, py2, 13, 12, C('#f7b955'));
+      L.rect(px2 + 2, py2 + 2, 9, 8, C('#fff6e0'));
+      L.stamp(Pets.HEART, { '#': C('#ff6f9c') }, px2 + 4, py2 + 3);
+    }
 
     // wall shelf with a jar and a book, filling the middle of the wall
     var sy = fy - 20, sx = W - 40;
@@ -876,6 +913,13 @@
         b.tri(bx - 4.6 * k, by, bx - 8 * k, by - 3.6 * k, bx - 8 * k, by + 3.6 * k, C('#5fc8ff'));
         b.tri(bx + 1 * k, by - 3.2 * k, bx + 4 * k, by - 6.4 * k, bx + 4.6 * k, by - 2.6 * k, C('#5fc8ff'));
         b.set(bx + 3 * k, by - 1.4 * k, C('#141014'));
+      } else if (kind === 'ice') {
+        b.tri(bx - 3.4 * k, by - 1 * k, bx + 3.4 * k, by - 1 * k, bx, by + 7 * k, C('#e0a45e'));
+        b.tri(bx - 2.4 * k, by - 0.6 * k, bx + 2.4 * k, by - 0.6 * k, bx, by + 5.6 * k, C('#f0bd7c'));
+        b.disc(bx - 2 * k, by - 2 * k, 3 * k, C('#ffc3dd'));
+        b.disc(bx + 2 * k, by - 2.4 * k, 3 * k, C('#c8f0ff'));
+        b.disc(bx, by - 4.6 * k, 3 * k, C('#fff3a8'));
+        b.set(bx, by - 7 * k, C('#ff5f8f'));
       } else {  // lollipop
         b.rect(bx - 0.5, by + 1, 1.5, 7 * k, C('#f4efe6'));
         b.disc(bx, by - 1 * k, 5 * k, C('#ff5f8f'));
@@ -3221,6 +3265,49 @@
     startGame(pz.game);
   }
 
+  var PRIZE_USE = {
+    hat: 'Tap to wear', toy: 'Tap to play',
+    picture: 'Tap to hang up', wallpaper: 'Tap to put up'
+  };
+  var PRIZE_ON = {
+    hat: 'Wearing it', toy: 'Tap to play',
+    picture: 'On the wall', wallpaper: 'On the walls'
+  };
+
+  function prizeInUse(pz) {
+    if (!pet) return false;
+    if (pz.kind === 'hat') return pet.hat === pz.id;
+    if (pz.kind === 'picture') return pet.picture === pz.id;
+    if (pz.kind === 'wallpaper') return pet.wallpaper === pz.id;
+    return false;
+  }
+
+  /* Tapping a prize uses it there and then and shuts the box, so you can see
+     what it did instead of having to close up first. */
+  function usePrize(pz) {
+    el.prizeScreen.classList.add('hidden');
+    if (pz.kind === 'toy') { playWithToy(pz); return; }
+
+    var wearing = prizeInUse(pz);
+    if (pz.kind === 'hat') {
+      pet.hat = wearing ? null : pz.id;
+      say(wearing ? 'Hat off!' : 'How do I look?', 1800);
+    } else if (pz.kind === 'picture') {
+      pet.picture = wearing ? null : pz.id;
+      say(wearing ? 'Back to the old one!' : 'Look at my new picture!', 2000);
+    } else if (pz.kind === 'wallpaper') {
+      pet.wallpaper = wearing ? null : pz.id;
+      say(wearing ? 'Back to the old walls!' : 'What a lovely room!', 2000);
+    }
+    Sfx.ding();
+    for (var i = 0; i < 6; i++) {
+      spawn('sparkle', W / 2 + (Math.random() - 0.5) * 26, room.groundY - 30,
+        { vx: (Math.random() - 0.5) * 18, vy: -14, g: 26, max: 0.9 });
+    }
+    bumpLove(2);
+    save();
+  }
+
   function openPrizes() {
     pet.prizeNew = 0;
     save();
@@ -3228,15 +3315,15 @@
     var owned = pet.prizes.length;
     el.prizeSub.textContent = owned
       ? pet.name + ' has ' + owned + ' of ' + PRIZES.length +
-        ' — tap a hat to wear it, or a toy to play'
+        ' — tap one to use it straight away'
       : pet.name + ' has not won anything yet. Top up two meters at once, ' +
         'or do well in a game, to win a prize!';
 
     PRIZES.forEach(function (pz) {
       var got = hasPrize(pz.id);
+      var on = prizeInUse(pz);
       var card = document.createElement(got ? 'button' : 'div');
-      card.className = 'prize-card' + (got ? '' : ' locked') +
-        (pet && pet.hat === pz.id ? ' worn' : '');
+      card.className = 'prize-card' + (got ? '' : ' locked') + (on ? ' worn' : '');
 
       var canvas = document.createElement('canvas');
       card.appendChild(canvas);
@@ -3248,26 +3335,16 @@
 
       var tag = document.createElement('span');
       tag.className = 'pz-tag';
-      if (!got) tag.textContent = 'Not won yet';
-      else if (pz.kind === 'hat') tag.textContent = (pet && pet.hat === pz.id) ? 'Wearing it' : 'Tap to wear';
-      else tag.textContent = 'Tap to play';
+      tag.textContent = !got ? 'Not won yet' : on ? PRIZE_ON[pz.kind] : PRIZE_USE[pz.kind];
       card.appendChild(tag);
 
       el.prizeGrid.appendChild(card);
       Icons.render(canvas, got ? pz.icon : 'lock', 52);
 
-      if (got && pz.kind === 'hat') {
+      if (got) {
         card.addEventListener('click', function () {
           Sfx.click();
-          pet.hat = pet.hat === pz.id ? null : pz.id;
-          save();
-          openPrizes();
-        });
-      } else if (got) {
-        card.addEventListener('click', function () {
-          Sfx.click();
-          el.prizeScreen.classList.add('hidden');
-          playWithToy(pz);
+          usePrize(pz);
         });
       }
     });
