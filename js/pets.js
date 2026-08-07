@@ -133,11 +133,15 @@
 
   // Life stages. `growth` is the score at which the pet reaches the stage.
   // Babies are all head; adults grow into their bodies, ears and tails.
+  // Growing up is meant to take a good while — a stage is several sessions of
+  // proper care, not a handful of taps. GROWTH_SCALE below is the multiplier
+  // these numbers were last stretched by, so old saves can be brought along.
+  var GROWTH_SCALE = 3;
   var STAGES = [
     { key: 'baby', label: 'Baby', growth: 0, head: [7.8, 7.2], body: [5.2, 4.4], ear: 4.0, eye: 2.5, tail: [8, 2.3] },
-    { key: 'kid', label: 'Kid', growth: 30, head: [8.4, 7.8], body: [6.2, 5.2], ear: 4.9, eye: 2.4, tail: [10, 2.6] },
-    { key: 'teen', label: 'Teen', growth: 75, head: [9, 8.4], body: [7.3, 6.3], ear: 5.6, eye: 2.3, tail: [12, 3.0] },
-    { key: 'adult', label: 'Adult', growth: 140, head: [9.6, 9], body: [8.4, 7.3], ear: 6.9, eye: 2.2, tail: [14, 3.3] }
+    { key: 'kid', label: 'Kid', growth: 90, head: [8.4, 7.8], body: [6.2, 5.2], ear: 4.9, eye: 2.4, tail: [10, 2.6] },
+    { key: 'teen', label: 'Teen', growth: 225, head: [9, 8.4], body: [7.3, 6.3], ear: 5.6, eye: 2.3, tail: [12, 3.0] },
+    { key: 'adult', label: 'Adult', growth: 420, head: [9.6, 9], body: [8.4, 7.3], ear: 6.9, eye: 2.2, tail: [14, 3.3] }
   ];
 
   function stageFor(growth) {
@@ -587,6 +591,7 @@
   global.Pets = {
     SPECIES: SPECIES,
     STAGES: STAGES,
+    GROWTH_SCALE: GROWTH_SCALE,
     SIZE: SIZE,
     FEET: FEET,
     stageFor: stageFor,

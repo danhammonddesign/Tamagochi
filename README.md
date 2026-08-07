@@ -43,7 +43,9 @@ thumb-sized targets along the bottom, and everything is saved to
    and it purrs. Keep going and it gets so happy it calls out: cats meow and
    chirrup, the Dalmatian barks twice and whines, the fox yips.
 4. Care earns growth points. Fill the gold bar at the top to grow up:
-   **Baby → Kid → Teen → Adult**, each with a little celebration.
+   **Baby → Kid → Teen → Adult**, each with a little celebration. Growing up
+   takes a good while — a stage is many rounds of proper care, not a handful
+   of taps, so a baby stays a baby for a fair few days of looking after it.
 5. Tap the **paw** button (top left) for *My Pets*: switch between pets, add a
    new one (up to six), or say goodbye to one.
 6. Tap the **moon** button (top right) to tuck your pet into bed, and again to
@@ -73,7 +75,9 @@ as your pet works through it.
 
 There are four ways to win a prize:
 
-* **Top up two meters to 85% or more at the same time.**
+* **Top up two meters to 85% or more at the same time.** A pet arrives clean
+  and freshly brushed, so that first pair does not count — a meter has to dip
+  and be filled back up before it earns anything.
 * **Get a perfect score** in any of the mini games — every game has a target
   score, shown next to your score while you play, and a ★ appears when you
   reach it.

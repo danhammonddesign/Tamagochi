@@ -293,6 +293,7 @@
   /* save data — a shelf of pets                                         */
   /* ------------------------------------------------------------------ */
   var db = { v: 2, activeId: '', pets: [], plant: 20 };
+  var GROWTH_V = 2;           // bumped whenever the growth scale changes
   var PLANT_FULL = 900;       // seconds from a fresh trim to fully overgrown
   var PLANT_WILD = 70;        // needs a trim above this
   var pet = null;               // the pet currently on screen
@@ -306,7 +307,10 @@
       growth: 0, stage: 'baby',
       stats: { food: 75, water: 75, fun: 75, clean: 95, groom: 92 },
       love: 40, born: Date.now(), saved: Date.now(), cuddles: 0,
-      messes: [], sick: false, sickT: 0, milkRun: 0, hat: null, prizeArmed: false,
+      messes: [], sick: false, sickT: 0, milkRun: 0, hat: null,
+      // a new pet arrives spotless, so it starts with the two-full-meters
+      // prize already claimed — one has to be earned by looking after it
+      prizeArmed: true, gv: GROWTH_V,
       prizes: [], prizeNew: 0, best: {}
     };
   }
@@ -319,6 +323,12 @@
       p.stats[k] = clamp(p.stats[k], 0, 100);
     }
     if (typeof p.growth !== 'number') p.growth = 0;
+    // growing up was stretched out; carry an older save's progress across so
+    // nobody's adult wakes up a baby
+    if (p.gv !== GROWTH_V) {
+      p.growth *= Pets.GROWTH_SCALE;
+      p.gv = GROWTH_V;
+    }
     if (typeof p.love !== 'number') p.love = 40;
     if (!p.id) p.id = uid();
     if (!Pets.SPECIES[p.species]) p.species = 'cat';
