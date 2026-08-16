@@ -668,10 +668,29 @@
   /* screen sizing — the room fills the whole viewport                   */
   /* ------------------------------------------------------------------ */
   var W = 88, H = 64, scale = 6, screen = null;
-  var petLayer = new PX.Layer(Pets.SIZE, Pets.SIZE);
   var fx = new PX.Layer(44, 44);
   var fxBig = new PX.Layer(80, 80);       // for stamps too tall for the small one
   var room = { floorY: 36, groundY: 48 };
+
+  /* Big pets get a bigger layer to be drawn into. Everything that works in
+     "pet coordinates" — dirt, tufts, scrubbing, where the sprite lands on the
+     floor — goes through these three so it follows whichever pet is out. */
+  var petLayers = {};
+  var SPAN_PER_K = 33;      // roughly how wide the fish sprite is per unit of scale
+  function pSize() {
+    var k = Pets.scaleOf(pet ? pet.species : 'fox');
+    // a big pet only grows as big as the scene has room for, so it never runs
+    // off both edges of a narrow phone
+    if (k > 1) k = Math.min(k, (W - 10) / SPAN_PER_K);
+    return Math.max(Pets.SIZE, Math.round(Pets.SIZE * k));
+  }
+  function petK() { return pSize() / Pets.SIZE; }
+  function pFeet() { return Pets.FEET * petK(); }
+  function petCanvas() {
+    var s = pSize();
+    if (!petLayers[s]) petLayers[s] = new PX.Layer(s, s);
+    return petLayers[s];
+  }
 
   function sizeScene() {
     var vw = Math.max(240, window.innerWidth);
@@ -867,8 +886,74 @@
   }
 
   // where everything sits on the sand
-  function tankChest() { return { x: 10, y: room.groundY + 3 }; }
-  function tankOrnament() { return { x: Math.round(W / 2) + 10, y: room.groundY + 4 }; }
+  /* One big boulder, half the height of the tank and hanging half off the
+     left edge so only its right-hand side is in view. */
+  function tankRock() {
+    var rx = Math.max(16, Math.round(W * 0.3));
+    var ry = Math.max(16, Math.round(H * 0.24));
+    // its middle sits on the left edge, so only the right half is in view, and
+    // its foot is buried far enough that the sand can be drawn over it
+    return { x: 0, y: room.groundY - Math.round(ry * 0.72), rx: rx, ry: ry };
+  }
+  // the open sand starts where the rock stops
+  function tankShelf() { return Math.round(tankRock().rx) + 4; }
+  function tankChest() { return { x: tankShelf() + 8, y: room.groundY + 3 }; }
+  function tankOrnament() { return { x: tankShelf() + 26, y: room.groundY + 4 }; }
+
+  /* Little air bubbles drifting up from the sand, all over the tank. Each one
+     is a fixed stream wobbling on its way, so they never need storing. */
+  var TANK_AIR = (function () {
+    var a = [];
+    for (var i = 0; i < 15; i++) {
+      a.push({
+        lane: (i * 0.6180339) % 1,
+        spd: 0.13 + ((i * 0.3721) % 1) * 0.16,
+        off: (i * 0.2573) % 1,
+        r: 0.7 + ((i * 0.1137) % 1) * 0.9
+      });
+    }
+    return a;
+  })();
+
+  function drawTankAir(L, t) {
+    var pale = C('#dff3ff'), white = C('#ffffff');
+    var rise = room.groundY + 8;
+    for (var i = 0; i < TANK_AIR.length; i++) {
+      var b = TANK_AIR[i];
+      var p = (t * b.spd + b.off) % 1;
+      var y = room.groundY + 4 - p * rise;
+      var x = 4 + b.lane * (W - 8) + Math.sin(p * 8 + i * 1.7) * 3;
+      var r = b.r * (0.7 + p * 0.6);
+      L.ellipse(x, y, r, r, pale);
+      if (r > 1.2) L.set(x - r * 0.5, y - r * 0.5, white);
+    }
+  }
+
+  /* The boulder. Only its right-hand half is on screen, so all of the shading
+     is kept on that side where it can actually be seen. */
+  function drawTankRock(L) {
+    var rk = tankRock();
+    var edge = C('#3f4454'), stone = C('#8f95a8');
+    var lit = C('#aab0c2'), litter = C('#c2c7d6'), shade = C('#767c90');
+    L.ellipse(rk.x, rk.y, rk.rx + 1, rk.ry + 1, edge);
+    L.ellipse(rk.x, rk.y, rk.rx, rk.ry, stone);
+    L.ellipse(rk.x + rk.rx * 0.12, rk.y - rk.ry * 0.42, rk.rx * 0.5, rk.ry * 0.3, lit);
+    L.ellipse(rk.x + rk.rx * 0.2, rk.y - rk.ry * 0.52, rk.rx * 0.26, rk.ry * 0.13, litter);
+    L.ellipse(rk.x + rk.rx * 0.42, rk.y + rk.ry * 0.42, rk.rx * 0.3, rk.ry * 0.22, shade);
+    // two cracks and a scatter of grain, so it reads as stone and not a blob
+    L.line(rk.x + rk.rx * 0.22, rk.y - rk.ry * 0.62, rk.x + rk.rx * 0.55, rk.y - rk.ry * 0.05,
+      shade, 1);
+    L.line(rk.x + rk.rx * 0.55, rk.y - rk.ry * 0.05, rk.x + rk.rx * 0.3, rk.y + rk.ry * 0.5,
+      shade, 1);
+    L.line(rk.x + rk.rx * 0.55, rk.y - rk.ry * 0.05, rk.x + rk.rx * 0.85, rk.y - rk.ry * 0.3,
+      shade, 1);
+    for (var i = 0; i < 14; i++) {
+      var a = i * 2.3999;                                   // spread evenly
+      var rr = Math.sqrt(((i * 7) % 11) / 11) * 0.86;
+      L.set(rk.x + Math.abs(Math.cos(a)) * rk.rx * rr, rk.y + Math.sin(a) * rk.ry * rr,
+        i % 3 ? shade : lit);
+    }
+  }
 
   function drawTank(L, t) {
     var wt = tankWater();
@@ -885,6 +970,11 @@
       L.rect(cx0, 5 + cw * 4, 7, 1, caustic);
       L.rect(cx0 + 9, 5 + cw * 4, 3, 1, caustic);
     }
+
+    // one big boulder, running off the left edge — far too large for the stamp
+    // buffer, so it goes straight onto the scene with its own edge. It is laid
+    // down before the sand so the sand buries its foot.
+    drawTankRock(L);
 
     // sand, with a soft dune line
     var sandC = C(wt.sand), sandD = C(wt.sandDark);
@@ -905,12 +995,6 @@
       }
     }
 
-    // one small rock
-    stampOutlined(L, 24, gy + 5, function (b, bx, by) {
-      b.ellipse(bx, by, 6, 3.6, C('#8f95a8'));
-      b.ellipse(bx - 1.4, by - 1.2, 3.4, 1.8, C('#aab0c2'));
-      b.set(bx + 2, by + 1, C('#6f7488'));
-    });
 
     // the ornament a prize can put in, sitting on the sand
     drawOrnament(L, t);
@@ -931,6 +1015,9 @@
       b.rect(bx - 6, by - 6 + lid, 13, 1, C('#e0b273'));
       b.rect(bx - 1, by - 3, 3, 3, C(chestNew ? '#ffe07a' : '#e6c34a'));
     });
+
+    // air bubbles last, so they float in front of everything on the sand
+    drawTankAir(L, t);
   }
 
   /* The tank plant: a clump of fronds that grows like the houseplant and
@@ -1740,7 +1827,7 @@
       // in the tank it is a clump of fronds rooted in the sand
       var tall = (pet.plantStyle === 'kelp' ? 16 : 10) + lv * (pet.plantStyle === 'kelp' ? 16 : 12);
       return {
-        lv: lv, wild: wild, crown: 3, cx: W - 12, baseY: room.groundY + 4,
+        lv: lv, wild: wild, crown: 3, cx: W - 11, baseY: room.groundY + 4,
         stem: tall, top: room.groundY + 4 - tall
       };
     }
@@ -2409,8 +2496,25 @@
   /* ------------------------------------------------------------------ */
   /* dirt + tufts                                                        */
   /* ------------------------------------------------------------------ */
+  /* Pets are shown in a 48x48 tile on the start screen and in My Pets. A fish
+     is drawn a little larger there so it fills the tile like the others do. */
+  var TILE = 48;
+  function tileScale(speciesId) {
+    var sp = Pets.SPECIES[speciesId];
+    return sp && sp.body === 'fish' ? 1.3 : 1;
+  }
+  function tileLayer(speciesId) {
+    var k = tileScale(speciesId);
+    return new PX.Layer(Math.round(Pets.SIZE * k), Math.round(Pets.SIZE * k));
+  }
+  function tileBlit(dest, layer, speciesId) {
+    var k = tileScale(speciesId);
+    dest.blit(layer, Math.round((TILE - layer.w) / 2),
+      Math.round(TILE - Pets.FEET * k - 3));
+  }
+
   function makeSpot(kind) {
-    var m = Pets.metrics(Pets.stageFor(pet.growth).key);
+    var m = Pets.metrics(Pets.stageFor(pet.growth).key, pet.species, petK());
     var onHead = Math.random() < 0.35;
     var a = Math.random() * Math.PI * 2;
     var r = kind === 'tuft' ? 0.55 + Math.random() * 0.35 : Math.sqrt(Math.random()) * 0.72;
@@ -2713,8 +2817,8 @@
       rt.props.tub = { x: W / 2, y: room.groundY + 1 };
       // the tub front hides the lower body, so float any dirt down there
       // back up to where it can actually be seen and scrubbed
-      var m = Pets.metrics(Pets.stageFor(pet.growth).key);
-      var topY = Pets.FEET - 9;
+      var m = Pets.metrics(Pets.stageFor(pet.growth).key, pet.species, petK());
+      var topY = pFeet() - 9 * petK();
       for (var i = 0; i < rt.spots.length; i++) {
         var sp = rt.spots[i];
         if (sp.kind === 'dirt' && sp.y > topY) {
@@ -2737,7 +2841,7 @@
 
   /* Where the current tool waits until you pick it up. */
   function parkSpot() {
-    return { x: Math.min(W - 10, W / 2 + 24), y: room.groundY - 5 };
+    return { x: Math.min(W - 10, W / 2 + 24 * petK()), y: room.groundY - 5 };
   }
 
   function updateToolMeter() {
@@ -2785,7 +2889,7 @@
       }
       while (rt.foam.length < 8) {
         var sp = makeSpot('dirt');
-        rt.foam.push({ x: sp.x, y: Math.min(sp.y, Pets.FEET - 10), r: 1.9, life: 0 });
+        rt.foam.push({ x: sp.x, y: Math.min(sp.y, pFeet() - 10 * petK()), r: 1.9, life: 0 });
       }
     } else if (fromStep === 1) {
       for (i = rt.foam.length - 1; i >= 0; i--) {
@@ -2794,7 +2898,7 @@
       }
       while (rt.drips.length < 7) {
         var sp2 = makeSpot('dirt');
-        rt.drips.push({ x: sp2.x, y: Math.min(sp2.y, Pets.FEET - 10) });
+        rt.drips.push({ x: sp2.x, y: Math.min(sp2.y, pFeet() - 10 * petK()) });
       }
     } else {
       rt.drips.length = 0;
@@ -2868,8 +2972,10 @@
   function scrubAt(x, y) {
     var t = rt.tool;
     if (!t || t.finishing || t.parked) return;
-    var lx = x - (W / 2 - Pets.SIZE / 2);
-    var ly = y - (room.groundY - Pets.FEET);
+    var k2 = petK();
+    var reach = 5 * k2;               // a bigger pet gets a bigger target
+    var lx = x - (W / 2 - pSize() / 2);
+    var ly = y - (room.groundY - pFeet());
     var hit = false;
     var cfg = ACTIONS[t.kind];
     var i, k;
@@ -2884,7 +2990,7 @@
       for (i = rt.spots.length - 1; i >= 0; i--) {
         var s = rt.spots[i];
         if (s.kind !== t.target) continue;
-        if (Math.abs(s.x - lx) < 5 && Math.abs(s.y - ly) < 5) {
+        if (Math.abs(s.x - lx) < reach && Math.abs(s.y - ly) < reach) {
           rt.spots.splice(i, 1);
           t.cleared++;
           hit = true;
@@ -2907,7 +3013,7 @@
     } else if (t.target === 'foam') {
       for (i = rt.foam.length - 1; i >= 0; i--) {
         var fm = rt.foam[i];
-        if (Math.abs(fm.x - lx) < 5 && Math.abs(fm.y - ly) < 5) {
+        if (Math.abs(fm.x - lx) < reach && Math.abs(fm.y - ly) < reach) {
           rt.foam.splice(i, 1);
           rt.drips.push({ x: fm.x, y: fm.y });
           t.cleared++;
@@ -2922,7 +3028,7 @@
     } else if (t.target === 'drip') {
       for (i = rt.drips.length - 1; i >= 0; i--) {
         var dr = rt.drips[i];
-        if (Math.abs(dr.x - lx) < 5 && Math.abs(dr.y - ly) < 5) {
+        if (Math.abs(dr.x - lx) < reach && Math.abs(dr.y - ly) < reach) {
           rt.drips.splice(i, 1);
           t.cleared++;
           hit = true;
@@ -2934,7 +3040,7 @@
     }
 
     // scrubbing over the pet at all is pleasant even when nothing is there
-    var overPetNow = Math.abs(lx - Pets.SIZE / 2) < 16 && ly > 4 && ly < Pets.FEET + 2;
+    var overPetNow = Math.abs(lx - pSize() / 2) < 16 * k2 && ly > 4 && ly < pFeet() + 2;
     t.onPet = overPetNow;
     if (overPetNow) {
       rt.leanTarget = clamp((x - W / 2) * 0.22, -3, 3);
@@ -3223,6 +3329,7 @@
       }
     }
 
+    var petLayer = petCanvas();
     petLayer.clear();
     var bobAmp = rt.activity && rt.activity.kind === 'play' ? 1.8 : 0.8;
     if (rt.sleep) bobAmp = 0.5;
@@ -3249,10 +3356,14 @@
     // a pounce at the wand throws the whole pet toward the toy for a moment
     var lunge = rt.pounce ? Math.sin(clamp(rt.pounce.t / 0.4, 0, 1) * Math.PI) : 0;
     var petDX = (rt.pounce ? rt.pounce.dir * 8 * lunge : 0) + looOffset();
-    if (isFish() && !rt.activity && !rt.tool) petDX += Math.sin(rt.t * 0.5) * 5;
+    if (isFish() && !rt.activity && !rt.tool) {
+      // it drifts about the tank, but only as far as the glass allows
+      var slack = Math.max(0, (W - SPAN_PER_K * petK()) / 2 - 2);
+      petDX += Math.sin(rt.t * 0.5) * Math.min(5, slack);
+    }
     if (!rt.intro || rt.intro.popped) {
-      L.blit(petLayer, Math.round(W / 2 - Pets.SIZE / 2 + petDX),
-        Math.round(room.groundY - Pets.FEET + blitDY - lunge * 7));
+      L.blit(petLayer, Math.round(W / 2 - pSize() / 2 + petDX),
+        Math.round(room.groundY - pFeet() + blitDY - lunge * 7));
     }
     if (inBed) drawBedFront(L, W / 2, room.groundY + 3);
     if (rt.intro) {
@@ -3317,14 +3428,17 @@
 
     // the thought bubble sits right where the medicine meter goes, so it stays
     // out of the way while you are giving a dose
+    // it hangs just clear of the pet's shoulder, so a big pet pushes it out
+    var bubX = W / 2 + 17 * petK();
+    var bubY = Math.max(12, (bounds ? room.groundY - pFeet() + bounds.top : room.groundY - 38) - 4);
     if (rt.needLoo) {
-      drawNeedBubble(L, W / 2 + 17, room.groundY - 42, 'loo', rt.t * 2.2);
+      drawNeedBubble(L, bubX, bubY, 'loo', rt.t * 2.2);
     } else if (!rt.activity && !rt.tool && !rt.dose && !rt.sleep && !rt.angry) {
       var lowest = null, lv = 101;
       for (var i = 0; i < STAT_KEYS.length; i++) {
         if (pet.stats[STAT_KEYS[i]] < lv) { lv = pet.stats[STAT_KEYS[i]]; lowest = STAT_KEYS[i]; }
       }
-      if (lv < 30) drawNeedBubble(L, W / 2 + 17, room.groundY - 42, lowest, rt.t);
+      if (lv < 30) drawNeedBubble(L, bubX, bubY, lowest, rt.t);
     }
 
     if (rt.growthFlash > 0 && Math.floor(rt.growthFlash * 16) % 2 === 0) {
@@ -3459,8 +3573,11 @@
   }
 
   function overPet(p) {
-    var top = bounds ? (room.groundY - Pets.FEET) + bounds.top - 2 : room.groundY - 40;
-    return p.x > W / 2 - 18 && p.x < W / 2 + 18 && p.y > top && p.y < room.groundY + 3;
+    var base = room.groundY - pFeet();
+    var top = bounds ? base + bounds.top - 2 : room.groundY - 40;
+    var low = bounds ? Math.max(room.groundY + 3, base + bounds.bottom + 2) : room.groundY + 3;
+    var half = 18 * petK();
+    return p.x > W / 2 - half && p.x < W / 2 + half && p.y > top && p.y < low;
   }
 
   function bindScene() {
@@ -3755,14 +3872,16 @@
       el.petGrid.appendChild(card);
 
       // thumbnail
-      var scr = new PX.Screen(canvas, 48, 48);
-      var L = new PX.Layer(Pets.SIZE, Pets.SIZE);
+      var scr = new PX.Screen(canvas, TILE, TILE);
+      var L = tileLayer(p.species);
       Pets.drawPet(L, p.species, Pets.stageFor(p.growth).key,
         { eyes: 'open', mouth: 'smile', hat: p.hat });
       var tsp = Pets.SPECIES[p.species] || Pets.SPECIES.cat;
       scr.layer.clear(C(tsp.thumbBg));
-      scr.layer.ellipse(24, 44, 15, 3, C(tsp.thumbShade));
-      scr.layer.blit(L, Math.round((48 - Pets.SIZE) / 2), 48 - Pets.FEET - 3);
+      // a fish floats, so it gets a strip of sand instead of a shadow
+      if (tsp.body === 'fish') scr.layer.rect(0, 43, TILE, 5, C(tsp.thumbShade));
+      else scr.layer.ellipse(24, 44, 15, 3, C(tsp.thumbShade));
+      tileBlit(scr.layer, L, p.species);
       scr.present();
     });
 
@@ -3960,13 +4079,13 @@
   var previewRAF = null;
 
   function setupPreviews() {
-    ['cat', 'fox', 'blackcat', 'dog'].forEach(function (id) {
+    ['cat', 'fox', 'blackcat', 'dog', 'fish'].forEach(function (id) {
       var canvas = document.getElementById('preview-' + id);
       if (!canvas) return;
       previews.push({
         id: id,
-        scr: new PX.Screen(canvas, 48, 48),
-        layer: new PX.Layer(Pets.SIZE, Pets.SIZE),
+        scr: new PX.Screen(canvas, TILE, TILE),
+        layer: tileLayer(id),
         phase: Math.random() * 6
       });
     });
@@ -3979,7 +4098,8 @@
       var L = pv.scr.layer;
       var psp = Pets.SPECIES[pv.id];
       L.clear(C(psp.thumbBg));
-      L.ellipse(24, 44, 15, 3, C(psp.thumbShade));
+      if (psp.body === 'fish') L.rect(0, 43, TILE, 5, C(psp.thumbShade));
+      else L.ellipse(24, 44, 15, 3, C(psp.thumbShade));
       pv.layer.clear();
       Pets.drawPet(pv.layer, pv.id, 'baby', {
         bob: Math.sin(t * 2.4 + pv.phase) * 0.9,
@@ -3987,7 +4107,7 @@
         eyes: Math.sin(t * 1.3 + pv.phase) > 0.985 ? 'blink' : 'open',
         mouth: 'smile'
       });
-      L.blit(pv.layer, Math.round((48 - Pets.SIZE) / 2), 48 - Pets.FEET - 3);
+      tileBlit(L, pv.layer, pv.id);
       pv.scr.present();
     }
     previewRAF = requestAnimationFrame(previewLoop);
