@@ -158,7 +158,41 @@
       foreheadStripes: false,
       cardBg: '#bfe9ff',
       thumbBg: '#dff3ff',
-      thumbShade: '#bfe9ff'
+      thumbShade: '#bfe9ff',
+      water: true                   // lives in a tank rather than a bedroom
+    },
+    axolotl: {
+      id: 'axolotl',
+      label: 'Axolotl',
+      emoji: '🦎',
+      blurb: 'Smiley and squishy',
+      body: 'axolotl',
+      water: true,
+      fur: '#3fc9bd',
+      furLight: '#74e2d8',
+      furDark: '#2a9a92',
+      frill: '#ff9ec4',             // the feathery gills
+      frillDark: '#ec7dab',
+      cream: '#d9f7f3',
+      creamShade: '#b7e9e3',
+      finColor: '#5fd8ce',
+      innerEar: '#ff9ec4',
+      earTip: null,
+      paw: '#74e2d8',
+      nose: '#16323a',
+      blush: '#ff9ec4',
+      outline: '#16323a',
+      eyeStyle: 'round',
+      eyeColor: '#16323a',
+      tailTip: '#5fd8ce',
+      whiskers: false,
+      earLean: 0,
+      tailBushy: false,
+      cheekPatch: false,
+      foreheadStripes: false,
+      cardBg: '#bff0ea',
+      thumbBg: '#e2faf7',
+      thumbShade: '#bff0ea'
     }
   };
 
@@ -200,8 +234,13 @@
   // Some pets are drawn bigger than others. The scale multiplies the whole
   // layer — the sprite is redrawn at the larger size rather than magnified —
   // so a big pet keeps the same crisp one-pixel grid as the scene around it.
-  var PET_SCALE = { fish: 2 };
+  var PET_SCALE = { fish: 2, axolotl: 1.85 };
   function scaleOf(id) { return PET_SCALE[id] || 1; }
+
+  // roughly how many layer pixels wide the sprite is per unit of scale, so the
+  // game can shrink a big pet that would not fit the scene
+  var PET_SPAN = { fish: 33, axolotl: 31 };
+  function spanOf(id) { return PET_SPAN[id] || 30; }
 
   function drawEye(L, sp, ex, ey, r, state, side) {
     side = side || -1;
@@ -446,15 +485,15 @@
     var bellyLow = bry * 1.28 + Math.abs(sway) * 0.3;
 
     // face — one eye and a little mouth, since it swims in profile
-    var eyeR = st.eye * 0.92 * k * (1 - 0.55 * sleep);
+    var eyeR = st.eye * 0.8 * k * (1 - 0.55 * sleep);
     var eyeX = cx + brx * 0.63, eyeY = cy - bry * 0.24;
     // a fish only has the one eye facing us, so it gets a white ball behind
     // whatever expression is on top — a lone blink or squint on bare orange
     // would not read as an eye at all
-    L.ellipse(eyeX, eyeY, eyeR * 1.02 + 1, eyeR * 1.12 + 1, ink);
-    L.ellipse(eyeX, eyeY, eyeR * 1.02, eyeR * 1.12, C('#ffffff'));
+    L.ellipse(eyeX, eyeY, eyeR * 1.26 + 1, eyeR * 1.36 + 1, ink);
+    L.ellipse(eyeX, eyeY, eyeR * 1.26, eyeR * 1.36, C('#ffffff'));
     drawEye(L, sp, eyeX, eyeY, eyeR, opts.eyes || 'open', 1);
-    L.ellipse(eyeX - eyeR * 1.15, eyeY + eyeR * 1.35, 1.3 * k, 0.8 * k, C(sp.blush));
+    L.ellipse(eyeX - eyeR * 1.4, eyeY + eyeR * 1.5, 1.3 * k, 0.8 * k, C(sp.blush));
     fishMouth(L, sp, cx + brx * 0.76, cy + bry * 0.3, opts.mouth || 'smile', k);
 
     // dirt, suds and drips are already scattered in this layer's coordinates
@@ -510,11 +549,203 @@
     };
   }
 
+  /* Geometry of the axolotl inside its layer — a long low body with a big
+     round head at the front and a paddle tail behind. */
+  function axoGeom(st, k) {
+    var brx = st.body[0] * 1.15 * k, bry = st.body[1] * 0.84 * k;
+    return {
+      k: k, brx: brx, bry: bry,
+      hrx: st.head[0] * 0.7 * k, hry: st.head[1] * 0.64 * k,
+      cx: (SIZE * k) / 2,
+      cy: FEET * k - bry - 13 * k     // it hovers just above the sand
+    };
+  }
+
+  /* The axolotl's smile — a wide, permanently pleased curve. */
+  function axoMouth(L, sp, mx, my, state, k) {
+    var dark = C(sp.outline);
+    var w = 3.1 * k;
+    switch (state) {
+      case 'open':
+      case 'wide':
+        L.ellipse(mx, my + 0.6 * k, w * 0.55, 1.7 * k, dark);
+        L.ellipse(mx, my + 1 * k, w * 0.32, 0.9 * k, C('#ff7f9f'));
+        break;
+      case 'frown':
+        L.rect(mx - w * 0.5, my + 0.8 * k, w, 1 * k, dark);
+        L.rect(mx - w * 0.6, my, 1 * k, 1 * k, dark);
+        L.rect(mx + w * 0.5, my, 1 * k, 1 * k, dark);
+        break;
+      case 'angry':
+        L.rect(mx - w * 0.5, my + 0.4 * k, w, 1 * k, dark);
+        break;
+      case 'snooze':
+        L.ellipse(mx, my + 0.4 * k, w * 0.3, 1 * k, dark);
+        break;
+      default:                        // the big smile
+        L.rect(mx - w * 0.5, my + 0.9 * k, w, 1 * k, dark);
+        L.rect(mx - w * 0.62, my, 1 * k, 1 * k, dark);
+        L.rect(mx - w * 0.62, my + 0.5 * k, 1 * k, 1 * k, dark);
+        L.rect(mx + w * 0.5, my, 1 * k, 1 * k, dark);
+        L.rect(mx + w * 0.5, my + 0.5 * k, 1 * k, 1 * k, dark);
+    }
+  }
+
+  /* An axolotl: the same care mechanics as everyone else, but built out of a
+     paddle tail, six feathery gills and four stubby legs. */
+  function drawAxolotl(L, sp, st, opts) {
+    var k = Math.max(1, L.w / SIZE);
+    var body = C(sp.fur), bodyL = C(sp.furLight), bodyD = C(sp.furDark);
+    var belly = C(sp.cream), ink = C(sp.outline), fin = C(sp.finColor || sp.furLight);
+    var frill = C(sp.frill || '#ff9ec4'), frillD = C(sp.frillDark || '#ec7dab');
+
+    var g = axoGeom(st, k);
+    var brx = g.brx, bry = g.bry, hrx = g.hrx, hry = g.hry;
+    var bob = (opts.bob || 0) * k;
+    var lean = (opts.lean || 0) * k;
+    var sleep = opts.sleep || 0;
+    var wag = (opts.tailWag || 0) * k;
+
+    var cx = g.cx + lean * 0.6;
+    var cy = g.cy + bob;
+    var hx = cx + brx * 0.7, hy = cy - bry * 0.28;
+
+    // the paddle tail: a thin core that tapers to a point, inside a fin
+    // membrane that swells early and narrows again at the tip
+    var tx = cx - brx * 0.72, tl = st.tail[0] * 0.7 * k;
+    for (var i = 0; i <= tl; i++) {
+      var f = i / tl;
+      var yc = cy + Math.sin(f * 1.7) * wag * 1.1;
+      var core = bry * (0.48 - 0.44 * f);
+      var mem = bry * 0.52 * Math.sin(Math.pow(f, 0.8) * Math.PI);
+      if (core + mem < 0.6) continue;
+      L.rect(tx - i, yc - core - mem, 1, (core + mem) * 2, fin);
+      if (core > 0.5) L.rect(tx - i, yc - core, 1, core * 2, body);
+    }
+
+    // the ridge along the back, sitting on top of the body line
+    for (var rx2 = -brx * 0.85; rx2 <= brx * 0.4; rx2 += 1) {
+      var rf = (rx2 + brx * 0.85) / (brx * 1.25);
+      var bodyTop = cy - bry * Math.sqrt(Math.max(0, 1 - Math.pow(rx2 / brx, 2)));
+      var rh = Math.sin(rf * Math.PI) * bry * 0.34;
+      if (rh > 0.5) L.rect(cx + rx2, bodyTop - rh, 1, rh + 1, fin);
+    }
+
+    // body
+    L.ellipse(cx, cy, brx + 1, bry + 1, ink);
+    L.ellipse(cx, cy, brx, bry, body);
+    L.ellipse(cx - brx * 0.2, cy - bry * 0.45, brx * 0.5, bry * 0.36, bodyL);
+    L.ellipse(cx - brx * 0.05, cy + bry * 0.58, brx * 0.62, bry * 0.32, belly);
+
+    // four stubby legs, the far pair a shade darker so they read as behind
+    function leg(lx, ly, len, dir, col) {
+      L.ellipse(lx, ly + len * 0.3, 1.7 * k, len * 0.62, col);
+      L.ellipse(lx + dir * 1 * k, ly + len, 2.5 * k, 1.3 * k, col);
+      for (var t3 = 0; t3 < 3; t3++) {
+        L.set(lx + dir * 1 * k + (t3 - 1) * 1.6 * k, ly + len + 1.5 * k, ink);
+      }
+    }
+    leg(cx + brx * 0.38, cy + bry * 0.48, bry * 0.75, 1, bodyD);
+    leg(cx - brx * 0.36, cy + bry * 0.48, bry * 0.75, -1, bodyD);
+    leg(cx + brx * 0.5, cy + bry * 0.62, bry * 0.75, 1, body);
+    leg(cx - brx * 0.24, cy + bry * 0.62, bry * 0.75, -1, body);
+
+    // the gills go on after the body but before the head, so the head hides
+    // their roots and the body cannot swallow the fans
+    var nx = hx - hrx * 0.74, ny = hy - hry * 0.16;
+    /* Each frill is laid down twice — once oversized in the darker pink, then
+       again on top — so neighbouring frills keep a rim between them instead of
+       melting into one lump. */
+    function frillArm(ang, len, pad, col) {
+      var ex = nx - Math.cos(ang) * len, ey = ny - Math.sin(ang) * len;
+      L.line(nx, ny, ex, ey, col, Math.max(1, 1.1 * k + pad));
+      for (var fr = 0; fr < 3; fr++) {
+        var ft = 0.4 + fr * 0.3;
+        L.disc(nx + (ex - nx) * ft, ny + (ey - ny) * ft, (0.85 + fr * 0.3) * k + pad, col);
+      }
+      L.disc(ex, ey, 1.5 * k + pad, col);
+    }
+    var arms = [[1.5, hrx * 1.3], [0.98, hrx * 1.42], [0.46, hrx * 1.2]];
+    for (var gi = 0; gi < arms.length; gi++) {
+      frillArm(arms[gi][0], arms[gi][1], 1, frillD);
+      frillArm(arms[gi][0], arms[gi][1], 0, frill);
+    }
+
+    // head over the front of the body
+    L.ellipse(hx, hy, hrx + 1, hry + 1, ink);
+    L.ellipse(hx, hy, hrx, hry, body);
+    L.ellipse(hx - hrx * 0.1, hy - hry * 0.42, hrx * 0.6, hry * 0.36, bodyL);
+
+    // face — one eye, a blush and that famous smile
+    var eyeR = st.eye * 0.74 * k * (1 - 0.55 * sleep);
+    var eyeX = hx + hrx * 0.3, eyeY = hy - hry * 0.3;
+    // a white ball behind the expression, so a blink or a squint still reads
+    L.ellipse(eyeX, eyeY, eyeR * 1.3 + 1, eyeR * 1.4 + 1, ink);
+    L.ellipse(eyeX, eyeY, eyeR * 1.3, eyeR * 1.4, C('#ffffff'));
+    drawEye(L, sp, eyeX, eyeY, eyeR, opts.eyes || 'open', 1);
+    L.ellipse(eyeX - eyeR * 2.4, eyeY + eyeR * 2.1, 1.5 * k, 0.9 * k, C(sp.blush));
+    axoMouth(L, sp, hx + hrx * 0.18, hy + hry * 0.42, opts.mouth || 'smile', k);
+
+    // dirt, suds and drips are already scattered in this layer's coordinates
+    if (opts.spots && opts.spots.length) {
+      var mud = C('#8a6a45'), mudD = C('#6d5233');
+      for (var d2 = 0; d2 < opts.spots.length; d2++) {
+        var s2 = opts.spots[d2];
+        if (s2.kind === 'tuft') {
+          var dir2 = s2.flip ? 1 : -1;
+          L.tri(s2.x - 1.6 * k, s2.y + 1.2 * k, s2.x + 1.6 * k, s2.y + 1.2 * k,
+            s2.x + dir2 * 2 * k, s2.y - 2.6 * k, bodyD);
+        } else {
+          L.disc(s2.x, s2.y, 1.6 * k, mud);
+          L.disc(s2.x, s2.y, 0.6 * k, mudD);
+        }
+      }
+    }
+    if (opts.foam && opts.foam.length) {
+      for (var fm = 0; fm < opts.foam.length; fm++) {
+        L.disc(opts.foam[fm].x, opts.foam[fm].y, opts.foam[fm].r * k, C('#ffffff'));
+      }
+    }
+    if (opts.drips && opts.drips.length) {
+      for (var dp = 0; dp < opts.drips.length; dp++) {
+        L.ellipse(opts.drips[dp].x, opts.drips[dp].y, 1.5 * k, 2 * k, C('#7fd8ff'));
+      }
+    }
+
+    L.outline(ink);
+
+    if (opts.sick) {
+      var iceY = hy - hry - 1.5 * k;
+      L.ellipse(hx, iceY, hrx * 0.5 + 1, hry * 0.24 + 1, ink);
+      L.ellipse(hx, iceY, hrx * 0.5, hry * 0.24, C('#9adcf8'));
+      L.ellipse(hx - hrx * 0.18, iceY - 0.6 * k, hrx * 0.16, 0.7 * k, C('#dff3ff'));
+    }
+    if (opts.hat) drawHat(L, opts.hat, hx, hy - hry * 0.5, hrx * 0.62, hry * 0.8, ink);
+    if (opts.shine) {
+      var sh = C('#ffffff');
+      var pts = [[cx - brx * 0.3, cy - bry * 0.6], [hx, hy - hry * 0.7],
+                 [cx + brx * 0.1, cy + bry * 0.5]];
+      for (var q = 0; q < pts.length; q++) {
+        if ((opts.shine * 3) < q) break;
+        L.disc(pts[q][0], pts[q][1], 0.7 * k, sh);
+        L.disc(pts[q][0] - 1 * k, pts[q][1] + 1 * k, 0.7 * k, sh);
+        L.disc(pts[q][0] + 1 * k, pts[q][1] + 1 * k, 0.7 * k, sh);
+      }
+    }
+
+    return {
+      cx: cx, top: Math.min(cy - bry * 1.5, hy - hry) - 2 * k,
+      bottom: cy + bry * 1.4 + 2 * k,
+      headX: hx, headY: hy, headR: hrx
+    };
+  }
+
   function drawPet(L, speciesId, stageKey, opts) {
     opts = opts || {};
     var sp = SPECIES[speciesId] || SPECIES.fox;
     var st = STAGES[stageIndex(stageKey)];
     if (sp.body === 'fish') return drawFish(L, sp, st, opts);
+    if (sp.body === 'axolotl') return drawAxolotl(L, sp, st, opts);
 
     var fur = C(sp.fur), furL = C(sp.furLight), furD = C(sp.furDark);
     var cream = C(sp.cream), creamS = C(sp.creamShade);
@@ -818,6 +1049,16 @@
   function metrics(stageKey, speciesId, k) {
     var st = STAGES[stageIndex(stageKey)];
     var sp = SPECIES[speciesId];
+    if (sp && sp.body === 'axolotl') {
+      var a = axoGeom(st, k || scaleOf(speciesId));
+      return {
+        cx: a.cx, feet: FEET * a.k,
+        bodyCY: a.cy, bodyRX: a.brx * 0.78, bodyRY: a.bry * 0.7,
+        headCX: a.cx + a.brx * 0.66,
+        headCY: a.cy - a.bry * 0.3, headRX: a.hrx * 0.62, headRY: a.hry * 0.6,
+        top: a.cy - a.bry * 1.5
+      };
+    }
     if (sp && sp.body === 'fish') {
       // a fish is one long body with no separate head, and it is drawn into a
       // layer of its own size
@@ -848,6 +1089,7 @@
     SIZE: SIZE,
     FEET: FEET,
     scaleOf: scaleOf,
+    spanOf: spanOf,
     stageFor: stageFor,
     metrics: metrics,
     stageIndex: stageIndex,

@@ -88,7 +88,7 @@
     { id: 'candyrug', kind: 'rug', label: 'Candy Corn Rug', icon: 'rugCandy' }
   ];
 
-  var FISH_PRIZES = [
+  var TANK_PRIZES = [
     { id: 'party', kind: 'hat', label: 'Party Hat', icon: 'hatParty' },
     { id: 'crown', kind: 'hat', label: 'Crown', icon: 'hatCrown' },
     { id: 'witch', kind: 'hat', label: 'Witch Hat', icon: 'hatWitch' },
@@ -102,10 +102,16 @@
     { id: 'gravel', kind: 'rug', label: 'Rainbow Gravel', icon: 'gravelRainbow' }
   ];
 
-  var ALL_PRIZES = LAND_PRIZES.concat(FISH_PRIZES);
+  var ALL_PRIZES = LAND_PRIZES.concat(TANK_PRIZES);
 
-  function isFish(p) { return !!(p || pet) && (p || pet).species === 'fish'; }
-  function prizeList(p) { return isFish(p || pet) ? FISH_PRIZES : LAND_PRIZES; }
+  /* Some pets live in a tank rather than a bedroom. That changes the scene,
+     the prize list and a handful of details, but nothing about how you care
+     for them. */
+  function inTank(p) {
+    var s2 = (p || pet) && Pets.SPECIES[(p || pet).species];
+    return !!(s2 && s2.water);
+  }
+  function prizeList(p) { return inTank(p || pet) ? TANK_PRIZES : LAND_PRIZES; }
 
   /* Wallpaper the room can be redecorated with. `rose` is what a room starts
      out with; the rest come out of the toy box. */
@@ -676,12 +682,12 @@
      "pet coordinates" — dirt, tufts, scrubbing, where the sprite lands on the
      floor — goes through these three so it follows whichever pet is out. */
   var petLayers = {};
-  var SPAN_PER_K = 33;      // roughly how wide the fish sprite is per unit of scale
+  function petSpan() { return Pets.spanOf(pet ? pet.species : 'fox'); }
   function pSize() {
     var k = Pets.scaleOf(pet ? pet.species : 'fox');
     // a big pet only grows as big as the scene has room for, so it never runs
     // off both edges of a narrow phone
-    if (k > 1) k = Math.min(k, (W - 10) / SPAN_PER_K);
+    if (k > 1) k = Math.min(k, (W - 10) / petSpan());
     return Math.max(Pets.SIZE, Math.round(Pets.SIZE * k));
   }
   function petK() { return pSize() / Pets.SIZE; }
@@ -971,6 +977,10 @@
       L.rect(cx0 + 9, 5 + cw * 4, 3, 1, caustic);
     }
 
+    // the pirate ship is a whole wreck sitting way back in the tank, so it
+    // goes in before the rock and the sand and everything else
+    drawPirateShip(L, wt);
+
     // one big boulder, running off the left edge — far too large for the stamp
     // buffer, so it goes straight onto the scene with its own edge. It is laid
     // down before the sand so the sand buries its foot.
@@ -1044,7 +1054,112 @@
     }, true);
   }
 
-  /* Castle, pineapple house or pirate ship — whichever ornament is out. */
+  /* The pirate ship is not an ornament on the sand like the other two — it is
+     a whole wreck sunk at the back of the tank, far bigger than anything else
+     in there. Distance is sold by washing every colour toward the water, so it
+     sits behind the fish rather than competing with it. */
+  function shipBox() {
+    return {
+      cx: Math.round(W * 0.54),
+      base: room.groundY + 6,
+      half: Math.max(24, Math.round(W * 0.4)),
+      top: Math.round(H * 0.15)             // the masts clear the pet entirely
+    };
+  }
+
+  function drawPirateShip(L, wt) {
+    if (!pet || pet.picture !== 'pirate') return;
+    var s = shipBox(), cx = s.cx, by = s.base, hw = s.half;
+    // distance is sold by washing every colour toward the water; the canvas
+    // fades less than the timber so the sails still read from across the tank
+    function far(hex, amt) { return C(mixHex(hex, wt.low, amt === undefined ? 0.3 : amt)); }
+    var hull = far('#7a5228'), hullLit = far('#9c6c39'), deck = far('#c08a4e');
+    var dark = far('#31200f', 0.2);
+    var sail = far('#f4eee4', 0.14), sailShade = far('#cfc2ae', 0.16);
+    var rope = far('#6d5a44');
+
+    var hullH = Math.max(9, Math.round(hw * 0.46));
+    var deckY = by - hullH;                 // the top of the planking
+    var railH = Math.max(2, Math.round(hullH * 0.3));
+    var railY = deckY - railH;
+
+    // the hull, one column at a time so the belly curves and the ends taper
+    var planks = [0.22, 0.46, 0.7];         // lines of timber down the side
+    var seam = far('#5c3d1c');
+    for (var i = -hw; i <= hw; i++) {
+      var f = Math.abs(i / hw);
+      var depth = Math.round(hullH * Math.sqrt(Math.max(0, 1 - f * f * f)));
+      if (depth > 0) {
+        L.rect(cx + i, deckY, 1, depth, hull);
+        for (var pk = 0; pk < planks.length; pk++) {
+          var py2 = deckY + Math.round(hullH * planks[pk]);
+          if (py2 < deckY + depth - 1) L.set(cx + i, py2, pk === 0 ? hullLit : seam);
+        }
+        L.set(cx + i, deckY + depth - 1, dark);           // keel
+      }
+      if (f < 0.93) {                                     // the rail above the deck
+        L.rect(cx + i, railY, 1, railH, hullLit);
+        L.set(cx + i, railY, deck);
+        L.set(cx + i, deckY, dark);
+      }
+    }
+    // the raised stern castle at the back
+    var stern = Math.max(3, Math.round(hullH * 0.55));
+    L.rect(cx - hw * 0.96, railY - stern, hw * 0.4, stern, hullLit);
+    L.rect(cx - hw * 0.96, railY - stern, hw * 0.4, 1, deck);
+    L.rect(cx - hw * 0.96, railY - 1, hw * 0.4, 1, dark);
+    // the bowsprit at the front, with a jib slung under it
+    var bx2 = cx + hw * 0.86, bty = railY;
+    var btx = cx + hw * 1.16, btip = railY - hullH * 0.42;
+    L.tri(bx2, bty - 1, btx, btip, bx2 + hw * 0.06, bty + hullH * 0.16, sail);
+    L.line(bx2, bty, btx, btip, dark, Math.max(1, hw * 0.045));
+
+    // a row of portholes, and a hole stoved in below the waterline
+    var nPort = Math.max(4, Math.round(hw / 7));
+    for (var p = 0; p < nPort; p++) {
+      var px = cx - hw * 0.7 + (p + 0.5) * (hw * 1.4 / nPort);
+      var pr = Math.max(1, hw * 0.045);
+      L.ellipse(px, deckY + hullH * 0.5, pr + 1, pr + 1, dark);
+      L.ellipse(px, deckY + hullH * 0.5, pr, pr, far('#2f4a5e'));
+    }
+    L.tri(cx + hw * 0.18, deckY + hullH * 0.2, cx + hw * 0.46, deckY + hullH * 0.2,
+      cx + hw * 0.3, deckY + hullH * 0.78, far('#241708'));
+
+    /* One mast: a spar with a square sail bellied out by the current, plus a
+       triangular staysail slung in front of it. */
+    function mast(mx, topY, sw) {
+      var h = railY - topY;
+      L.rect(mx - Math.max(0.5, hw * 0.025), topY, Math.max(1, hw * 0.05), h, dark);
+      var y0 = topY + Math.round(h * 0.12), sh = Math.round(h * 0.44);
+      L.rect(mx - sw, y0 - 1, sw * 2, 1, dark);                    // yard arm
+      for (var q = 0; q <= sh; q++) {
+        var belly = Math.sin((q / sh) * Math.PI) * sw * 0.3;
+        L.rect(mx - sw + belly * 0.35, y0 + q, sw * 2 - belly * 0.1, 1, sail);
+        L.rect(mx - sw + belly * 0.35, y0 + q, sw * 0.7, 1, sailShade);
+      }
+      L.rect(mx - sw * 0.9, y0 + Math.round(sh * 0.45), sw * 1.8, 1, sailShade);
+      L.rect(mx - sw * 0.86, y0 + sh, sw * 1.7, 1, dark);
+      // staysail, a triangle from partway up the mast down to the rail
+      L.tri(mx + sw * 0.15, y0 + sh + h * 0.06, mx + sw * 0.15, railY - 1,
+        mx + sw * 1.5, railY - 1, sail);
+      return topY;
+    }
+    var sailW = hw * 0.38;
+    var t1 = mast(cx - hw * 0.3, s.top, sailW);
+    mast(cx + hw * 0.44, s.top + Math.round((railY - s.top) * 0.3), sailW * 0.76);
+    // shrouds down to the rail
+    L.line(cx - hw * 0.3, t1 + 3, cx - hw * 0.86, railY - 1, rope, 1);
+    L.line(cx - hw * 0.3, t1 + 3, cx + hw * 0.1, railY - 1, rope, 1);
+
+    // the jolly roger at the masthead
+    var fw = Math.max(6, Math.round(hw * 0.3));
+    L.rect(cx - hw * 0.3, t1 - 1, fw, Math.max(5, fw * 0.7), dark);
+    L.set(cx - hw * 0.3 + fw * 0.28, t1 + fw * 0.18, sail);
+    L.set(cx - hw * 0.3 + fw * 0.64, t1 + fw * 0.18, sail);
+    L.rect(cx - hw * 0.3 + fw * 0.3, t1 + fw * 0.46, fw * 0.4, 1, sail);
+  }
+
+  /* Castle or pineapple house — the ornaments that stand on the sand. */
   function drawOrnament(L, t) {
     if (!pet || !pet.picture) return;
     var orn = tankOrnament(), gx = orn.x, gy = orn.y;
@@ -1076,20 +1191,9 @@
         b.tri(bx - 1, by - 12, bx + 1.5, by - 12, bx, by - 15.8, C('#63c93f'));
         b.tri(bx + 0.5, by - 12, bx + 3, by - 12, bx + 4, by - 14.6, C('#4ea832'));
       }, true);
-    } else if (pet.picture === 'pirate') {
-      stampOutlined(L, gx, gy, function (b, bx, by) {
-        b.tri(bx - 9, by - 6, bx + 9, by - 6, bx + 6, by, C('#8a5a2a'));
-        b.rect(bx - 9, by - 8, 18, 3, C('#a06a3c'));
-        b.rect(bx - 9, by - 8, 18, 1, C('#c08a54'));
-        b.rect(bx - 0.5, by - 14, 1.5, 7, C('#7f5a2a'));   // mast
-        b.tri(bx + 1, by - 13.5, bx + 1, by - 8.5, bx + 6, by - 11, C('#f4efe6'));
-        b.tri(bx - 1, by - 12.5, bx - 1, by - 9, bx - 5, by - 11, C('#e6ddd0'));
-        b.set(bx + 3, by - 11, C('#3a2b40'));
-        b.rect(bx - 1.5, by - 16, 3.5, 2.2, C('#3a2b40'));   // flag
-        b.set(bx - 0.5, by - 15.4, C('#f4efe6'));
-        b.set(bx + 1, by - 15.4, C('#f4efe6'));
-      }, true);
     }
+    // the pirate ship is not drawn here — it is a wreck at the back of the
+    // tank, laid down with the scenery long before this
   }
 
   /* The bubble curtain prize: a stream of bubbles rising up one side. */
@@ -1107,7 +1211,7 @@
   }
 
   function drawRoom(L, t) {
-    if (isFish()) return drawTank(L, t);
+    if (inTank()) return drawTank(L, t);
     var paper = WALLPAPERS[(pet && pet.wallpaper) || 'rose'] || WALLPAPERS.rose;
     var wall = C(paper.wall), wallLow = C(paper.low), trim = C(paper.trim);
     var floor = C('#f6cf95'), plank = C('#e0b273'), floorEdge = C('#c99a5f');
@@ -1697,7 +1801,7 @@
      stays bright after dark instead of being dimmed along with the walls. */
   function drawToyBoxGlow(L, t) {
     if (!pet || pet.prizeNew <= 0) return;
-    var ch = isFish() ? tankChest() : { x: 8, y: room.floorY - 1 };
+    var ch = inTank() ? tankChest() : { x: 8, y: room.floorY - 1 };
     var fy = ch.y + 1, cx = ch.x, cy = ch.y - 1;
     var pulse = 0.5 + 0.5 * Math.sin(t * 3.4);
     var reach = 5 + pulse * 2.5;
@@ -1738,7 +1842,7 @@
   }
 
   function tapWindow(x, y) {
-    if (isFish()) return false;
+    if (inTank()) return false;
     var bb = windowBounds();
     if (x < bb.x0 || x > bb.x1 || y < bb.y0 || y > bb.y1) return false;
     if (rt.t - rt.winTapT > 3) rt.winTaps = 0;   // the taps have to be in a run
@@ -1758,7 +1862,12 @@
   /* Once you have won a picture you can swap the two over by tapping the
      frame on the wall — no need to go through the toy box. */
   function pictureBounds() {
-    if (isFish()) {
+    if (inTank()) {
+      // the wreck is somewhere else entirely, so tap wherever it is showing
+      if (pet && pet.picture === 'pirate') {
+        var s = shipBox();
+        return { x0: s.cx - s.half, x1: s.cx + s.half, y0: s.base - s.half * 1.6, y1: s.base };
+      }
       var o = tankOrnament();
       return { x0: o.x - 12, x1: o.x + 12, y0: o.y - 30, y1: o.y + 4 };
     }
@@ -1792,7 +1901,7 @@
   }
 
   function toyBoxBounds() {
-    if (isFish()) {
+    if (inTank()) {
       var ch = tankChest();
       return { x0: ch.x - 9, x1: ch.x + 9, y0: ch.y - 9, y1: ch.y + 7 };
     }
@@ -1823,7 +1932,7 @@
   function plantShape() {
     var lv = clamp(db.plant / 100, 0, 1);
     var wild = db.plant >= PLANT_WILD;
-    if (isFish()) {
+    if (inTank()) {
       // in the tank it is a clump of fronds rooted in the sand
       var tall = (pet.plantStyle === 'kelp' ? 16 : 10) + lv * (pet.plantStyle === 'kelp' ? 16 : 12);
       return {
@@ -1846,7 +1955,7 @@
     var s = plantShape();
     return {
       x0: s.cx - 15, x1: s.cx + 15,
-      y0: s.top - s.crown - 2, y1: isFish() ? room.groundY + 9 : room.floorY + 3
+      y0: s.top - s.crown - 2, y1: inTank() ? room.groundY + 9 : room.floorY + 3
     };
   }
 
@@ -2501,16 +2610,34 @@
   var TILE = 48;
   function tileScale(speciesId) {
     var sp = Pets.SPECIES[speciesId];
-    return sp && sp.body === 'fish' ? 1.3 : 1;
+    // a tank pet is drawn big enough to fill the card, the way a land pet
+    // standing on the floor already does
+    return sp && sp.water ? Math.min(1.9, 43 / Pets.spanOf(speciesId)) : 1;
   }
   function tileLayer(speciesId) {
     var k = tileScale(speciesId);
     return new PX.Layer(Math.round(Pets.SIZE * k), Math.round(Pets.SIZE * k));
   }
   function tileBlit(dest, layer, speciesId) {
-    var k = tileScale(speciesId);
-    dest.blit(layer, Math.round((TILE - layer.w) / 2),
-      Math.round(TILE - Pets.FEET * k - 3));
+    var sp = Pets.SPECIES[speciesId];
+    if (!sp || !sp.water) {
+      dest.blit(layer, Math.round((TILE - layer.w) / 2), TILE - Pets.FEET - 3);
+      return;
+    }
+    // a swimmer has no feet to stand on, so it is centred on whatever it drew
+    var minX = layer.w, maxX = -1, minY = layer.h, maxY = -1;
+    for (var y = 0; y < layer.h; y++) {
+      for (var x = 0; x < layer.w; x++) {
+        if (!layer.data[y * layer.w + x]) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    if (maxX < 0) return;
+    dest.blit(layer, Math.round((TILE - minX - maxX) / 2),
+      Math.round((TILE - minY - maxY) / 2));
   }
 
   function makeSpot(kind) {
@@ -2518,7 +2645,7 @@
     var onHead = Math.random() < 0.35;
     var a = Math.random() * Math.PI * 2;
     var r = kind === 'tuft' ? 0.55 + Math.random() * 0.35 : Math.sqrt(Math.random()) * 0.72;
-    var cx = onHead ? m.cx : m.cx;
+    var cx = onHead ? (m.headCX || m.cx) : m.cx;
     var cy = onHead ? m.headCY : m.bodyCY;
     var rx = onHead ? m.headRX : m.bodyRX;
     var ry = onHead ? m.headRY : m.bodyRY;
@@ -3306,7 +3433,7 @@
     drawRoom(L, rt.t);
     // the pet's floor shadow follows it off screen on a trip outside; a fish
     // floats, so it does not cast one
-    if (!isFish()) L.ellipse(W / 2 + looOffset(), room.groundY + 1, 13, 2.5, C('#e0b273'));
+    if (!inTank()) L.ellipse(W / 2 + looOffset(), room.groundY + 1, 13, 2.5, C('#e0b273'));
 
     // everything from here on is an object in the room, not the room itself,
     // so it is flagged to keep its own colours whatever the light is doing
@@ -3316,7 +3443,7 @@
     drawBannerLights(L, rt.t);
     drawBubbler(L, rt.t);
 
-    var inBed = rt.sleep && !isFish() && (sky.night > 0.45 || rt.sleep.byPlayer);
+    var inBed = rt.sleep && !inTank() && (sky.night > 0.45 || rt.sleep.byPlayer);
     if (inBed) drawBedBack(L, W / 2, room.groundY + 3);
 
     if (rt.props.tub) drawTub(L, rt.props.tub.x, rt.props.tub.y, true, rt.t);
@@ -3356,9 +3483,9 @@
     // a pounce at the wand throws the whole pet toward the toy for a moment
     var lunge = rt.pounce ? Math.sin(clamp(rt.pounce.t / 0.4, 0, 1) * Math.PI) : 0;
     var petDX = (rt.pounce ? rt.pounce.dir * 8 * lunge : 0) + looOffset();
-    if (isFish() && !rt.activity && !rt.tool) {
+    if (inTank() && !rt.activity && !rt.tool) {
       // it drifts about the tank, but only as far as the glass allows
-      var slack = Math.max(0, (W - SPAN_PER_K * petK()) / 2 - 2);
+      var slack = Math.max(0, (W - petSpan() * petK()) / 2 - 2);
       petDX += Math.sin(rt.t * 0.5) * Math.min(5, slack);
     }
     if (!rt.intro || rt.intro.popped) {
@@ -3879,7 +4006,7 @@
       var tsp = Pets.SPECIES[p.species] || Pets.SPECIES.cat;
       scr.layer.clear(C(tsp.thumbBg));
       // a fish floats, so it gets a strip of sand instead of a shadow
-      if (tsp.body === 'fish') scr.layer.rect(0, 43, TILE, 5, C(tsp.thumbShade));
+      if (tsp.water) scr.layer.rect(0, 43, TILE, 5, C(tsp.thumbShade));
       else scr.layer.ellipse(24, 44, 15, 3, C(tsp.thumbShade));
       tileBlit(scr.layer, L, p.species);
       scr.present();
@@ -4071,6 +4198,7 @@
     fox: ['Ember', 'Ginger', 'Maple', 'Sunny', 'Pepper', 'Clementine', 'Rusty', 'Nutmeg'],
     blackcat: ['Shadow', 'Midnight', 'Onyx', 'Luna', 'Binx', 'Sooty', 'Pepper', 'Olive'],
     fish: ['Bubbles', 'Finn', 'Splash', 'Coral', 'Goldie', 'Nemo', 'Guppy', 'Marina'],
+    axolotl: ['Lotti', 'Pebble', 'Wiggle', 'Mochi', 'Doodle', 'Nori', 'Squish', 'Frilly'],
     dog: ['Spot', 'Domino', 'Patch', 'Buddy', 'Freckle', 'Pongo', 'Cookie', 'Dot']
   };
 
@@ -4079,7 +4207,7 @@
   var previewRAF = null;
 
   function setupPreviews() {
-    ['cat', 'fox', 'blackcat', 'dog', 'fish'].forEach(function (id) {
+    ['cat', 'fox', 'blackcat', 'dog', 'fish', 'axolotl'].forEach(function (id) {
       var canvas = document.getElementById('preview-' + id);
       if (!canvas) return;
       previews.push({
@@ -4098,7 +4226,7 @@
       var L = pv.scr.layer;
       var psp = Pets.SPECIES[pv.id];
       L.clear(C(psp.thumbBg));
-      if (psp.body === 'fish') L.rect(0, 43, TILE, 5, C(psp.thumbShade));
+      if (psp.water) L.rect(0, 43, TILE, 5, C(psp.thumbShade));
       else L.ellipse(24, 44, 15, 3, C(psp.thumbShade));
       pv.layer.clear();
       Pets.drawPet(pv.layer, pv.id, 'baby', {

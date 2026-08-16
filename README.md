@@ -1,7 +1,7 @@
 # 🦊 Pixel Pals
 
 A Tamagotchi-style pet game for kids. Adopt a baby **cat**, **fox**,
-**black cat**, **Dalmatian** or **clownfish**, look after it, and watch it grow up
+**black cat**, **Dalmatian**, **clownfish** or **axolotl**, look after it, and watch it grow up
 from Baby to Adult. Keep a whole shelf of pets and switch between them
 whenever you like.
 
@@ -72,22 +72,26 @@ which only fill about a quarter but give a good helping of Fun. So an ice
 cream makes a poor dinner and a lovely snack. Whatever you pick slides in and shrinks bite by bite
 as your pet works through it.
 
-### A clownfish and its tank
+### Tank pets
 
-Pick the **clownfish** and you get an aquarium instead of a bedroom: water top
-to bottom that deepens toward the floor, a bed of sand, one small plant, and a
-big boulder sitting half off the left-hand edge so you only ever see half of
-it. Air bubbles drift up from the sand all day long. No wallpaper, no window,
-no pictures on the wall — there is no wall. The prizes live in a **treasure
-chest** on the sand instead of a toy box.
+Two of the pets live in water, and picking either one swaps the bedroom for an
+aquarium: water top to bottom that deepens toward the floor, a bed of sand, one
+small plant, and a big boulder sitting half off the left-hand edge so you only
+ever see half of it. Air bubbles drift up from the sand all day long. No
+wallpaper, no window, no pictures on the wall — there is no wall. The prizes
+live in a **treasure chest** on the sand instead of a toy box.
 
-The clownfish is drawn about twice the size of the land pets — orange with
-three white stripes, a fanned tail and a sail along its back — and swims in
-mid-water, drifting gently from side to side. On a narrow phone it grows only
-as large as the tank has room for, so it never swims off the glass.
+* The **clownfish** is drawn about twice the size of the land pets — orange
+  with three white stripes, a fanned tail and a sail along its back.
+* The **axolotl** is teal, with three feathery pink gills on each side, four
+  stubby legs, a paddle tail and a permanent smile.
 
-Everything else is the same. It eats the same seven things, drinks the same
-three, plays the same games and grows up the same way.
+Both hover in mid-water and drift gently from side to side. On a narrow phone
+a tank pet only grows as large as the tank has room for, so it never swims off
+the glass.
+
+Everything else is the same. They eat the same seven things, drink the same
+three, play the same games and grow up the same way.
 
 ### Prizes and the toy box
 
@@ -114,7 +118,7 @@ things, so one never lands in the middle of a bath or a game.
 
 **Prizes belong to the pet that won them.** Every pet has its own toy box and
 its own best scores, so a second pet starts with an empty box and earns its
-own collection from scratch. **A clownfish has a different set of eleven** to suit
+own collection from scratch. **A tank pet has a different set of eleven** to suit
 a tank — see below.
 
 There are eleven prizes:
@@ -140,11 +144,14 @@ the wall** to flip between the two without opening the box at all.
 Every pet decorates its own room, so switching pets switches the walls too.
 The toys also show up in the Play menu once you have won them.
 
-A clownfish wins the same four hats, plus seven things for the tank:
+A tank pet wins the same four hats, plus seven things for the tank:
 
-* Three **ornaments** for the sand — a **sand castle**, a **pineapple house**
-  and a **pirate ship**. Only one is out at a time; **tap the ornament** to
-  step through the ones you have won and back to none.
+* Two **ornaments** for the sand — a **sand castle** and a **pineapple
+  house** — plus a **pirate ship**, which is not an ornament at all but a
+  whole wreck sunk at the back of the tank, masts and jolly roger rising above
+  your pet, its colours washed toward the water so it stays in the distance.
+  Only one is out at a time; **tap whichever is showing** to step through the
+  ones you have won and back to none.
 * **Deep Blue Water** to darken the tank.
 * **Tall Kelp** in place of the little plant, growing and needing a trim just
   the same.
