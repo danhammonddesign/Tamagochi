@@ -66,11 +66,15 @@
   var MILK_LIMIT = 2;         // milks in a row before a poorly tummy
 
   // what each animal says when it is thoroughly pleased with you
-  var HAPPY_SAY ={ dog: 'Woof woof!', fox: 'Yip yip!', cat: 'Purrrrr!', blackcat: 'Purrrrr!' };
+  var HAPPY_SAY = {
+    dog: 'Woof woof!', fox: 'Yip yip!', cat: 'Purrrrr!',
+    blackcat: 'Purrrrr!', fish: 'Blub blub!'
+  };
 
   /* Prizes live in the toy box in the corner, and belong to the pet that won
-     them — every pet fills its own toy box from scratch. */
-  var PRIZES = [
+     them — every pet fills its own toy box from scratch. A fish lives in a
+     tank rather than a room, so it has its own set to decorate that with. */
+  var LAND_PRIZES = [
     { id: 'party', kind: 'hat', label: 'Party Hat', icon: 'hatParty' },
     { id: 'crown', kind: 'hat', label: 'Crown', icon: 'hatCrown' },
     { id: 'witch', kind: 'hat', label: 'Witch Hat', icon: 'hatWitch' },
@@ -83,6 +87,25 @@
     { id: 'skullbanner', kind: 'banner', label: 'Skull Lights', icon: 'bannerSkull' },
     { id: 'candyrug', kind: 'rug', label: 'Candy Corn Rug', icon: 'rugCandy' }
   ];
+
+  var FISH_PRIZES = [
+    { id: 'party', kind: 'hat', label: 'Party Hat', icon: 'hatParty' },
+    { id: 'crown', kind: 'hat', label: 'Crown', icon: 'hatCrown' },
+    { id: 'witch', kind: 'hat', label: 'Witch Hat', icon: 'hatWitch' },
+    { id: 'bow', kind: 'hat', label: 'Bow', icon: 'hatBow' },
+    { id: 'castle', kind: 'picture', label: 'Sand Castle', icon: 'ornCastle' },
+    { id: 'pineapple', kind: 'picture', label: 'Pineapple House', icon: 'ornPineapple' },
+    { id: 'pirate', kind: 'picture', label: 'Pirate Ship', icon: 'ornPirate' },
+    { id: 'deep', kind: 'wallpaper', label: 'Deep Blue Water', icon: 'waterDeep' },
+    { id: 'kelp', kind: 'plant', label: 'Tall Kelp', icon: 'plantKelp' },
+    { id: 'bubbler', kind: 'banner', label: 'Bubble Curtain', icon: 'bubbler' },
+    { id: 'gravel', kind: 'rug', label: 'Rainbow Gravel', icon: 'gravelRainbow' }
+  ];
+
+  var ALL_PRIZES = LAND_PRIZES.concat(FISH_PRIZES);
+
+  function isFish(p) { return !!(p || pet) && (p || pet).species === 'fish'; }
+  function prizeList(p) { return isFish(p || pet) ? FISH_PRIZES : LAND_PRIZES; }
 
   /* Wallpaper the room can be redecorated with. `rose` is what a room starts
      out with; the rest come out of the toy box. */
@@ -247,9 +270,10 @@
 
   var PRIZE_LEVEL = 85;       // a meter counts as topped up at this much
 
-  function prizeById(id) {
+  function prizeById(id, p) {
     id = PRIZE_ALIAS[id] || id;
-    for (var i = 0; i < PRIZES.length; i++) if (PRIZES[i].id === id) return PRIZES[i];
+    var list = p ? prizeList(p) : ALL_PRIZES;
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
     return null;
   }
 
@@ -500,7 +524,7 @@
     p.sick = !!p.sick;
     if (!Array.isArray(p.prizes)) p.prizes = [];
     p.prizes = p.prizes.map(function (id) { return PRIZE_ALIAS[id] || id; })
-      .filter(function (id, i, all) { return prizeById(id) && all.indexOf(id) === i; });
+      .filter(function (id, i, all) { return prizeById(id, p) && all.indexOf(id) === i; });
     if (typeof p.prizeNew !== 'number') p.prizeNew = 0;
     if (!p.best || typeof p.best !== 'object') p.best = {};
     if (p.best.mouse !== undefined && p.best.wand === undefined) p.best.wand = p.best.mouse;
@@ -512,7 +536,7 @@
       if (p[slot] && p.prizes.indexOf(PRIZE_ALIAS[p[slot]] || p[slot]) < 0) p[slot] = null;
       else if (p[slot]) p[slot] = PRIZE_ALIAS[p[slot]] || p[slot];
     });
-    if (p.wallpaper && !WALLPAPERS[p.wallpaper]) p.wallpaper = null;
+    if (p.wallpaper && p.species !== 'fish' && !WALLPAPERS[p.wallpaper]) p.wallpaper = null;
     if (typeof p.sickT !== 'number') p.sickT = 0;
     if (typeof p.milkRun !== 'number') p.milkRun = 0;
     if (!Array.isArray(p.messes)) p.messes = [];
@@ -827,7 +851,176 @@
   /* ------------------------------------------------------------------ */
   /* the room                                                            */
   /* ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* the fish tank                                                       */
+  /* ------------------------------------------------------------------ */
+  /* A fish gets a tank instead of a room: water top to bottom, sand along
+     the floor, one rock and one plant. No wallpaper, no window, no pictures
+     on the wall — there is no wall. */
+  var WATERS = {
+    plain: { top: '#9ce0ff', low: '#3f9ecd', glint: '#d6f2ff', sand: '#ecd6a0', sandDark: '#cfb47e' },
+    deep: { top: '#4a9bd8', low: '#173f70', glint: '#7fc4ec', sand: '#d8c79e', sandDark: '#b8a37a' }
+  };
+
+  function tankWater() {
+    return WATERS[(pet && pet.wallpaper) || 'plain'] || WATERS.plain;
+  }
+
+  // where everything sits on the sand
+  function tankChest() { return { x: 10, y: room.groundY + 3 }; }
+  function tankOrnament() { return { x: Math.round(W / 2) + 10, y: room.groundY + 4 }; }
+
+  function drawTank(L, t) {
+    var wt = tankWater();
+    var fy = room.floorY, gy = room.groundY;
+
+    // the water, deepening smoothly toward the sand
+    for (var wy = 0; wy < H; wy++) {
+      L.rect(0, wy, W, 1, C(mixHex(wt.top, wt.low, clamp(wy / (gy + 4), 0, 1))));
+    }
+    // a few slow caustic streaks near the surface
+    var caustic = C(wt.glint);
+    for (var cw = 0; cw < 4; cw++) {
+      var cx0 = ((t * 3 + cw * 27) % (W + 24)) - 12;
+      L.rect(cx0, 5 + cw * 4, 7, 1, caustic);
+      L.rect(cx0 + 9, 5 + cw * 4, 3, 1, caustic);
+    }
+
+    // sand, with a soft dune line
+    var sandC = C(wt.sand), sandD = C(wt.sandDark);
+    var rainbow = pet && pet.rug === 'gravel';
+    for (var x = 0; x < W; x++) {
+      var top = gy + 2 + Math.round(Math.sin(x * 0.22) * 1.4);
+      L.rect(x, top, 1, H - top, sandC);
+      L.set(x, top, sandD);
+      if (rainbow) {
+        // coloured gravel scattered through the top of the sand
+        var cols = ['#ff8fb0', '#ffd93d', '#8ee86a', '#9ad0ff', '#c8a4ff'];
+        for (var gy2 = top + 1; gy2 < Math.min(H, top + 20); gy2 += 3) {
+          if ((x * 2 + gy2) % 7 > 1) continue;
+          var gc = C(cols[(x * 3 + gy2) % cols.length]);
+          L.set(x, gy2, gc);
+          L.set(x + 1, gy2, gc);
+        }
+      }
+    }
+
+    // one small rock
+    stampOutlined(L, 24, gy + 5, function (b, bx, by) {
+      b.ellipse(bx, by, 6, 3.6, C('#8f95a8'));
+      b.ellipse(bx - 1.4, by - 1.2, 3.4, 1.8, C('#aab0c2'));
+      b.set(bx + 2, by + 1, C('#6f7488'));
+    });
+
+    // the ornament a prize can put in, sitting on the sand
+    drawOrnament(L, t);
+
+    // one small plant, which still grows and still wants a trim
+    var pl = plantShape();
+    drawTankPlant(L, pl, t);
+
+    // the prize chest, in place of the toy box
+    var ch = tankChest();
+    var chestNew = !!pet && pet.prizeNew > 0;
+    var lid = chestNew ? Math.sin(t * 3) * 1.2 - 1.5 : 0;
+    void fy;
+    stampOutlined(L, ch.x, ch.y, function (b, bx, by) {
+      b.rect(bx - 6, by - 3, 13, 8, C('#b07a3a'));
+      b.rect(bx - 6, by - 1, 13, 1, C('#d19a54'));
+      b.rect(bx - 6, by - 6 + lid, 13, 3, C('#c98f4b'));
+      b.rect(bx - 6, by - 6 + lid, 13, 1, C('#e0b273'));
+      b.rect(bx - 1, by - 3, 3, 3, C(chestNew ? '#ffe07a' : '#e6c34a'));
+    });
+  }
+
+  /* The tank plant: a clump of fronds that grows like the houseplant and
+     can be trimmed the same way. Kelp is the taller prize version. */
+  function drawTankPlant(L, pl, t) {
+    var kelp = !!(pet && pet.plantStyle === 'kelp');
+    var lv = pl.lv;
+    var baseY = room.groundY + 4;
+    var blades = kelp ? 5 : 3;
+    var tall = (kelp ? 16 : 10) + lv * (kelp ? 16 : 12);
+    var dark = C(kelp ? '#2f8f5c' : '#4ea832'), litc = C(kelp ? '#5fc98a' : '#7ed957');
+    stampOutlined(L, pl.cx, baseY, function (b, bx, by) {
+      for (var i = 0; i < blades; i++) {
+        var off = (i - (blades - 1) / 2) * 3.2;
+        var h = tall * (0.65 + 0.35 * Math.abs(Math.cos(i * 1.7)));
+        var sway = Math.sin(t * 1.1 + i * 0.9) * (2 + lv * 2.5);
+        for (var k = 0; k <= h; k++) {
+          var f = k / h;
+          var px = bx + off + sway * f * f + Math.sin(f * 3 + i) * 1.2;
+          var wdt = 1.4 * Math.sin(Math.PI * Math.min(1, f * 1.15 + 0.12));   // tapered blade
+          b.ellipse(px, by - k, wdt, 0.6, f > 0.55 ? litc : dark);
+        }
+      }
+    }, true);
+  }
+
+  /* Castle, pineapple house or pirate ship — whichever ornament is out. */
+  function drawOrnament(L, t) {
+    if (!pet || !pet.picture) return;
+    var orn = tankOrnament(), gx = orn.x, gy = orn.y;
+    if (pet.picture === 'castle') {
+      stampOutlined(L, gx, gy, function (b, bx, by) {
+        b.rect(bx - 6, by - 8, 12, 8, C('#e8d3a8'));
+        b.rect(bx - 6, by - 8, 12, 1, C('#f6e6c4'));
+        b.rect(bx - 8, by - 11, 3, 11, C('#e8d3a8'));
+        b.rect(bx + 5, by - 11, 3, 11, C('#e8d3a8'));
+        b.rect(bx - 8, by - 12, 3, 1, C('#d9bd8c'));
+        b.rect(bx + 5, by - 12, 3, 1, C('#d9bd8c'));
+        b.rect(bx - 1.5, by - 5, 3, 5, C('#7f6a48'));    // doorway
+        b.set(bx - 6.5, by - 9.5, C('#d9bd8c'));
+        b.set(bx + 6, by - 9.5, C('#d9bd8c'));
+        b.rect(bx - 0.5, by - 15, 1, 4, C('#c9d6e2'));   // flag pole
+        b.tri(bx, by - 15, bx, by - 12.8, bx + 3.5, by - 14, C('#ff5f8f'));
+      }, true);
+    } else if (pet.picture === 'pineapple') {
+      stampOutlined(L, gx, gy, function (b, bx, by) {
+        b.ellipse(bx, by - 6, 6, 6.6, C('#ffc61f'));
+        b.ellipse(bx - 1.6, by - 8.4, 3, 3, C('#ffd93d'));
+        for (var r = -4; r <= 3; r += 3) {               // crosshatch skin
+          for (var c2 = -4; c2 <= 4; c2 += 3) b.set(bx + c2, by + r - 3, C('#e0a41a'));
+        }
+        b.rect(bx - 2, by - 3, 4, 3, C('#7f5a2a'));      // door
+        b.ellipse(bx - 3.4, by - 8, 1.3, 1.3, C('#c8f0ff'));
+        b.ellipse(bx + 3, by - 8, 1.3, 1.3, C('#c8f0ff'));
+        b.tri(bx - 3, by - 12, bx - 1, by - 12, bx - 4, by - 15, C('#4ea832'));
+        b.tri(bx - 1, by - 12, bx + 1.5, by - 12, bx, by - 15.8, C('#63c93f'));
+        b.tri(bx + 0.5, by - 12, bx + 3, by - 12, bx + 4, by - 14.6, C('#4ea832'));
+      }, true);
+    } else if (pet.picture === 'pirate') {
+      stampOutlined(L, gx, gy, function (b, bx, by) {
+        b.tri(bx - 9, by - 6, bx + 9, by - 6, bx + 6, by, C('#8a5a2a'));
+        b.rect(bx - 9, by - 8, 18, 3, C('#a06a3c'));
+        b.rect(bx - 9, by - 8, 18, 1, C('#c08a54'));
+        b.rect(bx - 0.5, by - 14, 1.5, 7, C('#7f5a2a'));   // mast
+        b.tri(bx + 1, by - 13.5, bx + 1, by - 8.5, bx + 6, by - 11, C('#f4efe6'));
+        b.tri(bx - 1, by - 12.5, bx - 1, by - 9, bx - 5, by - 11, C('#e6ddd0'));
+        b.set(bx + 3, by - 11, C('#3a2b40'));
+        b.rect(bx - 1.5, by - 16, 3.5, 2.2, C('#3a2b40'));   // flag
+        b.set(bx - 0.5, by - 15.4, C('#f4efe6'));
+        b.set(bx + 1, by - 15.4, C('#f4efe6'));
+      }, true);
+    }
+  }
+
+  /* The bubble curtain prize: a stream of bubbles rising up one side. */
+  function drawBubbler(L, t) {
+    if (!pet || pet.banner !== 'bubbler') return;
+    var bx = W - 6;
+    for (var i = 0; i < 9; i++) {
+      var p = ((t * 0.34) + i / 9) % 1;
+      var y = room.groundY + 4 - p * (room.groundY + 2);
+      var x = bx + Math.sin(p * 9 + i) * 2.2;
+      var r = 1 + p * 1.4;
+      L.ellipse(x, y, r, r, C('#dff3ff'));
+      L.set(x - r * 0.5, y - r * 0.5, C('#ffffff'));
+    }
+  }
+
   function drawRoom(L, t) {
+    if (isFish()) return drawTank(L, t);
     var paper = WALLPAPERS[(pet && pet.wallpaper) || 'rose'] || WALLPAPERS.rose;
     var wall = C(paper.wall), wallLow = C(paper.low), trim = C(paper.trim);
     var floor = C('#f6cf95'), plank = C('#e0b273'), floorEdge = C('#c99a5f');
@@ -1378,7 +1571,7 @@
      into the toy box, and the box lights up until you go and look. Nothing
      covers the screen, so play is never interrupted. */
   function awardPrize() {
-    var left = PRIZES.filter(function (p) { return !hasPrize(p.id); });
+    var left = prizeList(pet).filter(function (p) { return !hasPrize(p.id); });
     if (!left.length) return null;
     var won = left[Math.floor(Math.random() * left.length)];
     pet.prizes.push(won.id);
@@ -1417,7 +1610,8 @@
      stays bright after dark instead of being dimmed along with the walls. */
   function drawToyBoxGlow(L, t) {
     if (!pet || pet.prizeNew <= 0) return;
-    var fy = room.floorY, cx = 8, cy = fy - 2;
+    var ch = isFish() ? tankChest() : { x: 8, y: room.floorY - 1 };
+    var fy = ch.y + 1, cx = ch.x, cy = ch.y - 1;
     var pulse = 0.5 + 0.5 * Math.sin(t * 3.4);
     var reach = 5 + pulse * 2.5;
     var lit = C('#fff3c8'), warm = C('#ffe98a');
@@ -1427,7 +1621,7 @@
     for (var y = Math.floor(cy - 7 - reach); y <= Math.ceil(cy + 7 + reach); y++) {
       for (var x = Math.floor(cx - 9 - reach); x <= Math.ceil(cx + 9 + reach); x++) {
         if (x < 0 || y < 0 || x >= W || y >= H) continue;
-        if (x <= 17 && y >= fy - 9 && y <= fy + 4) continue;   // the box itself
+        if (x <= cx + 9 && x >= cx - 9 && y >= fy - 9 && y <= fy + 4) continue;   // the box itself
         var ex = Math.max(0, Math.abs(x - cx) - 8.5);
         var ey = Math.max(0, Math.abs(y - cy) - 6);
         var d = Math.sqrt(ex * ex + ey * ey);
@@ -1440,9 +1634,11 @@
     var tw = Math.sin(t * 4);
     if (tw > -0.3) {
       L.stamp(['..#..', '.###.', '#####', '.###.', '..#..'], { '#': C('#fffbe6') },
-        13, fy - 15 + Math.round(tw));
+        cx + 5, fy - 15 + Math.round(tw));
     }
-    if (tw < 0.4) L.stamp(['.#.', '###', '.#.'], { '#': C('#fff6d0') }, 2, fy - 13 - Math.round(tw * 2));
+    if (tw < 0.4) {
+      L.stamp(['.#.', '###', '.#.'], { '#': C('#fff6d0') }, cx - 6, fy - 13 - Math.round(tw * 2));
+    }
   }
 
   /* Tap the window five times and something flies past outside. */
@@ -1455,6 +1651,7 @@
   }
 
   function tapWindow(x, y) {
+    if (isFish()) return false;
     var bb = windowBounds();
     if (x < bb.x0 || x > bb.x1 || y < bb.y0 || y > bb.y1) return false;
     if (rt.t - rt.winTapT > 3) rt.winTaps = 0;   // the taps have to be in a run
@@ -1474,24 +1671,33 @@
   /* Once you have won a picture you can swap the two over by tapping the
      frame on the wall — no need to go through the toy box. */
   function pictureBounds() {
+    if (isFish()) {
+      var o = tankOrnament();
+      return { x0: o.x - 12, x1: o.x + 12, y0: o.y - 30, y1: o.y + 4 };
+    }
     var py = pictureY();
     return { x0: W - 20, x1: W - 5, y0: py - 1, y1: py + 13 };
   }
 
+  /* Tapping the picture on the wall — or the ornament on the sand — steps
+     through the ones you have won and then back to none. */
   function tapPicture(x, y) {
-    var pic = null;
-    for (var i = 0; i < PRIZES.length; i++) {
-      if (PRIZES[i].kind === 'picture' && hasPrize(PRIZES[i].id)) pic = PRIZES[i];
-    }
-    if (!pic) return false;
+    var owned = prizeList(pet).filter(function (pz) {
+      return pz.kind === 'picture' && hasPrize(pz.id);
+    });
+    if (!owned.length) return false;
     var bb = pictureBounds();
     if (x < bb.x0 || x > bb.x1 || y < bb.y0 || y > bb.y1) return false;
-    var on = pet.picture === pic.id;
-    pet.picture = on ? null : pic.id;
+
+    var seq = [null];
+    for (var i = 0; i < owned.length; i++) seq.push(owned[i].id);
+    var next = seq[(seq.indexOf(pet.picture) + 1) % seq.length];
+    pet.picture = next;
     Sfx.click();
-    say(on ? PUT_AWAY.picture : PUT_UP.picture, 1800);
+    say(next ? PUT_UP.picture : PUT_AWAY.picture, 1800);
+    var cx = (bb.x0 + bb.x1) / 2;
     for (var s = 0; s < 5; s++) {
-      spawn('sparkle', (W - 13) + (Math.random() - 0.5) * 12, bb.y0 + Math.random() * 12,
+      spawn('sparkle', cx + (Math.random() - 0.5) * 12, bb.y1 - 4 - Math.random() * 12,
         { vx: (Math.random() - 0.5) * 12, vy: -10, g: 20, max: 0.8 });
     }
     save();
@@ -1499,6 +1705,10 @@
   }
 
   function toyBoxBounds() {
+    if (isFish()) {
+      var ch = tankChest();
+      return { x0: ch.x - 9, x1: ch.x + 9, y0: ch.y - 9, y1: ch.y + 7 };
+    }
     return { x0: 1, x1: 16, y0: room.floorY - 9, y1: room.floorY + 4 };
   }
 
@@ -1526,6 +1736,14 @@
   function plantShape() {
     var lv = clamp(db.plant / 100, 0, 1);
     var wild = db.plant >= PLANT_WILD;
+    if (isFish()) {
+      // in the tank it is a clump of fronds rooted in the sand
+      var tall = (pet.plantStyle === 'kelp' ? 16 : 10) + lv * (pet.plantStyle === 'kelp' ? 16 : 12);
+      return {
+        lv: lv, wild: wild, crown: 3, cx: W - 12, baseY: room.groundY + 4,
+        stem: tall, top: room.groundY + 4 - tall
+      };
+    }
     var crown = wild ? 14 : 9;          // how far the leaves reach above the stem
     var baseY = room.floorY - 4;        // the rim of the pot
     var cap = Math.max(3, (baseY - 4) - (pictureY() + 13) - crown);
@@ -1541,7 +1759,7 @@
     var s = plantShape();
     return {
       x0: s.cx - 15, x1: s.cx + 15,
-      y0: s.top - s.crown - 2, y1: room.floorY + 3
+      y0: s.top - s.crown - 2, y1: isFish() ? room.groundY + 9 : room.floorY + 3
     };
   }
 
@@ -2980,8 +3198,9 @@
     L.record(null);
     L.clear(C('#ffe6f2'));
     drawRoom(L, rt.t);
-    // the pet's floor shadow follows it off screen on a trip outside
-    L.ellipse(W / 2 + looOffset(), room.groundY + 1, 13, 2.5, C('#e0b273'));
+    // the pet's floor shadow follows it off screen on a trip outside; a fish
+    // floats, so it does not cast one
+    if (!isFish()) L.ellipse(W / 2 + looOffset(), room.groundY + 1, 13, 2.5, C('#e0b273'));
 
     // everything from here on is an object in the room, not the room itself,
     // so it is flagged to keep its own colours whatever the light is doing
@@ -2989,8 +3208,9 @@
 
     drawToyBoxGlow(L, rt.t);
     drawBannerLights(L, rt.t);
+    drawBubbler(L, rt.t);
 
-    var inBed = rt.sleep && (sky.night > 0.45 || rt.sleep.byPlayer);
+    var inBed = rt.sleep && !isFish() && (sky.night > 0.45 || rt.sleep.byPlayer);
     if (inBed) drawBedBack(L, W / 2, room.groundY + 3);
 
     if (rt.props.tub) drawTub(L, rt.props.tub.x, rt.props.tub.y, true, rt.t);
@@ -3029,6 +3249,7 @@
     // a pounce at the wand throws the whole pet toward the toy for a moment
     var lunge = rt.pounce ? Math.sin(clamp(rt.pounce.t / 0.4, 0, 1) * Math.PI) : 0;
     var petDX = (rt.pounce ? rt.pounce.dir * 8 * lunge : 0) + looOffset();
+    if (isFish() && !rt.activity && !rt.tool) petDX += Math.sin(rt.t * 0.5) * 5;
     if (!rt.intro || rt.intro.popped) {
       L.blit(petLayer, Math.round(W / 2 - Pets.SIZE / 2 + petDX),
         Math.round(room.groundY - Pets.FEET + blitDY - lunge * 7));
@@ -3591,14 +3812,14 @@
     plant: 'plantStyle', banner: 'banner', rug: 'rug'
   };
   var PUT_UP = {
-    hat: 'How do I look?', picture: 'Look at my new picture!',
-    wallpaper: 'What a spooky room!', plant: 'A prickly new friend!',
-    banner: 'Spooky lights!', rug: 'What a cosy rug!'
+    hat: 'How do I look?', picture: 'Look at my new ornament!',
+    wallpaper: 'What a lovely place!', plant: 'A new friend to swim round!',
+    banner: 'Ooh, sparkly!', rug: 'What a comfy floor!'
   };
   var PUT_AWAY = {
-    hat: 'Hat off!', picture: 'Back to the old one!',
-    wallpaper: 'Back to the old walls!', plant: 'My plant is back!',
-    banner: 'Lights out!', rug: 'Back to the old rug!'
+    hat: 'Hat off!', picture: 'Put away again!',
+    wallpaper: 'Back to how it was!', plant: 'My old plant is back!',
+    banner: 'All quiet again!', rug: 'Back to the old floor!'
   };
 
   function prizeInUse(pz) {
@@ -3630,12 +3851,12 @@
     el.prizeGrid.innerHTML = '';
     var owned = pet.prizes.length;
     el.prizeSub.textContent = owned
-      ? pet.name + ' has ' + owned + ' of ' + PRIZES.length +
+      ? pet.name + ' has ' + owned + ' of ' + prizeList(pet).length +
         ' — tap one to use it straight away'
       : pet.name + ' has not won anything yet. Top up two meters at once, ' +
         'or do well in a game, to win a prize!';
 
-    PRIZES.forEach(function (pz) {
+    prizeList(pet).forEach(function (pz) {
       var got = hasPrize(pz.id);
       var on = prizeInUse(pz);
       var card = document.createElement(got ? 'button' : 'div');
@@ -3730,6 +3951,7 @@
     cat: ['Mochi', 'Biscuit', 'Pumpkin', 'Nimbus', 'Waffles', 'Pickle', 'Sushi', 'Muffin'],
     fox: ['Ember', 'Ginger', 'Maple', 'Sunny', 'Pepper', 'Clementine', 'Rusty', 'Nutmeg'],
     blackcat: ['Shadow', 'Midnight', 'Onyx', 'Luna', 'Binx', 'Sooty', 'Pepper', 'Olive'],
+    fish: ['Bubbles', 'Finn', 'Splash', 'Coral', 'Goldie', 'Nemo', 'Guppy', 'Marina'],
     dog: ['Spot', 'Domino', 'Patch', 'Buddy', 'Freckle', 'Pongo', 'Cookie', 'Dot']
   };
 

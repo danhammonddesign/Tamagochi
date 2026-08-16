@@ -128,6 +128,36 @@
       cardBg: '#ecebe9',
       thumbBg: '#f3f2f0',
       thumbShade: '#dedcda'
+    },
+    fish: {
+      id: 'fish',
+      label: 'Fish',
+      emoji: '🐠',
+      blurb: 'Bubbly and bright',
+      body: 'fish',                 // swims instead of standing, and lives in a tank
+      fur: '#ff8a3d',
+      furLight: '#ffb066',
+      furDark: '#d96a24',
+      cream: '#ffe0b8',
+      creamShade: '#f0c894',
+      finColor: '#ffd07a',
+      innerEar: '#ffd07a',
+      earTip: null,
+      paw: '#ffd07a',
+      nose: '#141014',
+      blush: '#ff9ec4',
+      outline: '#141014',
+      eyeStyle: 'round',
+      eyeColor: '#141014',
+      tailTip: '#ffd07a',
+      whiskers: false,
+      earLean: 0,
+      tailBushy: false,
+      cheekPatch: false,
+      foreheadStripes: false,
+      cardBg: '#bfe9ff',
+      thumbBg: '#dff3ff',
+      thumbShade: '#bfe9ff'
     }
   };
 
@@ -270,10 +300,145 @@
 
   /* Draws the pet into `L` (a SIZE x SIZE layer, cleared by the caller).
      opts: { bob, tailWag, earWig, eyes, mouth, dirty, lean, sparkle } */
+  /* A little mouth at the snout. The pet's mouth states are shared with the
+     other animals, but a wide muzzle smile makes no sense in profile. */
+  function fishMouth(L, sp, mx, my, state) {
+    var dark = C(sp.outline);
+    switch (state) {
+      case 'open':
+      case 'wide':
+        L.ellipse(mx - 1, my, 1.7, 1.6, dark);
+        L.ellipse(mx - 1, my + 0.3, 0.9, 0.8, C('#ff7f9f'));
+        break;
+      case 'frown':
+        L.set(mx, my - 1, dark);
+        L.set(mx - 1, my, dark);
+        L.set(mx - 2, my + 0.5, dark);
+        break;
+      case 'angry':
+        L.rect(mx - 3, my, 3.5, 1, dark);
+        break;
+      case 'snooze':
+        L.ellipse(mx - 1, my, 1.2, 1.1, dark);
+        break;
+      default:                       // smile
+        L.rect(mx - 1, my, 3, 1, dark);
+        L.set(mx + 2, my - 1, dark);
+        L.set(mx - 2, my - 1, dark);
+    }
+  }
+
+  /* A fish is a different animal altogether — no legs, no ears, no standing
+     up — so it gets its own sprite. It still grows from the same stage
+     numbers and takes the same eyes, mouth, hat and scrubbable spots, so
+     everything the game does to a pet works on it too. */
+  function drawFish(L, sp, st, opts) {
+    var fur = C(sp.fur), furL = C(sp.furLight), furD = C(sp.furDark);
+    var cream = C(sp.cream), ink = C(sp.outline), fin = C(sp.finColor || sp.furLight);
+
+    var brx = st.body[0] * 1.85, bry = st.body[1] * 1.15;
+    var bob = opts.bob || 0;
+    var lean = opts.lean || 0;
+    var sleep = opts.sleep || 0;
+    var wag = opts.tailWag || 0;
+
+    var cx = SIZE / 2 + lean * 0.6;
+    var cy = FEET - bry - 12 + bob;          // it floats above the sand, not on it
+
+    // body first, so every fin can be laid over it and read as attached
+    L.ellipse(cx, cy, brx + 1, bry + 1, ink);
+    L.ellipse(cx, cy, brx, bry, fur);
+    L.ellipse(cx - brx * 0.25, cy - bry * 0.4, brx * 0.45, bry * 0.4, furL);
+    L.ellipse(cx - brx * 0.02, cy + bry * 0.62, brx * 0.52, bry * 0.26, cream);
+    L.set(cx - brx * 0.5, cy + bry * 0.05, furD);
+    L.set(cx - brx * 0.2, cy + bry * 0.25, furD);
+
+    // tail fin, sweeping out behind
+    var tx = cx - brx * 0.72, tl = st.tail[0] * 0.62, th = st.tail[1] * 1.5;
+    L.tri(tx, cy - 1, tx - tl - 1, cy - th - 1 + wag, tx - tl - 1, cy + th + 1 + wag, ink);
+    L.tri(tx, cy, tx - tl, cy - th + wag, tx - tl, cy + th + wag, fin);
+
+    // dorsal and belly fins, overlapping the body so they are joined on
+    L.tri(cx - brx * 0.36, cy - bry * 0.55, cx - brx * 0.02, cy - bry * 0.55,
+      cx - brx * 0.2, cy - bry - 4.2 - wag * 0.4, ink);
+    L.tri(cx - brx * 0.32, cy - bry * 0.55, cx - brx * 0.05, cy - bry * 0.55,
+      cx - brx * 0.19, cy - bry - 3.2 - wag * 0.4, fin);
+    L.tri(cx - brx * 0.22, cy + bry * 0.5, cx + brx * 0.1, cy + bry * 0.5,
+      cx - brx * 0.06, cy + bry + 3.2 + wag * 0.3, ink);
+    L.tri(cx - brx * 0.18, cy + bry * 0.5, cx + brx * 0.07, cy + bry * 0.5,
+      cx - brx * 0.06, cy + bry + 2.3 + wag * 0.3, fin);
+
+    // side fin, small and low on the flank
+    var sfx = cx + brx * 0.24, sfy = cy + bry * 0.2;
+    L.ellipse(sfx, sfy, brx * 0.15 + 1, bry * 0.2 + 1, ink);
+    L.ellipse(sfx, sfy, brx * 0.15, bry * 0.2, fin);
+
+    // face — one eye and a little mouth, since it swims in profile
+    var eyeR = st.eye * 1.25 * (1 - 0.55 * sleep);
+    var eyeX = cx + brx * 0.44, eyeY = cy - bry * 0.34;
+    drawEye(L, sp, eyeX, eyeY, eyeR, opts.eyes || 'open', 1);
+    L.ellipse(eyeX - 0.5, eyeY + eyeR + 2.4, 1.8, 1, C(sp.blush));
+    fishMouth(L, sp, cx + brx * 0.82, cy + bry * 0.14, opts.mouth || 'smile');
+
+    if (opts.spots && opts.spots.length) {
+      var mud = C('#8a6a45'), mudD = C('#6d5233');
+      for (var d2 = 0; d2 < opts.spots.length; d2++) {
+        var s2 = opts.spots[d2];
+        var sx = cx + (s2.x - SIZE / 2) * 0.8, sy = cy + (s2.y - (FEET - st.body[1] - 2.5)) * 0.6;
+        if (s2.kind === 'tuft') {
+          var dir = s2.flip ? 1 : -1;
+          L.tri(sx - 1.6, sy + 1.2, sx + 1.6, sy + 1.2, sx + dir * 2, sy - 2.6, furD);
+        } else {
+          L.disc(sx, sy, 1.6, mud);
+          L.set(sx, sy, mudD);
+        }
+      }
+    }
+    if (opts.foam && opts.foam.length) {
+      for (var f = 0; f < opts.foam.length; f++) {
+        L.disc(cx + (opts.foam[f].x - SIZE / 2) * 0.8,
+          cy + (opts.foam[f].y - (FEET - st.body[1] - 2.5)) * 0.6, opts.foam[f].r, C('#ffffff'));
+      }
+    }
+    if (opts.drips && opts.drips.length) {
+      for (var dp = 0; dp < opts.drips.length; dp++) {
+        L.ellipse(cx + (opts.drips[dp].x - SIZE / 2) * 0.8,
+          cy + (opts.drips[dp].y - (FEET - st.body[1] - 2.5)) * 0.6, 1.5, 2, C('#7fd8ff'));
+      }
+    }
+
+    L.outline(ink);
+
+    if (opts.sick) {
+      var iceX = cx + brx * 0.2, iceY = cy - bry - 1.5;
+      L.ellipse(iceX, iceY, brx * 0.34 + 1, bry * 0.22 + 1, ink);
+      L.ellipse(iceX, iceY, brx * 0.34, bry * 0.22, C('#9adcf8'));
+      L.ellipse(iceX - brx * 0.12, iceY - 0.6, brx * 0.12, 0.7, C('#dff3ff'));
+    }
+    if (opts.hat) drawHat(L, opts.hat, cx + brx * 0.25, cy - bry * 0.55, brx * 0.5, bry * 0.75, ink);
+    if (opts.shine) {
+      var sh = C('#ffffff');
+      var pts = [[cx - brx * 0.3, cy - bry * 0.6], [cx + brx * 0.4, cy - bry * 0.3],
+                 [cx, cy + bry * 0.5]];
+      for (var q = 0; q < pts.length; q++) {
+        if ((opts.shine * 3) < q) break;
+        L.set(pts[q][0], pts[q][1], sh);
+        L.set(pts[q][0] - 1, pts[q][1] + 1, sh);
+        L.set(pts[q][0] + 1, pts[q][1] + 1, sh);
+      }
+    }
+
+    return {
+      cx: cx, top: cy - bry - 4, bottom: cy + bry + 3,
+      headX: cx + brx * 0.4, headY: cy, headR: brx * 0.5
+    };
+  }
+
   function drawPet(L, speciesId, stageKey, opts) {
     opts = opts || {};
     var sp = SPECIES[speciesId] || SPECIES.fox;
     var st = STAGES[stageIndex(stageKey)];
+    if (sp.body === 'fish') return drawFish(L, sp, st, opts);
 
     var fur = C(sp.fur), furL = C(sp.furLight), furD = C(sp.furDark);
     var cream = C(sp.cream), creamS = C(sp.creamShade);

@@ -52,6 +52,76 @@
       L.disc(8, 4, 3.2, C('#fff3a8'));
       L.disc(8, 1.4, 1.1, C('#ff5f8f'));
     },
+    ornCastle: function (L) {                  // sand castle ornament
+      L.rect(4, 6, 8, 8, C('#e8d3a8'));
+      L.rect(4, 6, 8, 1, C('#f6e6c4'));
+      L.rect(1, 3, 3, 11, C('#e8d3a8'));
+      L.rect(12, 3, 3, 11, C('#e8d3a8'));
+      L.rect(1, 2, 3, 1, C('#d9bd8c'));
+      L.rect(12, 2, 3, 1, C('#d9bd8c'));
+      L.rect(6, 10, 4, 4, C('#7f6a48'));
+      L.rect(7, 0, 1, 4, C('#c9d6e2'));
+      L.tri(8, 0, 8, 3, 12, 1.5, C('#ff5f8f'));
+    },
+    ornPineapple: function (L) {               // pineapple house ornament
+      L.ellipse(8, 9, 5.6, 6, C('#ffc61f'));
+      L.ellipse(6.4, 6, 2.6, 2.6, C('#ffd93d'));
+      for (var r = 4; r <= 13; r += 3) {
+        for (var c2 = 4; c2 <= 12; c2 += 3) L.set(c2, r, C('#e0a41a'));
+      }
+      L.rect(6.5, 11, 3, 4, C('#7f5a2a'));
+      L.disc(5, 7.5, 1.2, C('#c8f0ff'));
+      L.disc(11, 7.5, 1.2, C('#c8f0ff'));
+      L.tri(5, 3, 7, 3, 4, 0, C('#4ea832'));
+      L.tri(7, 3, 9, 3, 8, 0, C('#63c93f'));
+      L.tri(9, 3, 11, 3, 12, 0.5, C('#4ea832'));
+    },
+    ornPirate: function (L) {                  // pirate ship ornament
+      L.tri(1, 10, 15, 10, 12, 15, C('#8a5a2a'));
+      L.rect(1, 9, 14, 2, C('#a06a3c'));
+      L.rect(1, 9, 14, 1, C('#c08a54'));
+      L.rect(7.5, 1, 1.5, 9, C('#7f5a2a'));
+      L.tri(9, 2, 9, 8, 14, 5, C('#f4efe6'));
+      L.tri(7.5, 3, 7.5, 8, 3, 5.5, C('#e6ddd0'));
+      L.rect(6, 0, 4, 2, C('#3a2b40'));
+      L.set(7, 0.6, C('#f4efe6'));
+      L.set(9, 0.6, C('#f4efe6'));
+    },
+    waterDeep: function (L) {                  // a swatch of deep water
+      L.rect(1, 1, 14, 14, C('#2b6fae'));
+      L.rect(1, 1, 14, 5, C('#3f8fd0'));
+      L.rect(1, 11, 14, 4, C('#1d5089'));
+      L.rect(3, 3, 6, 1, C('#6fb4e8'));
+      L.rect(9, 6, 4, 1, C('#6fb4e8'));
+      L.rect(2, 8, 5, 1, C('#6fb4e8'));
+    },
+    plantKelp: function (L) {                  // tall kelp
+      for (var i = 0; i < 3; i++) {
+        var x0 = 3 + i * 4.5;
+        for (var y = 2 + (i % 2) * 2; y < 15; y++) {
+          var xx = x0 + Math.sin((y + i * 3) * 0.5) * 1.4;
+          L.set(xx, y, C(y < 8 ? '#5fc98a' : '#2f8f5c'));
+          L.set(xx + 1, y, C(y < 8 ? '#5fc98a' : '#2f8f5c'));
+        }
+      }
+      L.rect(0, 14, 16, 2, C('#f0dca8'));
+    },
+    bubbler: function (L) {                    // a rising curtain of bubbles
+      L.rect(1, 13, 14, 3, C('#8f95a8'));
+      [[4, 10, 2], [8, 7, 2.4], [12, 9, 1.8], [6, 4, 1.6], [10, 2, 2.2]].forEach(function (b) {
+        L.disc(b[0], b[1], b[2], C('#dff3ff'));
+        L.set(b[0] - b[2] * 0.4, b[1] - b[2] * 0.4, C('#ffffff'));
+      });
+    },
+    gravelRainbow: function (L) {              // coloured gravel
+      L.rect(1, 4, 14, 11, C('#f0dca8'));
+      var cols = ['#ff8fb0', '#ffd93d', '#8ee86a', '#9ad0ff', '#c8a4ff'];
+      for (var i = 0; i < 22; i++) {
+        var x = 2 + ((i * 5) % 13), y = 5 + ((i * 7) % 9);
+        L.set(x, y, C(cols[i % cols.length]));
+        L.set(x + 1, y, C(cols[i % cols.length]));
+      }
+    },
     rugCandy: function (L) {                   // candy corn rug
       L.ellipse(8, 8, 7.4, 5.4, C('#ffd93d'));
       L.ellipse(8, 8, 5, 3.6, C('#ff9f3d'));
