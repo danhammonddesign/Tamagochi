@@ -94,8 +94,8 @@
     { id: 'witch', kind: 'hat', label: 'Witch Hat', icon: 'hatWitch' },
     { id: 'bow', kind: 'hat', label: 'Bow', icon: 'hatBow' },
     { id: 'castle', kind: 'picture', label: 'Sand Castle', icon: 'ornCastle' },
-    { id: 'pineapple', kind: 'picture', label: 'Pineapple House', icon: 'ornPineapple' },
-    { id: 'pirate', kind: 'picture', label: 'Pirate Ship', icon: 'ornPirate' },
+    { id: 'pineapple', kind: 'house', label: 'Pineapple House', icon: 'ornPineapple' },
+    { id: 'pirate', kind: 'wreck', label: 'Pirate Ship', icon: 'ornPirate' },
     { id: 'galaxy', kind: 'wallpaper', label: 'Starry Water', icon: 'waterGalaxy' },
     { id: 'kelp', kind: 'plant', label: 'Tall Kelp', icon: 'plantKelp' },
     { id: 'bubbler', kind: 'banner', label: 'Bubble Curtain', icon: 'bubbler' },
@@ -502,7 +502,8 @@
       stats: { food: 75, water: 75, fun: 75, clean: 95, groom: 92 },
       love: 40, born: Date.now(), saved: Date.now(), cuddles: 0,
       messes: [], sick: false, sickT: 0, milkRun: 0,
-      hat: null, picture: null, wallpaper: null, plantStyle: null, banner: null, rug: null,
+      hat: null, picture: null, house: null, wreck: null,
+      wallpaper: null, plantStyle: null, banner: null, rug: null,
       // a new pet arrives spotless, so it starts with the two-full-meters
       // prize already claimed — one has to be earned by looking after it
       prizeArmed: true, gv: GROWTH_V,
@@ -537,10 +538,15 @@
     delete p.best.mouse;
     if (p.hat) p.hat = PRIZE_ALIAS[p.hat] || p.hat;
     if (p.hat && p.prizes.indexOf(p.hat) < 0) p.hat = null;
+    // the house and the wreck used to share the ornament slot with the castle,
+    // one at a time; they have a slot each now so they can both be out
+    if (p.picture === 'pineapple') { p.house = 'pineapple'; p.picture = null; }
+    if (p.picture === 'pirate') { p.wreck = 'pirate'; p.picture = null; }
     // decorations only stay up while the pet still owns the prize
-    ['picture', 'wallpaper', 'plantStyle', 'banner', 'rug'].forEach(function (slot) {
+    ['picture', 'house', 'wreck', 'wallpaper', 'plantStyle', 'banner', 'rug'].forEach(function (slot) {
       if (p[slot] && p.prizes.indexOf(PRIZE_ALIAS[p[slot]] || p[slot]) < 0) p[slot] = null;
       else if (p[slot]) p[slot] = PRIZE_ALIAS[p[slot]] || p[slot];
+      if (!p[slot]) p[slot] = null;              // never leave one undefined
     });
     // a tank pet's "wallpaper" is its water, which is not in the room set
     var wsp = Pets.SPECIES[p.species];
@@ -662,6 +668,7 @@
     tool: null,                 // bath / brush
     dose: null,                 // the medicine timing game
     witch: null, winTaps: 0, winTapT: -10,
+    ghost: null, shipTaps: 0, shipTapT: -10,
     needLoo: null, loo: null,
     props: {}, particles: [],
     spots: [], foam: [], drips: [],
@@ -979,7 +986,7 @@
      the windows and all of the shading live on that side where they can
      actually be seen. */
   function drawTankHouse(L) {
-    if (!pet || pet.picture !== 'pineapple') return;
+    if (!pet || pet.house !== 'pineapple') return;
     var h = tankHouse();
     var skin = C('#ffc61f'), skinL = C('#ffe066'), skinD = C('#d9970f');
     var ink = C('#6b4207'), leaf = C('#3f9426'), leafL = C('#63c93f'), leafD = C('#2b6b1a');
@@ -1146,7 +1153,7 @@
   }
 
   function drawPirateShip(L, wt) {
-    if (!pet || pet.picture !== 'pirate') return;
+    if (!pet || pet.wreck !== 'pirate') return;
     var s = shipBox(), cx = s.cx, by = s.base, hw = s.half;
     // distance is sold by washing every colour toward the water; the canvas
     // fades less than the timber so the sails still read from across the tank
@@ -1259,6 +1266,45 @@
     // the pineapple house and the pirate ship are not drawn here — one is a
     // house standing on the left of the tank and the other a wreck at the
     // back, both laid down with the scenery long before this
+  }
+
+  /* The wreck's ghost: a friendly little spook that drifts out from the stern,
+     across the tank and away. Drawn in the object pass so the evening light
+     never dims it — a ghost ought to glow. */
+  function drawGhost(L, t) {
+    if (!rt.ghost) return;
+    var k = clamp(rt.ghost.t / GHOST_FLY, 0, 1);
+    var sb = shipBox();
+    var gx = sb.cx - sb.half * 0.75 + k * (W * 0.95);
+    var gy = sb.base - sb.half * 0.75 - k * (H * 0.3) + Math.sin(k * Math.PI * 3) * 3;
+    var sc = Math.max(1, Math.round(W / 56));            // it stays a small spook
+    var body = C('#eef7ff'), shade = C('#c3daf2'), edge = C('#8fb4d8');
+    var eye = C('#2b3550');
+    // fades in at the start and out at the end
+    if (k < 0.06 && Math.floor(rt.t * 14) % 2) return;
+    if (k > 0.9 && Math.floor(rt.t * 14) % 2) return;
+
+    var rx = 5 * sc, ry = 5.5 * sc;
+    L.ellipse(gx, gy, rx + 1, ry + 1, edge);
+    L.ellipse(gx, gy, rx, ry, body);
+    L.rect(gx - rx, gy, rx * 2, ry * 0.9, body);
+    L.rect(gx - rx - 1, gy, 1, ry * 0.9, edge);
+    L.rect(gx + rx, gy, 1, ry * 0.9, edge);
+    // three tails along the bottom, waving as it goes
+    for (var w = -1; w <= 1; w++) {
+      var wx = gx + w * rx * 0.66;
+      var dip = Math.sin(rt.t * 6 + w * 1.6) * sc;
+      L.ellipse(wx, gy + ry * 0.9 + dip, rx * 0.35 + 1, sc * 1.6 + 1, edge);
+      L.ellipse(wx, gy + ry * 0.9 + dip, rx * 0.35, sc * 1.6, body);
+    }
+    L.ellipse(gx - rx * 0.45, gy + ry * 0.5, rx * 0.5, ry * 0.28, shade);
+    // a face, looking the way it is drifting
+    L.ellipse(gx - rx * 0.38, gy - ry * 0.2, sc * 0.9, sc * 1.3, eye);
+    L.ellipse(gx + rx * 0.38, gy - ry * 0.2, sc * 0.9, sc * 1.3, eye);
+    L.ellipse(gx, gy + ry * 0.28, sc * 1.1, sc * 0.8, eye);
+    if (Math.random() < 0.25) {
+      spawn('sparkle', gx - rx, gy + ry, { vx: -6, vy: -4, max: 0.9 });
+    }
   }
 
   /* The bubble curtain prize: a stream of bubbles rising up one side. */
@@ -1928,20 +1974,63 @@
      frame on the wall — no need to go through the toy box. */
   function pictureBounds() {
     if (inTank()) {
-      // two of the three are somewhere else entirely, so tap whichever is out
-      if (pet && pet.picture === 'pirate') {
-        var s = shipBox();
-        return { x0: s.cx - s.half, x1: s.cx + s.half, y0: s.base - s.half * 1.6, y1: s.base };
-      }
-      if (pet && pet.picture === 'pineapple') {
-        var hs = tankHouse();
-        return { x0: 0, x1: hs.rx + 2, y0: hs.y - hs.ry - 2, y1: room.groundY + 6 };
-      }
+      // kept tight to the castle itself, so the wreck behind it stays tappable
       var o = tankOrnament();
-      return { x0: o.x - 12, x1: o.x + 12, y0: o.y - 30, y1: o.y + 4 };
+      return { x0: o.x - 9, x1: o.x + 9, y0: o.y - 18, y1: o.y + 3 };
     }
     var py = pictureY();
     return { x0: W - 20, x1: W - 5, y0: py - 1, y1: py + 13 };
+  }
+
+  /* The house and the wreck are landmarks, not ornaments you cycle. Tapping
+     one never takes it away — put it away from the toy box instead. */
+  function houseBounds() {
+    var hs = tankHouse();
+    return { x0: 0, x1: hs.rx + 2, y0: hs.y - hs.ry - 2, y1: room.groundY + 6 };
+  }
+
+  function shipBounds() {
+    var sb = shipBox();
+    return { x0: sb.cx - sb.half, x1: sb.cx + sb.half, y0: sb.top - 2, y1: sb.base };
+  }
+
+  function inside(bb, x, y) {
+    return x >= bb.x0 && x <= bb.x1 && y >= bb.y0 && y <= bb.y1;
+  }
+
+  /* A knock on the door: a puff of bubbles and nothing else. */
+  function tapHouse(x, y) {
+    if (!pet || pet.house !== 'pineapple' || !inside(houseBounds(), x, y)) return false;
+    Sfx.click();
+    var hs = tankHouse();
+    for (var i = 0; i < 4; i++) {
+      spawn('bubble', hs.rx * 0.5 + (Math.random() - 0.5) * 8,
+        hs.y + (Math.random() - 0.5) * hs.ry, { vy: -12 - Math.random() * 8, max: 1.4 });
+    }
+    return true;
+  }
+
+  /* Knock on the wreck five times in a row and something drifts out of it. */
+  var GHOST_TAPS = 5;         // taps needed
+  var GHOST_FLY = 4.2;        // seconds to drift across the tank
+
+  function tapShip(x, y) {
+    if (!pet || pet.wreck !== 'pirate' || !inside(shipBounds(), x, y)) return false;
+    if (rt.t - rt.shipTapT > 3) rt.shipTaps = 0;   // the taps have to be in a run
+    rt.shipTapT = rt.t;
+    rt.shipTaps++;
+    Sfx.click();
+    for (var i = 0; i < 3; i++) {
+      spawn('bubble', x + (Math.random() - 0.5) * 8, y, { vy: -14 - Math.random() * 8, max: 1.4 });
+    }
+    if (rt.shipTaps >= GHOST_TAPS && !rt.ghost) {
+      rt.shipTaps = 0;
+      rt.ghost = { t: 0 };
+      Sfx.whoosh();
+      say('A ghost!', 2400);
+      bumpLove(2);
+    }
+    return true;
   }
 
   /* Tapping the picture on the wall — or the ornament on the sand — steps
@@ -3580,6 +3669,7 @@
     if (rt.props.tub) drawTub(L, rt.props.tub.x, rt.props.tub.y, false, rt.t);
     if (rt.props.ball) drawBall(L, rt.props.ball.x, rt.props.ball.y, rt.props.ball.spin);
     if (rt.props.wand) drawWand(L, rt.props.wand);
+    drawGhost(L, rt.t);
     drawDoseMeter(L);
     if (rt.props.frisbee) drawFrisbee(L, rt.props.frisbee.x, rt.props.frisbee.y, rt.props.frisbee.spin);
     if (rt.props.bubbles) {
@@ -3688,6 +3778,7 @@
     if (rt.prizeFly) { rt.prizeFly.t += dt; if (rt.prizeFly.t > 1.1) rt.prizeFly = null; }
     if (rt.pounce) { rt.pounce.t += dt; if (rt.pounce.t > 0.4) rt.pounce = null; }
     if (rt.witch) { rt.witch.t += dt; if (rt.witch.t > WITCH_FLY) rt.witch = null; }
+    if (rt.ghost) { rt.ghost.t += dt; if (rt.ghost.t > GHOST_FLY) rt.ghost = null; }
 
     growthClock += dt;
     if (growthClock > 10) {
@@ -3863,6 +3954,9 @@
       if (!rt.tool && !rt.activity && tapToyBox(p.x, p.y)) return;
       if (!rt.tool && !rt.activity && tapPicture(p.x, p.y)) return;
       if (!rt.tool && !rt.activity && tapWindow(p.x, p.y)) return;
+      // the landmarks sit behind the pet, so stroking it always wins
+      if (!rt.tool && !rt.activity && !overPet(p) && tapHouse(p.x, p.y)) return;
+      if (!rt.tool && !rt.activity && !overPet(p) && tapShip(p.x, p.y)) return;
 
       // a sleeping pet does not want to be prodded
       if (rt.sleep) {
@@ -4114,25 +4208,28 @@
   var PRIZE_USE = {
     hat: 'Tap to wear', toy: 'Tap to play', picture: 'Tap to hang up',
     wallpaper: 'Tap to put up', plant: 'Tap to pot it', banner: 'Tap to string up',
-    rug: 'Tap to lay it down'
+    rug: 'Tap to lay it down', house: 'Tap to build it', wreck: 'Tap to sink it'
   };
   var PRIZE_ON = {
     hat: 'Wearing it', toy: 'Tap to play', picture: 'On the wall',
     wallpaper: 'On the walls', plant: 'In the pot', banner: 'Twinkling away',
-    rug: 'On the floor'
+    rug: 'On the floor', house: 'Standing there', wreck: 'Out at the back'
   };
   // which field on the pet each kind of decoration is remembered in
   var PRIZE_SLOT = {
     hat: 'hat', picture: 'picture', wallpaper: 'wallpaper',
-    plant: 'plantStyle', banner: 'banner', rug: 'rug'
+    plant: 'plantStyle', banner: 'banner', rug: 'rug',
+    house: 'house', wreck: 'wreck'
   };
   var PUT_UP = {
     hat: 'How do I look?', picture: 'Look at my new ornament!',
     wallpaper: 'What a lovely place!', plant: 'A new friend to swim round!',
-    banner: 'Ooh, sparkly!', rug: 'What a comfy floor!'
+    banner: 'Ooh, sparkly!', rug: 'What a comfy floor!',
+    house: 'A house of my own!', wreck: 'Treasure at the back!'
   };
   var PUT_AWAY = {
     hat: 'Hat off!', picture: 'Put away again!',
+    house: 'The house has gone!', wreck: 'The ship sailed away!',
     wallpaper: 'Back to how it was!', plant: 'My old plant is back!',
     banner: 'All quiet again!', rug: 'Back to the old floor!'
   };

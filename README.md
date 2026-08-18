@@ -147,14 +147,15 @@ The toys also show up in the Play menu once you have won them.
 
 A tank pet wins the same four hats, plus seven things for the tank:
 
-* Three **landmarks**, only one of which is out at a time. A **sand castle**
-  stands on the sand next to the chest. A **pineapple house** is a whole house
-  taller than half the tank, standing with its middle on the left-hand edge so
-  you only ever see half of it, portholes and front door and a crown of leaves
-  on top. A **pirate ship** is a whole wreck sunk at the back of the tank,
-  masts and jolly roger rising above your pet, its colours washed toward the
-  water so it stays in the distance. **Tap whichever is showing** to step
-  through the ones you have won and back to none.
+* Three **landmarks**, each switched on and off from the toy box on its own,
+  so you can have all three out at once. A **sand castle** stands on the sand
+  next to the chest — tap it to put it up and take it down. A **pineapple
+  house** is a whole house taller than half the tank, standing with its middle
+  on the left-hand edge so you only ever see half of it, portholes and front
+  door and a crown of leaves on top. A **pirate ship** is a whole wreck sunk at
+  the back of the tank, masts and jolly roger rising above your pet, its
+  colours washed toward the water so it stays in the distance. Tapping the
+  house or the ship never takes it away — knock on them all you like.
 * **Starry Water** turns the tank into a night sky — a deep violet gradient
   with stars twinkling all through the water and pale stardust for sand.
 * **Tall Kelp** in place of the little plant, growing and needing a trim just
@@ -212,9 +213,13 @@ a sun or moon rides an arc across the panes, and stars come out after dark.
 Your pet dozes off far more readily at night — and once it is properly dark it curls up in its own little bed — and it
 greets you differently depending on the hour.
 
-### A secret
+### Two secrets
 
 **Tap the window five times in a row** and something sails past outside.
+
+In a tank there is no window, so the wreck keeps the other one: **tap the
+pirate ship five times in a row** and a little ghost drifts out of it, floats
+across the tank in front of your pet and fades away.
 
 ### The houseplant
 
