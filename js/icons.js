@@ -87,13 +87,22 @@
       L.set(7, 0.6, C('#f4efe6'));
       L.set(9, 0.6, C('#f4efe6'));
     },
-    waterDeep: function (L) {                  // a swatch of deep water
-      L.rect(1, 1, 14, 14, C('#2b6fae'));
-      L.rect(1, 1, 14, 5, C('#3f8fd0'));
-      L.rect(1, 11, 14, 4, C('#1d5089'));
-      L.rect(3, 3, 6, 1, C('#6fb4e8'));
-      L.rect(9, 6, 4, 1, C('#6fb4e8'));
-      L.rect(2, 8, 5, 1, C('#6fb4e8'));
+    waterGalaxy: function (L) {                // a swatch of starry water
+      L.rect(1, 1, 14, 14, C('#3b1f7a'));
+      L.rect(1, 1, 14, 5, C('#7a3fb8'));
+      L.rect(1, 11, 14, 4, C('#1b1046'));
+      var star = C('#d6b0ff'), lit = C('#ffffff');
+      var pts = [[4, 3], [11, 5], [6, 8], [12, 10], [3, 12], [9, 13]];
+      for (var i = 0; i < pts.length; i++) {
+        var x = pts[i][0], y = pts[i][1];
+        L.set(x, y, i % 2 ? lit : star);
+        if (i % 3 === 0) {                     // a few get a twinkle
+          L.set(x - 1, y, star);
+          L.set(x + 1, y, star);
+          L.set(x, y - 1, star);
+          L.set(x, y + 1, star);
+        }
+      }
     },
     plantKelp: function (L) {                  // tall kelp
       for (var i = 0; i < 3; i++) {

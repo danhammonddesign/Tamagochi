@@ -75,11 +75,10 @@ as your pet works through it.
 ### Tank pets
 
 Two of the pets live in water, and picking either one swaps the bedroom for an
-aquarium: water top to bottom that deepens toward the floor, a bed of sand, one
-small plant, and a big boulder sitting half off the left-hand edge so you only
-ever see half of it. Air bubbles drift up from the sand all day long. No
-wallpaper, no window, no pictures on the wall — there is no wall. The prizes
-live in a **treasure chest** on the sand instead of a toy box.
+aquarium: water top to bottom that deepens toward the floor, a bed of sand and
+one small plant. Air bubbles drift up from the sand all day long. No wallpaper,
+no window, no pictures on the wall — there is no wall. The prizes live in a
+**treasure chest** on the sand instead of a toy box.
 
 * The **clownfish** is drawn about twice the size of the land pets — orange
   with three white stripes, a fanned tail and a sail along its back.
@@ -148,13 +147,16 @@ The toys also show up in the Play menu once you have won them.
 
 A tank pet wins the same four hats, plus seven things for the tank:
 
-* Two **ornaments** for the sand — a **sand castle** and a **pineapple
-  house** — plus a **pirate ship**, which is not an ornament at all but a
-  whole wreck sunk at the back of the tank, masts and jolly roger rising above
-  your pet, its colours washed toward the water so it stays in the distance.
-  Only one is out at a time; **tap whichever is showing** to step through the
-  ones you have won and back to none.
-* **Deep Blue Water** to darken the tank.
+* Three **landmarks**, only one of which is out at a time. A **sand castle**
+  stands on the sand next to the chest. A **pineapple house** is a whole house
+  taller than half the tank, standing with its middle on the left-hand edge so
+  you only ever see half of it, portholes and front door and a crown of leaves
+  on top. A **pirate ship** is a whole wreck sunk at the back of the tank,
+  masts and jolly roger rising above your pet, its colours washed toward the
+  water so it stays in the distance. **Tap whichever is showing** to step
+  through the ones you have won and back to none.
+* **Starry Water** turns the tank into a night sky — a deep violet gradient
+  with stars twinkling all through the water and pale stardust for sand.
 * **Tall Kelp** in place of the little plant, growing and needing a trim just
   the same.
 * A **bubble curtain** that sends a stream of bubbles up one side.

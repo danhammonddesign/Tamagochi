@@ -96,7 +96,7 @@
     { id: 'castle', kind: 'picture', label: 'Sand Castle', icon: 'ornCastle' },
     { id: 'pineapple', kind: 'picture', label: 'Pineapple House', icon: 'ornPineapple' },
     { id: 'pirate', kind: 'picture', label: 'Pirate Ship', icon: 'ornPirate' },
-    { id: 'deep', kind: 'wallpaper', label: 'Deep Blue Water', icon: 'waterDeep' },
+    { id: 'galaxy', kind: 'wallpaper', label: 'Starry Water', icon: 'waterGalaxy' },
     { id: 'kelp', kind: 'plant', label: 'Tall Kelp', icon: 'plantKelp' },
     { id: 'bubbler', kind: 'banner', label: 'Bubble Curtain', icon: 'bubbler' },
     { id: 'gravel', kind: 'rug', label: 'Rainbow Gravel', icon: 'gravelRainbow' }
@@ -272,7 +272,7 @@
   }
 
   // prizes that have been renamed since an earlier version
-  var PRIZE_ALIAS = { cap: 'witch', mouse: 'wand', rainbow: 'skull', mint: 'pumpkin' };
+  var PRIZE_ALIAS = { cap: 'witch', mouse: 'wand', rainbow: 'skull', mint: 'pumpkin', deep: 'galaxy' };
 
   var PRIZE_LEVEL = 85;       // a meter counts as topped up at this much
 
@@ -542,7 +542,9 @@
       if (p[slot] && p.prizes.indexOf(PRIZE_ALIAS[p[slot]] || p[slot]) < 0) p[slot] = null;
       else if (p[slot]) p[slot] = PRIZE_ALIAS[p[slot]] || p[slot];
     });
-    if (p.wallpaper && p.species !== 'fish' && !WALLPAPERS[p.wallpaper]) p.wallpaper = null;
+    // a tank pet's "wallpaper" is its water, which is not in the room set
+    var wsp = Pets.SPECIES[p.species];
+    if (p.wallpaper && !(wsp && wsp.water) && !WALLPAPERS[p.wallpaper]) p.wallpaper = null;
     if (typeof p.sickT !== 'number') p.sickT = 0;
     if (typeof p.milkRun !== 'number') p.milkRun = 0;
     if (!Array.isArray(p.messes)) p.messes = [];
@@ -884,25 +886,63 @@
      on the wall — there is no wall. */
   var WATERS = {
     plain: { top: '#9ce0ff', low: '#3f9ecd', glint: '#d6f2ff', sand: '#ecd6a0', sandDark: '#cfb47e' },
-    deep: { top: '#4a9bd8', low: '#173f70', glint: '#7fc4ec', sand: '#d8c79e', sandDark: '#b8a37a' }
+    // starry water: a night-sky gradient with drifting sparks and pale violet sand
+    galaxy: {
+      top: '#7a3fb8', low: '#1b1046', glint: '#d6b0ff',
+      sand: '#d7c6f0', sandDark: '#b3a0d4', stars: true
+    }
   };
+
+  /* Fixed specks for the starry water, spread by the golden ratio so they
+     never clump, each twinkling on its own beat. */
+  var TANK_STARS = (function () {
+    var a = [];
+    for (var i = 0; i < 52; i++) {
+      a.push({
+        nx: (i * 0.6180339) % 1,
+        ny: (i * 0.3819660) % 1,
+        beat: 0.5 + ((i * 0.271) % 1) * 1.6,
+        phase: (i * 2.399) % 6.283,
+        big: i % 3 === 0
+      });
+    }
+    return a;
+  })();
+
+  function drawTankStars(L, t) {
+    var pale = C('#d6b0ff'), bright = C('#ffffff');
+    for (var i = 0; i < TANK_STARS.length; i++) {
+      var st2 = TANK_STARS[i];
+      var tw = Math.sin(t * st2.beat + st2.phase);
+      if (tw < -0.4) continue;                       // blinked out for a moment
+      var x = Math.round(st2.nx * (W - 2)) + 1;
+      var y = Math.round(st2.ny * (room.groundY - 4)) + 2;
+      L.set(x, y, tw > 0.25 ? bright : pale);
+      if (st2.big && tw > 0.1) {                     // a four-point twinkle
+        L.set(x - 1, y, pale);
+        L.set(x + 1, y, pale);
+        L.set(x, y - 1, pale);
+        L.set(x, y + 1, pale);
+      }
+    }
+  }
 
   function tankWater() {
     return WATERS[(pet && pet.wallpaper) || 'plain'] || WATERS.plain;
   }
 
   // where everything sits on the sand
-  /* One big boulder, half the height of the tank and hanging half off the
-     left edge so only its right-hand side is in view. */
-  function tankRock() {
-    var rx = Math.max(16, Math.round(W * 0.3));
-    var ry = Math.max(16, Math.round(H * 0.24));
-    // its middle sits on the left edge, so only the right half is in view, and
-    // its foot is buried far enough that the sand can be drawn over it
-    return { x: 0, y: room.groundY - Math.round(ry * 0.72), rx: rx, ry: ry };
+  /* The pineapple house is not a trinket like the other ornaments — it is a
+     whole house, taller than half the tank, with its middle on the left edge
+     so only its right-hand side is in view. Its foot is buried deep enough
+     that the sand can be drawn over it. */
+  function tankHouse() {
+    var rx = Math.max(16, Math.round(W * 0.34));
+    var ry = Math.max(22, Math.round(H * 0.33));
+    return { x: 0, y: room.groundY - Math.round(ry * 0.45), rx: rx, ry: ry };
   }
-  // the open sand starts where the rock stops
-  function tankShelf() { return Math.round(tankRock().rx) + 4; }
+  // the open sand starts where the house stands
+  function tankShelf() { return Math.max(16, Math.round(W * 0.34)) + 4; }
   function tankChest() { return { x: tankShelf() + 8, y: room.groundY + 3 }; }
   function tankOrnament() { return { x: tankShelf() + 26, y: room.groundY + 4 }; }
 
@@ -922,7 +962,7 @@
   })();
 
   function drawTankAir(L, t) {
-    var pale = C('#dff3ff'), white = C('#ffffff');
+    var pale = C(tankWater().glint), white = C('#ffffff');
     var rise = room.groundY + 8;
     for (var i = 0; i < TANK_AIR.length; i++) {
       var b = TANK_AIR[i];
@@ -935,30 +975,64 @@
     }
   }
 
-  /* The boulder. Only its right-hand half is on screen, so all of the shading
-     is kept on that side where it can actually be seen. */
-  function drawTankRock(L) {
-    var rk = tankRock();
-    var edge = C('#3f4454'), stone = C('#8f95a8');
-    var lit = C('#aab0c2'), litter = C('#c2c7d6'), shade = C('#767c90');
-    L.ellipse(rk.x, rk.y, rk.rx + 1, rk.ry + 1, edge);
-    L.ellipse(rk.x, rk.y, rk.rx, rk.ry, stone);
-    L.ellipse(rk.x + rk.rx * 0.12, rk.y - rk.ry * 0.42, rk.rx * 0.5, rk.ry * 0.3, lit);
-    L.ellipse(rk.x + rk.rx * 0.2, rk.y - rk.ry * 0.52, rk.rx * 0.26, rk.ry * 0.13, litter);
-    L.ellipse(rk.x + rk.rx * 0.42, rk.y + rk.ry * 0.42, rk.rx * 0.3, rk.ry * 0.22, shade);
-    // two cracks and a scatter of grain, so it reads as stone and not a blob
-    L.line(rk.x + rk.rx * 0.22, rk.y - rk.ry * 0.62, rk.x + rk.rx * 0.55, rk.y - rk.ry * 0.05,
-      shade, 1);
-    L.line(rk.x + rk.rx * 0.55, rk.y - rk.ry * 0.05, rk.x + rk.rx * 0.3, rk.y + rk.ry * 0.5,
-      shade, 1);
-    L.line(rk.x + rk.rx * 0.55, rk.y - rk.ry * 0.05, rk.x + rk.rx * 0.85, rk.y - rk.ry * 0.3,
-      shade, 1);
-    for (var i = 0; i < 14; i++) {
-      var a = i * 2.3999;                                   // spread evenly
-      var rr = Math.sqrt(((i * 7) % 11) / 11) * 0.86;
-      L.set(rk.x + Math.abs(Math.cos(a)) * rk.rx * rr, rk.y + Math.sin(a) * rk.ry * rr,
-        i % 3 ? shade : lit);
+  /* The pineapple house. Only its right-hand half is on screen, so the door,
+     the windows and all of the shading live on that side where they can
+     actually be seen. */
+  function drawTankHouse(L) {
+    if (!pet || pet.picture !== 'pineapple') return;
+    var h = tankHouse();
+    var skin = C('#ffc61f'), skinL = C('#ffe066'), skinD = C('#d9970f');
+    var ink = C('#6b4207'), leaf = C('#3f9426'), leafL = C('#63c93f'), leafD = C('#2b6b1a');
+    var glass = C('#bde9ff'), frame = C('#8a5a12');
+    var door = C('#7f4a14'), doorD = C('#5a3208');
+
+    // the crown of leaves goes down first, so the body covers their stalks
+    var crownY = h.y - h.ry * 0.88, crownX = h.x + h.rx * 0.4;
+    var lim = Math.round(H * 0.13);              // never poke up behind the HUD
+    for (var lf = 0; lf < 5; lf++) {
+      var la = -1.62 + lf * 0.4;                 // fanning up and to the right
+      var ll = h.ry * (0.5 + (lf % 2) * 0.14);
+      var ex = crownX + Math.cos(la) * ll * 0.85;
+      var ey = Math.max(lim, crownY + Math.sin(la) * ll);
+      var wdt = Math.max(2, h.rx * 0.26);
+      L.tri(crownX - wdt, crownY + 2, crownX + wdt, crownY + 2, ex, ey, leafD);
+      L.tri(crownX - wdt * 0.68, crownY + 2, crownX + wdt * 0.68, crownY + 2,
+        ex, ey + 1, lf % 2 ? leafL : leaf);
     }
+
+    L.ellipse(h.x, h.y, h.rx + 1, h.ry + 1, ink);
+    L.ellipse(h.x, h.y, h.rx, h.ry, skin);
+    L.ellipse(h.x + h.rx * 0.18, h.y - h.ry * 0.34, h.rx * 0.44, h.ry * 0.36, skinL);
+
+    // the diamond quilting of a pineapple, clipped to the body
+    var step = Math.max(4, Math.round(h.rx * 0.42));
+    for (var y = Math.floor(h.y - h.ry); y <= h.y + h.ry; y++) {
+      for (var x = 0; x <= h.x + h.rx; x++) {
+        var dx = (x + 0.5 - h.x) / h.rx, dy = (y + 0.5 - h.y) / h.ry;
+        if (dx * dx + dy * dy > 0.93) continue;
+        var a = (x + y) % step, b2 = (x - y + step * 60) % step;
+        if (a === 0 || b2 === 0) L.set(x, y, skinD);
+      }
+    }
+
+    // two portholes and a round front door, all on the half you can see
+    function porthole(px, py, pr) {
+      L.ellipse(px, py, pr + 1, pr + 1, ink);
+      L.ellipse(px, py, pr, pr, frame);
+      L.ellipse(px, py, pr - 1, pr - 1, glass);
+      L.ellipse(px - pr * 0.32, py - pr * 0.32, pr * 0.36, pr * 0.36, C('#ffffff'));
+    }
+    porthole(h.x + h.rx * 0.4, h.y - h.ry * 0.38, Math.max(3, h.rx * 0.26));
+    porthole(h.x + h.rx * 0.52, h.y + h.ry * 0.08, Math.max(2, h.rx * 0.2));
+
+    var dx0 = h.x + h.rx * 0.38, dy0 = h.y + h.ry * 0.52;
+    var dr = Math.max(4, h.rx * 0.34);
+    L.ellipse(dx0, dy0, dr + 1, dr + 1, ink);
+    L.rect(dx0 - dr - 1, dy0, dr * 2 + 2, dr + 2, ink);
+    L.ellipse(dx0, dy0, dr, dr, door);
+    L.rect(dx0 - dr, dy0, dr * 2, dr + 2, door);
+    L.rect(dx0 - dr * 0.2, dy0 - dr, dr * 0.4, dr * 2, doorD);   // the join in the door
+    L.set(dx0 + dr * 0.55, dy0 + dr * 0.2, C('#ffe07a'));        // knob
   }
 
   function drawTank(L, t) {
@@ -970,21 +1044,25 @@
       L.rect(0, wy, W, 1, C(mixHex(wt.top, wt.low, clamp(wy / (gy + 4), 0, 1))));
     }
     // a few slow caustic streaks near the surface
-    var caustic = C(wt.glint);
-    for (var cw = 0; cw < 4; cw++) {
-      var cx0 = ((t * 3 + cw * 27) % (W + 24)) - 12;
-      L.rect(cx0, 5 + cw * 4, 7, 1, caustic);
-      L.rect(cx0 + 9, 5 + cw * 4, 3, 1, caustic);
+    if (wt.stars) {
+      drawTankStars(L, t);
+    } else {
+      var caustic = C(wt.glint);
+      for (var cw = 0; cw < 4; cw++) {
+        var cx0 = ((t * 3 + cw * 27) % (W + 24)) - 12;
+        L.rect(cx0, 5 + cw * 4, 7, 1, caustic);
+        L.rect(cx0 + 9, 5 + cw * 4, 3, 1, caustic);
+      }
     }
 
     // the pirate ship is a whole wreck sitting way back in the tank, so it
-    // goes in before the rock and the sand and everything else
+    // goes in before everything else
     drawPirateShip(L, wt);
 
-    // one big boulder, running off the left edge — far too large for the stamp
-    // buffer, so it goes straight onto the scene with its own edge. It is laid
-    // down before the sand so the sand buries its foot.
-    drawTankRock(L);
+    // the pineapple house, running off the left edge — far too large for the
+    // stamp buffer, so it goes straight onto the scene with its own edge. It
+    // is laid down before the sand so the sand buries its foot.
+    drawTankHouse(L);
 
     // sand, with a soft dune line
     var sandC = C(wt.sand), sandD = C(wt.sandDark);
@@ -1159,7 +1237,7 @@
     L.rect(cx - hw * 0.3 + fw * 0.3, t1 + fw * 0.46, fw * 0.4, 1, sail);
   }
 
-  /* Castle or pineapple house — the ornaments that stand on the sand. */
+  /* The sand castle — the one ornament that still stands on the sand. */
   function drawOrnament(L, t) {
     if (!pet || !pet.picture) return;
     var orn = tankOrnament(), gx = orn.x, gy = orn.y;
@@ -1177,23 +1255,10 @@
         b.rect(bx - 0.5, by - 15, 1, 4, C('#c9d6e2'));   // flag pole
         b.tri(bx, by - 15, bx, by - 12.8, bx + 3.5, by - 14, C('#ff5f8f'));
       }, true);
-    } else if (pet.picture === 'pineapple') {
-      stampOutlined(L, gx, gy, function (b, bx, by) {
-        b.ellipse(bx, by - 6, 6, 6.6, C('#ffc61f'));
-        b.ellipse(bx - 1.6, by - 8.4, 3, 3, C('#ffd93d'));
-        for (var r = -4; r <= 3; r += 3) {               // crosshatch skin
-          for (var c2 = -4; c2 <= 4; c2 += 3) b.set(bx + c2, by + r - 3, C('#e0a41a'));
-        }
-        b.rect(bx - 2, by - 3, 4, 3, C('#7f5a2a'));      // door
-        b.ellipse(bx - 3.4, by - 8, 1.3, 1.3, C('#c8f0ff'));
-        b.ellipse(bx + 3, by - 8, 1.3, 1.3, C('#c8f0ff'));
-        b.tri(bx - 3, by - 12, bx - 1, by - 12, bx - 4, by - 15, C('#4ea832'));
-        b.tri(bx - 1, by - 12, bx + 1.5, by - 12, bx, by - 15.8, C('#63c93f'));
-        b.tri(bx + 0.5, by - 12, bx + 3, by - 12, bx + 4, by - 14.6, C('#4ea832'));
-      }, true);
     }
-    // the pirate ship is not drawn here — it is a wreck at the back of the
-    // tank, laid down with the scenery long before this
+    // the pineapple house and the pirate ship are not drawn here — one is a
+    // house standing on the left of the tank and the other a wreck at the
+    // back, both laid down with the scenery long before this
   }
 
   /* The bubble curtain prize: a stream of bubbles rising up one side. */
@@ -1863,10 +1928,14 @@
      frame on the wall — no need to go through the toy box. */
   function pictureBounds() {
     if (inTank()) {
-      // the wreck is somewhere else entirely, so tap wherever it is showing
+      // two of the three are somewhere else entirely, so tap whichever is out
       if (pet && pet.picture === 'pirate') {
         var s = shipBox();
         return { x0: s.cx - s.half, x1: s.cx + s.half, y0: s.base - s.half * 1.6, y1: s.base };
+      }
+      if (pet && pet.picture === 'pineapple') {
+        var hs = tankHouse();
+        return { x0: 0, x1: hs.rx + 2, y0: hs.y - hs.ry - 2, y1: room.groundY + 6 };
       }
       var o = tankOrnament();
       return { x0: o.x - 12, x1: o.x + 12, y0: o.y - 30, y1: o.y + 4 };
