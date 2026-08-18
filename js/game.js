@@ -2612,7 +2612,7 @@
     var sp = Pets.SPECIES[speciesId];
     // a tank pet is drawn big enough to fill the card, the way a land pet
     // standing on the floor already does
-    return sp && sp.water ? Math.min(1.9, 43 / Pets.spanOf(speciesId)) : 1;
+    return sp && sp.water ? Math.min(1.9, 41 / Pets.spanOf(speciesId)) : 1;
   }
   function tileLayer(speciesId) {
     var k = tileScale(speciesId);

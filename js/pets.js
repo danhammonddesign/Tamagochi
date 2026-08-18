@@ -239,23 +239,24 @@
 
   // roughly how many layer pixels wide the sprite is per unit of scale, so the
   // game can shrink a big pet that would not fit the scene
-  var PET_SPAN = { fish: 33, axolotl: 31 };
+  var PET_SPAN = { fish: 33, axolotl: 39 };
   function spanOf(id) { return PET_SPAN[id] || 30; }
 
-  function drawEye(L, sp, ex, ey, r, state, side) {
+  function drawEye(L, sp, ex, ey, r, state, side, k) {
     side = side || -1;
+    k = k || 1;
     var dark = C(sp.eyeColor);
     var white = C('#ffffff');
 
     switch (state) {
       case 'blink':
-        L.rect(ex - r, ey, r * 2, 1, dark);
+        L.rect(ex - r, ey, r * 2, k, dark);
         break;
 
       case 'sleep':   // a contented downward curve
-        L.set(ex - r, ey - 1, dark);
-        L.rect(ex - r + 1, ey, r * 2 - 2, 1, dark);
-        L.set(ex + r, ey - 1, dark);
+        L.rect(ex - r, ey - k, k, k, dark);
+        L.rect(ex - r + k, ey, r * 2 - 2 * k, k, dark);
+        L.rect(ex + r, ey - k, k, k, dark);
         break;
 
       case 'angry':
@@ -264,8 +265,8 @@
         break;
 
       case 'happy':
-        L.line(ex - r, ey + r * 0.55, ex, ey - r * 0.45, dark, 1);
-        L.line(ex, ey - r * 0.45, ex + r, ey + r * 0.55, dark, 1);
+        L.line(ex - r, ey + r * 0.55, ex, ey - r * 0.45, dark, k);
+        L.line(ex, ey - r * 0.45, ex + r, ey + r * 0.55, dark, k);
         break;
 
       case 'love':
@@ -300,46 +301,48 @@
     }
   }
 
-  function drawMouth(L, sp, mx, my, state) {
+  function drawMouth(L, sp, mx, my, state, k) {
+    k = k || 1;
     var dark = C(sp.outline);
+    function dot(dx, dy) { L.rect(mx + dx * k, my + dy * k, k, k, dark); }
     switch (state) {
       case 'open':
-        L.ellipse(mx, my + 1, 2.2, 1.8, dark);
-        L.ellipse(mx, my + 1.6, 1.2, 0.9, C('#ff7f9f'));
+        L.ellipse(mx, my + 1 * k, 2.2 * k, 1.8 * k, dark);
+        L.ellipse(mx, my + 1.6 * k, 1.2 * k, 0.9 * k, C('#ff7f9f'));
         break;
       case 'wide':
-        L.ellipse(mx, my + 1.2, 3, 2.4, dark);
-        L.ellipse(mx, my + 2, 1.7, 1.2, C('#ff7f9f'));
+        L.ellipse(mx, my + 1.2 * k, 3 * k, 2.4 * k, dark);
+        L.ellipse(mx, my + 2 * k, 1.7 * k, 1.2 * k, C('#ff7f9f'));
         break;
       case 'frown':
-        L.set(mx - 2, my + 1, dark);
-        L.set(mx - 1, my, dark);
-        L.set(mx, my, dark);
-        L.set(mx + 1, my, dark);
-        L.set(mx + 2, my + 1, dark);
+        dot(-2, 1);
+        dot(-1, 0);
+        dot(0, 0);
+        dot(1, 0);
+        dot(2, 1);
         break;
       case 'angry':
-        L.set(mx - 2, my + 1, dark);
-        L.set(mx - 1, my, dark);
-        L.set(mx, my + 1, dark);
-        L.set(mx + 1, my, dark);
-        L.set(mx + 2, my + 1, dark);
-        L.set(mx - 1, my + 1, dark);
-        L.set(mx + 1, my + 1, dark);
+        dot(-2, 1);
+        dot(-1, 0);
+        dot(0, 1);
+        dot(1, 0);
+        dot(2, 1);
+        dot(-1, 1);
+        dot(1, 1);
         break;
 
       case 'snooze':
-        L.ellipse(mx, my + 1, 1.4, 1.1, dark);
+        L.ellipse(mx, my + 1 * k, 1.4 * k, 1.1 * k, dark);
         break;
 
       case 'none':
         break;
       default: // smile — a little "w"
-        L.set(mx - 2, my, dark);
-        L.set(mx - 1, my + 1, dark);
-        L.set(mx, my, dark);
-        L.set(mx + 1, my + 1, dark);
-        L.set(mx + 2, my, dark);
+        dot(-2, 0);
+        dot(-1, 1);
+        dot(0, 0);
+        dot(1, 1);
+        dot(2, 0);
         break;
     }
   }
@@ -549,50 +552,38 @@
     };
   }
 
-  /* Geometry of the axolotl inside its layer — a long low body with a big
-     round head at the front and a paddle tail behind. */
+  /* Geometry of the axolotl inside its layer. Unlike the fish it faces us,
+     the way the land pets do: a big round head, a small body tucked under it,
+     and a fan of gills out to either side. */
   function axoGeom(st, k) {
-    var brx = st.body[0] * 1.15 * k, bry = st.body[1] * 0.84 * k;
+    var hrx = st.head[0] * 0.98 * k, hry = st.head[1] * 0.9 * k;
+    var brx = st.body[0] * 1.02 * k, bry = st.body[1] * 0.8 * k;
+    var cy = FEET * k - bry - 12 * k;          // it hovers just above the sand
     return {
-      k: k, brx: brx, bry: bry,
-      hrx: st.head[0] * 0.7 * k, hry: st.head[1] * 0.64 * k,
+      k: k, hrx: hrx, hry: hry, brx: brx, bry: bry,
       cx: (SIZE * k) / 2,
-      cy: FEET * k - bry - 13 * k     // it hovers just above the sand
+      by: cy,
+      hy: cy - (bry + hry) * 0.62               // the head sits over the body
     };
   }
 
-  /* The axolotl's smile — a wide, permanently pleased curve. */
-  function axoMouth(L, sp, mx, my, state, k) {
-    var dark = C(sp.outline);
-    var w = 3.1 * k;
-    switch (state) {
-      case 'open':
-      case 'wide':
-        L.ellipse(mx, my + 0.6 * k, w * 0.55, 1.7 * k, dark);
-        L.ellipse(mx, my + 1 * k, w * 0.32, 0.9 * k, C('#ff7f9f'));
-        break;
-      case 'frown':
-        L.rect(mx - w * 0.5, my + 0.8 * k, w, 1 * k, dark);
-        L.rect(mx - w * 0.6, my, 1 * k, 1 * k, dark);
-        L.rect(mx + w * 0.5, my, 1 * k, 1 * k, dark);
-        break;
-      case 'angry':
-        L.rect(mx - w * 0.5, my + 0.4 * k, w, 1 * k, dark);
-        break;
-      case 'snooze':
-        L.ellipse(mx, my + 0.4 * k, w * 0.3, 1 * k, dark);
-        break;
-      default:                        // the big smile
-        L.rect(mx - w * 0.5, my + 0.9 * k, w, 1 * k, dark);
-        L.rect(mx - w * 0.62, my, 1 * k, 1 * k, dark);
-        L.rect(mx - w * 0.62, my + 0.5 * k, 1 * k, 1 * k, dark);
-        L.rect(mx + w * 0.5, my, 1 * k, 1 * k, dark);
-        L.rect(mx + w * 0.5, my + 0.5 * k, 1 * k, 1 * k, dark);
+  /* One feathery gill branch: a stalk with a few plus-shaped fronds along it.
+     Everything is laid down twice, oversized in the darker pink first, so
+     neighbouring branches keep a rim between them instead of merging. */
+  function axoGill(L, gx, gy, ang, len, dir, k, pad, col) {
+    var ex = gx + Math.cos(ang) * len * dir, ey = gy + Math.sin(ang) * len;
+    L.line(gx, gy, ex, ey, col, Math.max(1, 1.2 * k + pad));
+    for (var i = 0; i < 3; i++) {
+      var t = 0.36 + i * 0.32;
+      var px = gx + (ex - gx) * t, py = gy + (ey - gy) * t;
+      var r = (1.5 + i * 0.5) * k + pad;
+      L.rect(px - r, py - r * 0.42, r * 2, r * 0.84, col);   // the plus shape
+      L.rect(px - r * 0.42, py - r, r * 0.84, r * 2, col);
     }
   }
 
-  /* An axolotl: the same care mechanics as everyone else, but built out of a
-     paddle tail, six feathery gills and four stubby legs. */
+  /* An axolotl, facing us: the same care mechanics as everyone else, built out
+     of a round head, six frilly gills, two little hands and a paddle tail. */
   function drawAxolotl(L, sp, st, opts) {
     var k = Math.max(1, L.w / SIZE);
     var body = C(sp.fur), bodyL = C(sp.furLight), bodyD = C(sp.furDark);
@@ -600,91 +591,76 @@
     var frill = C(sp.frill || '#ff9ec4'), frillD = C(sp.frillDark || '#ec7dab');
 
     var g = axoGeom(st, k);
-    var brx = g.brx, bry = g.bry, hrx = g.hrx, hry = g.hry;
+    var hrx = g.hrx, hry = g.hry, brx = g.brx, bry = g.bry;
     var bob = (opts.bob || 0) * k;
     var lean = (opts.lean || 0) * k;
     var sleep = opts.sleep || 0;
     var wag = (opts.tailWag || 0) * k;
 
-    var cx = g.cx + lean * 0.6;
-    var cy = g.cy + bob;
-    var hx = cx + brx * 0.7, hy = cy - bry * 0.28;
+    var cx = g.cx + lean * 0.5;
+    var by = g.by + bob, hy = g.hy + bob + lean * 0.2;
 
-    // the paddle tail: a thin core that tapers to a point, inside a fin
-    // membrane that swells early and narrows again at the tip
-    var tx = cx - brx * 0.72, tl = st.tail[0] * 0.7 * k;
-    for (var i = 0; i <= tl; i++) {
-      var f = i / tl;
-      var yc = cy + Math.sin(f * 1.7) * wag * 1.1;
-      var core = bry * (0.48 - 0.44 * f);
-      var mem = bry * 0.52 * Math.sin(Math.pow(f, 0.8) * Math.PI);
-      if (core + mem < 0.6) continue;
-      L.rect(tx - i, yc - core - mem, 1, (core + mem) * 2, fin);
-      if (core > 0.5) L.rect(tx - i, yc - core, 1, core * 2, body);
-    }
-
-    // the ridge along the back, sitting on top of the body line
-    for (var rx2 = -brx * 0.85; rx2 <= brx * 0.4; rx2 += 1) {
-      var rf = (rx2 + brx * 0.85) / (brx * 1.25);
-      var bodyTop = cy - bry * Math.sqrt(Math.max(0, 1 - Math.pow(rx2 / brx, 2)));
-      var rh = Math.sin(rf * Math.PI) * bry * 0.34;
-      if (rh > 0.5) L.rect(cx + rx2, bodyTop - rh, 1, rh + 1, fin);
-    }
-
-    // body
-    L.ellipse(cx, cy, brx + 1, bry + 1, ink);
-    L.ellipse(cx, cy, brx, bry, body);
-    L.ellipse(cx - brx * 0.2, cy - bry * 0.45, brx * 0.5, bry * 0.36, bodyL);
-    L.ellipse(cx - brx * 0.05, cy + bry * 0.58, brx * 0.62, bry * 0.32, belly);
-
-    // four stubby legs, the far pair a shade darker so they read as behind
-    function leg(lx, ly, len, dir, col) {
-      L.ellipse(lx, ly + len * 0.3, 1.7 * k, len * 0.62, col);
-      L.ellipse(lx + dir * 1 * k, ly + len, 2.5 * k, 1.3 * k, col);
-      for (var t3 = 0; t3 < 3; t3++) {
-        L.set(lx + dir * 1 * k + (t3 - 1) * 1.6 * k, ly + len + 1.5 * k, ink);
+    // the tail, hooking away to one side behind the body. The dark edge is
+    // laid along the whole path first, or each step would paint over the last
+    // step's colour and the tail would come out solid black.
+    var tl = st.tail[0] * 0.78 * k;
+    var tailAt = function (f) {
+      return {
+        x: cx + brx * 0.5 + f * tl * 0.78,
+        y: by + bry * 0.25 + Math.sin(f * 2.2 + wag * 0.2) * tl * 0.42,
+        r: bry * 0.5 * (1 - f * 0.78)
+      };
+    };
+    for (var pass0 = 0; pass0 < 2; pass0++) {
+      for (var i = 0; i <= tl; i++) {
+        var t0 = tailAt(i / tl);
+        if (pass0 === 0) L.disc(t0.x, t0.y, t0.r + 1, ink);
+        else L.disc(t0.x, t0.y, t0.r, i / tl > 0.4 ? fin : body);
       }
     }
-    leg(cx + brx * 0.38, cy + bry * 0.48, bry * 0.75, 1, bodyD);
-    leg(cx - brx * 0.36, cy + bry * 0.48, bry * 0.75, -1, bodyD);
-    leg(cx + brx * 0.5, cy + bry * 0.62, bry * 0.75, 1, body);
-    leg(cx - brx * 0.24, cy + bry * 0.62, bry * 0.75, -1, body);
 
-    // the gills go on after the body but before the head, so the head hides
-    // their roots and the body cannot swallow the fans
-    var nx = hx - hrx * 0.74, ny = hy - hry * 0.16;
-    /* Each frill is laid down twice — once oversized in the darker pink, then
-       again on top — so neighbouring frills keep a rim between them instead of
-       melting into one lump. */
-    function frillArm(ang, len, pad, col) {
-      var ex = nx - Math.cos(ang) * len, ey = ny - Math.sin(ang) * len;
-      L.line(nx, ny, ex, ey, col, Math.max(1, 1.1 * k + pad));
-      for (var fr = 0; fr < 3; fr++) {
-        var ft = 0.4 + fr * 0.3;
-        L.disc(nx + (ex - nx) * ft, ny + (ey - ny) * ft, (0.85 + fr * 0.3) * k + pad, col);
+    // three gills each side, rooted just behind the cheeks
+    var gy0 = hy - hry * 0.4, gx0 = hrx * 0.62;
+    var arms = [[-0.8, 0.86], [-0.16, 0.96], [0.48, 0.82]];
+    for (var pass = 0; pass < 2; pass++) {
+      var pad = pass ? 0 : 1, col = pass ? frill : frillD;
+      for (var a = 0; a < arms.length; a++) {
+        var ay = gy0 + a * hry * 0.44;
+        axoGill(L, cx - gx0, ay, arms[a][0], hrx * arms[a][1], -1, k, pad, col);
+        axoGill(L, cx + gx0, ay, arms[a][0], hrx * arms[a][1], 1, k, pad, col);
       }
-      L.disc(ex, ey, 1.5 * k + pad, col);
-    }
-    var arms = [[1.5, hrx * 1.3], [0.98, hrx * 1.42], [0.46, hrx * 1.2]];
-    for (var gi = 0; gi < arms.length; gi++) {
-      frillArm(arms[gi][0], arms[gi][1], 1, frillD);
-      frillArm(arms[gi][0], arms[gi][1], 0, frill);
     }
 
-    // head over the front of the body
-    L.ellipse(hx, hy, hrx + 1, hry + 1, ink);
-    L.ellipse(hx, hy, hrx, hry, body);
-    L.ellipse(hx - hrx * 0.1, hy - hry * 0.42, hrx * 0.6, hry * 0.36, bodyL);
+    // body under the head, with a soft pale tummy
+    L.ellipse(cx, by, brx + 1, bry + 1, ink);
+    L.ellipse(cx, by, brx, bry, body);
+    void belly;
 
-    // face — one eye, a blush and that famous smile
-    var eyeR = st.eye * 0.74 * k * (1 - 0.55 * sleep);
-    var eyeX = hx + hrx * 0.3, eyeY = hy - hry * 0.3;
-    // a white ball behind the expression, so a blink or a squint still reads
-    L.ellipse(eyeX, eyeY, eyeR * 1.3 + 1, eyeR * 1.4 + 1, ink);
-    L.ellipse(eyeX, eyeY, eyeR * 1.3, eyeR * 1.4, C('#ffffff'));
-    drawEye(L, sp, eyeX, eyeY, eyeR, opts.eyes || 'open', 1);
-    L.ellipse(eyeX - eyeR * 2.4, eyeY + eyeR * 2.1, 1.5 * k, 0.9 * k, C(sp.blush));
-    axoMouth(L, sp, hx + hrx * 0.18, hy + hry * 0.42, opts.mouth || 'smile', k);
+    // two little hands held up in front, with a couple of stubby fingers each
+    function hand(px) {
+      var hy2 = by + bry * 0.42, hw = 2.7 * k, hh = 2.1 * k;
+      L.ellipse(px, hy2, hw + 1, hh + 1, ink);
+      L.ellipse(px, hy2, hw, hh, body);
+      L.ellipse(px, hy2 - hh * 0.3, hw * 0.7, hh * 0.4, bodyL);
+      L.rect(px - 0.5 * k, hy2 + hh * 0.15, Math.max(1, 0.8 * k), hh * 0.85, ink);
+    }
+    hand(cx - brx * 0.42);
+    hand(cx + brx * 0.42);
+
+    // head over the top of it all
+    L.ellipse(cx, hy, hrx + 1, hry + 1, ink);
+    L.ellipse(cx, hy, hrx, hry, body);
+    L.ellipse(cx, hy - hry * 0.52, hrx * 0.52, hry * 0.22, bodyL);
+
+    // face — two big eyes, blushed cheeks and a little "w" of a smile
+    var eyeR = st.eye * 1.12 * k * (1 - 0.55 * sleep);
+    var eyeY = hy + hry * 0.06;
+    var eyeDX = hrx * 0.44;
+    drawEye(L, sp, cx - eyeDX, eyeY, eyeR, opts.eyes || 'open', -1, k);
+    drawEye(L, sp, cx + eyeDX, eyeY, eyeR, opts.eyes || 'open', 1, k);
+    L.ellipse(cx - eyeDX - eyeR * 1.15, eyeY + eyeR * 0.9, 1.6 * k, 1.1 * k, C(sp.blush));
+    L.ellipse(cx + eyeDX + eyeR * 1.15, eyeY + eyeR * 0.9, 1.6 * k, 1.1 * k, C(sp.blush));
+    drawMouth(L, sp, cx, eyeY + eyeR * 1.15, opts.mouth || 'smile', k);
 
     // dirt, suds and drips are already scattered in this layer's coordinates
     if (opts.spots && opts.spots.length) {
@@ -716,15 +692,15 @@
 
     if (opts.sick) {
       var iceY = hy - hry - 1.5 * k;
-      L.ellipse(hx, iceY, hrx * 0.5 + 1, hry * 0.24 + 1, ink);
-      L.ellipse(hx, iceY, hrx * 0.5, hry * 0.24, C('#9adcf8'));
-      L.ellipse(hx - hrx * 0.18, iceY - 0.6 * k, hrx * 0.16, 0.7 * k, C('#dff3ff'));
+      L.ellipse(cx, iceY, hrx * 0.5 + 1, hry * 0.22 + 1, ink);
+      L.ellipse(cx, iceY, hrx * 0.5, hry * 0.22, C('#9adcf8'));
+      L.ellipse(cx - hrx * 0.18, iceY - 0.6 * k, hrx * 0.16, 0.7 * k, C('#dff3ff'));
     }
-    if (opts.hat) drawHat(L, opts.hat, hx, hy - hry * 0.5, hrx * 0.62, hry * 0.8, ink);
+    if (opts.hat) drawHat(L, opts.hat, cx, hy - hry * 0.5, hrx * 0.64, hry * 0.86, ink);
     if (opts.shine) {
       var sh = C('#ffffff');
-      var pts = [[cx - brx * 0.3, cy - bry * 0.6], [hx, hy - hry * 0.7],
-                 [cx + brx * 0.1, cy + bry * 0.5]];
+      var pts = [[cx - hrx * 0.7, hy - hry * 0.6], [cx + hrx * 0.7, hy - hry * 0.5],
+                 [cx, by + bry * 0.4]];
       for (var q = 0; q < pts.length; q++) {
         if ((opts.shine * 3) < q) break;
         L.disc(pts[q][0], pts[q][1], 0.7 * k, sh);
@@ -734,9 +710,8 @@
     }
 
     return {
-      cx: cx, top: Math.min(cy - bry * 1.5, hy - hry) - 2 * k,
-      bottom: cy + bry * 1.4 + 2 * k,
-      headX: hx, headY: hy, headR: hrx
+      cx: cx, top: hy - hry - 3 * k, bottom: by + bry + 3 * k,
+      headX: cx, headY: hy, headR: hrx
     };
   }
 
@@ -1053,10 +1028,10 @@
       var a = axoGeom(st, k || scaleOf(speciesId));
       return {
         cx: a.cx, feet: FEET * a.k,
-        bodyCY: a.cy, bodyRX: a.brx * 0.78, bodyRY: a.bry * 0.7,
-        headCX: a.cx + a.brx * 0.66,
-        headCY: a.cy - a.bry * 0.3, headRX: a.hrx * 0.62, headRY: a.hry * 0.6,
-        top: a.cy - a.bry * 1.5
+        bodyCY: a.by, bodyRX: a.brx * 0.8, bodyRY: a.bry * 0.75,
+        headCX: a.cx,
+        headCY: a.hy, headRX: a.hrx * 0.7, headRY: a.hry * 0.7,
+        top: a.hy - a.hry
       };
     }
     if (sp && sp.body === 'fish') {

@@ -83,8 +83,10 @@ live in a **treasure chest** on the sand instead of a toy box.
 
 * The **clownfish** is drawn about twice the size of the land pets — orange
   with three white stripes, a fanned tail and a sail along its back.
-* The **axolotl** is teal, with three feathery pink gills on each side, four
-  stubby legs, a paddle tail and a permanent smile.
+* The **axolotl** faces you the way the land pets do: a big round teal head
+  with two wide eyes, blushed cheeks and a little "w" of a smile, three
+  feathery pink gills fanning out to either side, two small hands held up in
+  front and a tail hooking away behind.
 
 Both hover in mid-water and drift gently from side to side. On a narrow phone
 a tank pet only grows as large as the tank has room for, so it never swims off
