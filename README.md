@@ -192,7 +192,7 @@ monster still eats, drinks, plays, bathes, sleeps and grows up.
 | Dalmatian | Hound | Dire Wolf | **Werewolf** |
 | Cat | Fanged Cat | Sabre Cat | **Sabertooth** — teal, with sabres to match |
 | Fox | Ember Fox | Blaze Fox | **Firefox** — wreathed in flame |
-| Axolotl | Deep One | Kraken Pup | **Cthulhu** — tentacles, extra eyes, wings |
+| Axolotl | Deep One | Kraken Pup | **Cthulhu** — a beard of face tentacles, sunken eyes, wings |
 | Black Cat | Shade Cat | Night Stalker | **Void Panther** |
 | Clownfish | Snapper | Deep Lurker | **Leviathan** |
 

@@ -803,12 +803,14 @@
       names: ['Deep One', 'Kraken Pup', 'Cthulhu'],
       skin: [
         { fur: '#2f9a86', furLight: '#4dc0a8', furDark: '#1c6b5c', cream: '#bdf0e2',
-          finColor: '#4dc0a8', frill: '#7fdc6a', frillDark: '#4fae42', iris: '#ffe14d' },
+          finColor: '#4dc0a8', frill: '#7fdc6a', frillDark: '#4fae42', iris: '#ffe14d',
+          blush: '#1c6b5c' },
         { fur: '#25806f', furLight: '#3aa48e', furDark: '#144f45', cream: '#9adcc9',
-          finColor: '#3aa48e', frill: '#6ecf52', frillDark: '#3f9433', iris: '#ffe14d' },
+          finColor: '#3aa48e', frill: '#6ecf52', frillDark: '#3f9433', iris: '#ffe14d',
+          blush: '#144f45', eyeStyle: 'round', eyeColor: '#08201c' },
         { fur: '#17594f', furLight: '#248071', furDark: '#0c332d', cream: '#6fb8a5',
           finColor: '#248071', frill: '#57b83c', frillDark: '#2f7a24', outline: '#07211d',
-          iris: '#ffd21f' }
+          iris: '#ffd21f', blush: '#0c332d', eyeStyle: 'round', eyeColor: '#051714' }
       ]
     },
     fish: {
@@ -843,7 +845,7 @@
     for (key in sp) if (Object.prototype.hasOwnProperty.call(sp, key)) out[key] = sp[key];
     var pal = m.skin[Math.min(phase, 3) - 1];
     for (key in pal) if (Object.prototype.hasOwnProperty.call(pal, key)) out[key] = pal[key];
-    out.eyeStyle = phase >= 2 ? 'glow' : sp.eyeStyle;
+    out.eyeStyle = pal.eyeStyle || (phase >= 2 ? 'glow' : sp.eyeStyle);
     out.eyeColor = out.outline;
     return out;
   }
@@ -966,24 +968,39 @@
         }
         break;
 
-      case 'cthulhu':
-        // face tentacles hanging where a mouth would be
-        var tent = C(sp.furDark), tentL = C(sp.furLight);
-        var nT = 2 + p;
-        for (var ti = 0; ti < nT; ti++) {
-          var tf = nT === 1 ? 0.5 : ti / (nT - 1);
-          var tx0 = g.headX + (tf - 0.5) * g.headR * 1.05;
-          var ty0 = g.headY + g.headRY * 0.34;
-          var tl = (3 + p * 2.6) * k;
-          var curl = (tf - 0.5) * 3.4 * k;
-          for (var tq = 0; tq <= tl; tq++) {
-            var q = tq / tl;
-            var px2 = tx0 + curl * q * q + Math.sin(q * 3 + ti) * 0.8 * k;
-            var py2 = ty0 + tq;
-            var r2 = (1.5 - q * 0.9) * k;
-            L.disc(px2, py2, r2 + 1, ink);
-            L.disc(px2, py2, r2, q > 0.6 ? tentL : tent);
+      case 'cthulhu': {
+        /* A packed beard of face tentacles, the way the old one is always
+           drawn: a mass of them filling the lower face, each a fat column with
+           a dark seam beside it. Ink goes down for all of them first, or each
+           one would paint over the seam of the last. */
+        var tentA = C(sp.fur), tentB = C(sp.furDark), tentC = C(sp.furLight);
+        var nT = 4 + p * 2;                                  // 6, 8, 10
+        var halfW = g.headR * (0.6 + p * 0.09);
+        var step = (halfW * 2) / (nT - 1);
+        var rad = Math.max(1, step * 0.42);
+        var rootY = g.headY + g.headRY * 0.66;
+        var maxLen = (5 + p * 3.6) * k;
+        for (var pass = 0; pass < 2; pass++) {
+          for (var ti = 0; ti < nT; ti++) {
+            var f = (ti / (nT - 1)) * 2 - 1;                 // -1 .. 1 across
+            var len = maxLen * (1 - Math.abs(f) * 0.38);
+            var col = pass === 0 ? ink
+              : (ti % 3 === 0 ? tentB : ti % 3 === 1 ? tentA : tentC);
+            var r0 = rad + (pass === 0 ? 1 : 0);
+            for (var q = 0; q <= len; q++) {
+              var t = q / len;
+              // they hang straight, then splay outward and curl at the tips
+              var px = g.headX + f * halfW + f * t * t * 3.4 * k
+                + Math.sin(t * 2.4 + ti * 1.3) * 0.7 * k;
+              L.disc(px, rootY + q, r0 * (1 - t * 0.3), col);
+            }
           }
+        }
+        // a couple of pale highlights, the way the reference catches the light
+        for (var hl = 0; hl < 2; hl++) {
+          var hx2 = g.headX + (hl ? 1 : -1) * halfW * 0.55;
+          L.disc(hx2, rootY + maxLen * 0.42, rad * 0.5, tentC);
+          L.disc(hx2, rootY + maxLen * 0.6, rad * 0.5, tentC);
         }
         if (p >= 2) {                                    // extra eyes on the brow
           var ce = C(sp.iris || '#ffe14d');
@@ -993,15 +1010,18 @@
             L.ellipse(xx, xy, k, 0.8 * k, ce);
           }
         }
-        if (p >= 3) {                                    // little bat wings
+        if (p >= 3) {                                    // a pair of ragged wings
           for (var gs = -1; gs <= 1; gs += 2) {
-            var gx2 = g.bodyX + gs * g.bodyRX * 0.7, gy2 = g.bodyY - g.bodyRY * 0.5;
-            L.tri(gx2, gy2, gx2 + gs * 9 * k, gy2 - 7 * k, gx2 + gs * 8 * k, gy2 + 3 * k, ink);
-            L.tri(gx2, gy2, gx2 + gs * 8 * k, gy2 - 6 * k, gx2 + gs * 7 * k, gy2 + 2 * k, tent);
-            L.line(gx2, gy2, gx2 + gs * 7.5 * k, gy2 - 5.5 * k, ink, k);
+            var wxr = g.headX + gs * g.headR * 0.86, wyr = g.headY + g.headRY * 0.36;
+            var tipX = wxr + gs * 7.5 * k, tipY = wyr - 8.5 * k;
+            L.tri(wxr, wyr, tipX + gs, tipY - 1, wxr + gs * 7 * k, wyr + 5 * k, ink);
+            L.tri(wxr, wyr, tipX, tipY, wxr + gs * 6 * k, wyr + 4 * k, tentA);
+            L.line(wxr, wyr, tipX, tipY, ink, k);          // the leading edge
+            L.line(wxr + gs * 1.5 * k, wyr + 1.5 * k, wxr + gs * 5 * k, wyr - 2.5 * k, ink, k);
           }
         }
         break;
+      }
 
       case 'leviathan':
         // a jagged grin along the front of the body
