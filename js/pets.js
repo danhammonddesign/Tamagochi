@@ -758,18 +758,21 @@
       ]
     },
     cat: {
-      kind: 'sabre',
-      names: ['Fanged Cat', 'Sabre Cat', 'Sabertooth'],
+      kind: 'tiger',
+      names: ['Blue Tabby', 'Blue Tiger', 'Demon Tiger'],
       skin: [
-        { fur: '#4a8f8a', furLight: '#67b3ad', furDark: '#2f6360', cream: '#d8f2ee',
-          creamShade: '#b6ded8', innerEar: '#7fd0c8', blush: '#4fb0a6', paw: '#d8f2ee',
-          tailTip: '#d8f2ee', nose: '#1b3a38', iris: '#ffe14d', whiskers: false },
-        { fur: '#2f7d78', furLight: '#4aa39c', furDark: '#1c5350', cream: '#bde8e2',
-          creamShade: '#9bd2ca', innerEar: '#66c4bb', blush: '#3d9a90', paw: '#bde8e2',
-          tailTip: '#bde8e2', nose: '#122b2a', iris: '#ffe14d', whiskers: false },
-        { fur: '#1e6461', furLight: '#33908a', furDark: '#12403f', cream: '#a9e6df',
-          creamShade: '#86cfc6', innerEar: '#4fb3aa', blush: '#2d7d74', paw: '#a9e6df',
-          tailTip: '#a9e6df', nose: '#0b1f1e', outline: '#0b1f22', iris: '#ffd21f', whiskers: false }
+        { fur: '#5fa8d8', furLight: '#8fcbe8', furDark: '#2a4f7a', cream: '#cfe9f8',
+          creamShade: '#aed3ea', innerEar: '#f4a6c8', blush: '#7fb8dd', paw: '#cfe9f8',
+          tailTip: '#2a4f7a', nose: '#ef8ab0', iris: '#ffb84d', whiskers: false,
+          eyeStyle: 'glow', eyeScale: 1.2 },
+        { fur: '#4a9fe0', furLight: '#79c4f2', furDark: '#1f4270', cream: '#bfe2f8',
+          creamShade: '#9ccbe8', innerEar: '#f79ec4', blush: '#5fa8d8', paw: '#bfe2f8',
+          tailTip: '#1f4270', nose: '#ef7fa8', iris: '#ff9f1a', whiskers: false,
+          eyeStyle: 'glow', eyeScale: 1.32 },
+        { fur: '#3f9ae8', furLight: '#79c9f7', furDark: '#17335c', cream: '#bfe6fb',
+          creamShade: '#97cfee', innerEar: '#f79ec4', blush: '#3f8fd0', paw: '#bfe6fb',
+          tailTip: '#0f2340', nose: '#f08ab0', outline: '#0b1c33', iris: '#ff8c1a',
+          whiskers: false, eyeStyle: 'glow', eyeScale: 1.45 }
       ]
     },
     fox: {
@@ -908,17 +911,79 @@
         }
         break;
 
-      case 'sabre':
-        fangs(L, g, k, Math.min(7.5 * k, (2 + p * 1.9) * k), 0.46, bone, ink);
-        if (p >= 2) claws(L, g, k, 3, bone, ink);
-        if (p >= 2) {                                    // tufted ear tips
-          for (var ss = -1; ss <= 1; ss += 2) {
-            var tx = g.headX + ss * g.headR * 0.8, ty = g.top + 1 * k;
-            L.tri(tx - 1.2 * k, ty + 2 * k, tx + 1.2 * k, ty + 2 * k, tx + ss * k, ty - 3 * k, furD);
+      case 'tiger': {
+        /* A demon tiger: bold stripes, a mouthful of needle teeth and big
+           burning eyes with a slit down the middle. */
+        var stripe = C(sp.furDark), pale = C(sp.creamShade);
+
+        // stripes down both flanks, and a couple on each front leg
+        for (var fs = -1; fs <= 1; fs += 2) {
+          for (var si = 0; si < 2 + p; si++) {
+            var sy = g.bodyY - g.bodyRY * 0.45 + si * g.bodyRY * 0.42;
+            var dy = (sy - g.bodyY) / g.bodyRY;
+            var reach = g.bodyRX * Math.sqrt(Math.max(0, 1 - dy * dy));
+            L.rect(g.bodyX + fs * reach - (fs > 0 ? 3.4 * k : 0), sy,
+              3.4 * k, Math.max(1, 1.2 * k), stripe);
+          }
+          L.rect(g.bodyX + fs * g.bodyRX * 0.66 - 1.4 * k, g.feet - 3.4 * k,
+            2.8 * k, Math.max(1, 1.1 * k), stripe);
+        }
+
+        // soft teardrops down the chest
+        for (var td = 0; td < 5; td++) {
+          var tcol = td % 2 ? -1 : 1;
+          L.ellipse(g.bodyX + tcol * g.bodyRX * 0.2,
+            g.bodyY + g.bodyRY * (-0.05 + td * 0.16), 0.9 * k, 1.5 * k, pale);
+        }
+
+        // heavy brows sweeping up and out over the eyes
+        if (p >= 2 && g.eyeR) {
+          for (var bs = -1; bs <= 1; bs += 2) {
+            L.line(g.headX + bs * g.eyeDX * 0.4, g.eyeY - g.eyeR * 1.5,
+              g.headX + bs * g.eyeDX * 1.7, g.eyeY - g.eyeR * 2.1, stripe,
+              Math.max(1, 1.4 * k));
           }
         }
-        if (p >= 3) spines(L, g, k, 5, 2.4 * k, furD, ink);
+
+        // burning eyes: a yellow heart inside the orange, split by a slit
+        if (g.eyeR) {
+          var hot = C('#ffe14d'), slit = C(sp.outline);
+          for (var es = -1; es <= 1; es += 2) {
+            var ex2 = g.headX + es * g.eyeDX;
+            L.ellipse(ex2, g.eyeY, g.eyeR * 0.5, g.eyeR * 0.66, hot);
+            L.ellipse(ex2, g.eyeY, g.eyeR * 0.22, g.eyeR * 0.74, slit);
+            L.disc(ex2 - g.eyeR * 0.42, g.eyeY - g.eyeR * 0.48, 0.5 * k, C('#ffffff'));
+          }
+        }
+
+        // the grin: a wide dark maw lined with needle teeth
+        var mw = g.headR * (0.42 + p * 0.1);
+        var my = g.headY + g.headRY * 0.58;
+        var mh = (0.9 + p * 0.38) * k;
+        L.ellipse(g.headX, my, mw + 1, mh + 1, ink);
+        L.ellipse(g.headX, my, mw, mh, C('#8f1f45'));
+        L.ellipse(g.headX, my + mh * 0.35, mw * 0.6, mh * 0.4, C('#c8386b'));
+        var nT2 = 3 + p * 2;
+        for (var tt = 0; tt < nT2; tt++) {
+          var tx2 = g.headX - mw + (tt + 0.5) * (mw * 2 / nT2);
+          var tw2 = (mw / nT2) * 0.58;          // gums show between them
+          L.tri(tx2 - tw2, my - mh, tx2 + tw2, my - mh, tx2, my + mh * 0.05, bone);
+          if (tt % 2 === 0) {
+            L.tri(tx2 - tw2 * 0.8, my + mh, tx2 + tw2 * 0.8, my + mh,
+              tx2, my - mh * 0.05, bone);
+          }
+        }
+        // and a long fang at each corner of the mouth
+        for (var cf = -1; cf <= 1; cf += 2) {
+          var fx2 = g.headX + cf * mw * 0.94;
+          var fl = (1.1 + p * 0.7) * k;
+          L.tri(fx2 - k - 1, my - mh, fx2 + k + 1, my - mh,
+            fx2 + cf * 0.5 * k, my + fl + 1, ink);
+          L.tri(fx2 - k, my - mh, fx2 + k, my - mh,
+            fx2 + cf * 0.5 * k, my + fl, bone);
+        }
         break;
+      }
 
       case 'fire':
         // flames licking off the head, shoulders and tail tip
@@ -1207,7 +1272,7 @@
     }
 
     /* ---- face ---- */
-    var eyeR = st.eye * k;
+    var eyeR = st.eye * k * (sp.eyeScale || 1);
     var eyeY = headCY - hry * 0.02;
     var eyeDX = hrx * 0.44;
     var eyes = opts.eyes || 'open';
@@ -1280,7 +1345,8 @@
     var mg3 = {
       cx: cx, feet: feet, top: headCY - hry - earLen,
       headX: headCX, headY: headCY, headR: hrx, headRY: hry,
-      bodyX: cx, bodyY: bodyCY, bodyRX: brx, bodyRY: bry
+      bodyX: cx, bodyY: bodyCY, bodyRX: brx, bodyRY: bry,
+      eyeR: eyeR, eyeDX: eyeDX, eyeY: eyeY
     };
     drawMonsterParts(L, sp, mg3, phase, k, opts);
 
