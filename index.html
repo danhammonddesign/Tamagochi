@@ -192,14 +192,6 @@
         <canvas data-icon="foodIce" data-icon-size="32"></canvas><span>Ice Cream</span>
       </button>
     </div>
-    <div id="mixFoodWrap" class="mix-wrap hidden">
-      <p class="food-heading mix-heading">Mutation <span>something is bubbling</span></p>
-      <div class="food-grid">
-        <button id="mixFoodBtn" class="food-card mix">
-          <canvas id="mixFoodIcon"></canvas><span id="mixFoodName">Toxic Fish</span>
-        </button>
-      </div>
-    </div>
     <div class="modal-btns">
       <button id="foodCancel" class="pill-btn ghost">Not now</button>
     </div>
@@ -221,11 +213,11 @@
         <canvas data-icon="drinkJuice" data-icon-size="38"></canvas><span>Juice</span>
       </button>
     </div>
-    <div id="mixDrinkWrap" class="mix-wrap hidden">
-      <p class="food-heading mix-heading">Mutation <span>something is bubbling</span></p>
+    <div id="antidoteWrap" class="mix-wrap hidden">
+      <p class="food-heading mix-heading">Antidote <span>turn back to normal</span></p>
       <div class="food-grid">
-        <button id="mixDrinkBtn" class="drink-card mix">
-          <canvas id="mixDrinkIcon"></canvas><span id="mixDrinkName">Toxic Milk</span>
+        <button id="antidoteBtn" class="drink-card mix">
+          <canvas id="antidoteIcon"></canvas><span>Antidote</span>
         </button>
       </div>
     </div>
@@ -280,11 +272,15 @@
     <div class="formula-row">
       <span class="formula-tile"><canvas id="formulaPotion"></canvas></span>
       <span class="formula-op">+</span>
-      <span class="formula-tile formula-q">?</span>
+      <button id="formulaQ" class="formula-tile formula-q" aria-label="Try an ingredient">?</button>
       <span class="formula-op">=</span>
       <span class="formula-tile"><canvas id="formulaShape"></canvas></span>
     </div>
-    <p id="formulaHint" class="picker-note">Mix it into something to drink!</p>
+    <p id="formulaHint" class="picker-note">Tap the ? to try something!</p>
+    <div id="formulaTray" class="formula-tray hidden">
+      <p class="food-heading">What shall we add? <span>only one works</span></p>
+      <div id="formulaMixers" class="food-grid four"></div>
+    </div>
     <div class="modal-btns">
       <button id="formulaOk" class="pill-btn go">Got it!</button>
     </div>

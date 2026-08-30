@@ -740,3 +740,18 @@ body {
 .formula-tile canvas { image-rendering: pixelated; width: 52px; height: 52px; }
 .formula-q { font: 800 30px/1 system-ui, sans-serif; color: #8a7fb0; }
 .formula-op { font: 800 20px/1 system-ui, sans-serif; color: #6f6690; }
+
+/* ---------- the formula tray ---------- */
+.formula-q {
+  cursor: pointer; border: 2px dashed #b7abda; background: #efeafa;
+  animation: q-throb 1.6s ease-in-out infinite;
+}
+@keyframes q-throb {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.formula-q:active { transform: scale(.94); }
+.formula-tray { margin-top: 8px; }
+.formula-tray.hidden { display: none; }
+.formula-tray .food-heading { margin-bottom: 4px; }
+.formula-tile.picked { border-color: #8ee86a; background: #eaffe0; }

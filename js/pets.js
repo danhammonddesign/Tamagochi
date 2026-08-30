@@ -492,13 +492,13 @@
     var bellyLow = bry * 1.28 + Math.abs(sway) * 0.3;
 
     // face — one eye and a little mouth, since it swims in profile
-    var eyeR = st.eye * 0.8 * k * (1 - 0.55 * sleep);
+    var eyeR = st.eye * 0.8 * k * (sp.eyeScale || 1) * (1 - 0.55 * sleep);
     var eyeX = cx + brx * 0.63, eyeY = cy - bry * 0.24;
     // a fish only has the one eye facing us, so it gets a white ball behind
     // whatever expression is on top — a lone blink or squint on bare orange
     // would not read as an eye at all
     L.ellipse(eyeX, eyeY, eyeR * 1.26 + 1, eyeR * 1.36 + 1, ink);
-    L.ellipse(eyeX, eyeY, eyeR * 1.26, eyeR * 1.36, C('#ffffff'));
+    L.ellipse(eyeX, eyeY, eyeR * 1.26, eyeR * 1.36, C(sp.sclera || '#ffffff'));
     drawEye(L, sp, eyeX, eyeY, eyeR, opts.eyes || 'open', 1);
     L.ellipse(eyeX - eyeR * 1.4, eyeY + eyeR * 1.5, 1.3 * k, 0.8 * k, C(sp.blush));
     fishMouth(L, sp, cx + brx * 0.76, cy + bry * 0.3, opts.mouth || 'smile', k);
@@ -532,7 +532,8 @@
     var mg = {
       cx: cx, feet: FEET * k, top: cy - dorsalTop,
       headX: cx + brx * 0.5, headY: cy, headR: brx * 0.4, headRY: bry * 0.7,
-      bodyX: cx, bodyY: cy, bodyRX: brx, bodyRY: bry
+      bodyX: cx, bodyY: cy, bodyRX: brx, bodyRY: bry,
+      eyeR: eyeR, eyeX: eyeX, eyeY: eyeY
     };
     drawMonsterParts(L, sp, mg, phase || 0, k, opts);
 
@@ -824,15 +825,22 @@
       ]
     },
     fish: {
-      kind: 'leviathan',
-      names: ['Snapper', 'Deep Lurker', 'Leviathan'],
+      kind: 'drake',
+      names: ['Ember Fin', 'Flame Drake', 'Fire Dragon'],
       skin: [
-        { fur: '#d95f18', furLight: '#f0812f', furDark: '#a03f08', band: '#e8e2cf',
-          finColor: '#e0701f', tailTip: '#e0701f', iris: '#ffe14d' },
-        { fur: '#a83c12', furLight: '#cf5c1e', furDark: '#6e2409', band: '#d6cfb8',
-          finColor: '#b8480f', tailTip: '#b8480f', iris: '#ffe14d' },
-        { fur: '#6e2409', furLight: '#9a3d10', furDark: '#3d1204', band: '#bdb59c',
-          finColor: '#7f2c08', tailTip: '#7f2c08', outline: '#180b04', iris: '#ffd21f' }
+        { fur: '#f26b25', furLight: '#ff9147', furDark: '#b23f0c', band: '#e8843f',
+          cream: '#ffd9a0', finColor: '#e8551a', tailTip: '#e8551a', blush: '#d1682a',
+          eyeColor: '#1b0a08', iris: '#7fe8ff', eyeStyle: 'round', eyeScale: 1.15,
+          sclera: '#ffc48f' },
+        { fur: '#e8561a', furLight: '#ff7d33', furDark: '#96310a', band: '#d1682a',
+          cream: '#f2a86a', finColor: '#cf4310', tailTip: '#cf4310', blush: '#b8501c',
+          eyeColor: '#150705', iris: '#7fe8ff', eyeStyle: 'round', eyeScale: 1.3,
+          sclera: '#f2a86a' },
+        { fur: '#d94510', furLight: '#ff6b1f', furDark: '#7a2405', band: '#c25a1c',
+          cream: '#e07f3a', finColor: '#b83409', tailTip: '#b83409', outline: '#2a0d04',
+          blush: '#a03f10',
+          eyeColor: '#100504', iris: '#7fe8ff', eyeStyle: 'round', eyeScale: 1.45,
+          sclera: '#e08a4a' }
       ]
     }
   };
@@ -1148,24 +1156,87 @@
         break;
       }
 
-      case 'leviathan':
-        // a jagged grin along the front of the body
-        var jaw = g.headX + g.headR * 0.4;
-        for (var jt = 0; jt < 3 + p; jt++) {
-          var jx = jaw - jt * 2.2 * k;
-          var jy = g.headY + g.headRY * 0.42;
-          L.tri(jx - 1.1 * k, jy - 1, jx + 1.1 * k, jy - 1, jx, jy + (1.4 + p * 0.9) * k, ink);
-          L.tri(jx - 0.7 * k, jy - 1, jx + 0.7 * k, jy - 1, jx, jy + (1 + p * 0.8) * k, bone);
+      case 'drake': {
+        /* A little fire drake: a crest of webbed spines swept back off the
+           head, a crown of bone horns, stubby clawed legs and a huge dark eye. */
+        var horn = C('#f4e2c0'), hornS = C('#d6c09a');
+        var web = C(sp.furDark), fin2 = C(sp.finColor || sp.furLight);
+
+        // the crest — a dark membrane with orange spines standing out of it
+        var cbx = g.bodyX + g.bodyRX * 0.16;
+        var nS = 3 + p;
+        for (var wpass = 0; wpass < 2; wpass++) {
+          for (var ci = 0; ci < nS; ci++) {
+            var cf = ci / Math.max(1, nS - 1);
+            var clen = (3.4 + p * 2) * k * (1 - cf * 0.34);
+            var bx3 = cbx - ci * 2.4 * k;
+            var dxc = (bx3 - g.bodyX) / g.bodyRX;
+            var by3 = g.bodyY - g.bodyRY * Math.sqrt(Math.max(0, 1 - dxc * dxc)) + 1;
+            var tx3 = bx3 - clen * 0.5, ty3 = by3 - clen;
+            if (wpass === 0) {                     // membrane behind the spines
+              L.tri(bx3 + 1.5 * k, by3 + 1, tx3, ty3, bx3 - clen * 0.5, by3 + 1, web);
+            } else {
+              L.tri(bx3 - 1.1 * k, by3 + 1, bx3 + 1.1 * k, by3 + 1, tx3, ty3 - 1, ink);
+              L.tri(bx3 - 0.7 * k, by3 + 1, bx3 + 0.7 * k, by3 + 1, tx3, ty3, fin2);
+            }
+          }
         }
-        spines(L, g, k, 3 + p, (2 + p * 1.4) * k, furD, ink);
-        if (p >= 3) {                                    // an angler's lure
-          var lx = g.headX + g.headR * 0.2, ly = g.bodyY - g.bodyRY * 1.35;
-          L.line(g.headX - g.headR * 0.1, g.bodyY - g.bodyRY, lx, ly, ink, k);
-          L.disc(lx, ly, 2.2 * k, ink);
-          L.disc(lx, ly, 1.6 * k, C('#fff3a0'));
+
+        // a crown of bone horns over the top of the head
+        for (var hi = 0; hi < 3; hi++) {
+          var hf = (hi + 0.5) / 3;
+          var hx3 = g.headX - g.headR * 0.7 + hf * g.headR * 1.4;
+          var dx3 = (hx3 - g.bodyX) / g.bodyRX;
+          var hy3 = g.bodyY - g.bodyRY * Math.sqrt(Math.max(0, 1 - dx3 * dx3)) + 1;
+          var hh = (1.1 + p * 0.55) * k * (0.7 + 0.5 * Math.sin(hf * Math.PI));
+          L.tri(hx3 - 0.9 * k, hy3 + 1, hx3 + 0.9 * k, hy3 + 1, hx3 + 0.5 * k, hy3 - hh - 1, ink);
+          L.tri(hx3 - 0.55 * k, hy3 + 1, hx3 + 0.55 * k, hy3 + 1, hx3 + 0.5 * k, hy3 - hh, hi % 2 ? hornS : horn);
         }
-        void furL;
+
+        // four stubby legs with clawed toes
+        var legTop = g.bodyY + g.bodyRY * 0.72;
+        for (var li = 0; li < 4; li++) {
+          var lx3 = g.bodyX + (li < 2 ? -1 : 1) * g.bodyRX * (li % 2 ? 0.62 : 0.3);
+          var back = li < 2;
+          var llen = (2.4 + p * 0.6) * k * (back ? 0.9 : 1);
+          var col2 = back ? C(sp.furDark) : C(sp.fur);
+          L.ellipse(lx3, legTop + llen * 0.4, 1.6 * k + 1, llen * 0.6 + 1, ink);
+          L.ellipse(lx3, legTop + llen * 0.4, 1.6 * k, llen * 0.6, col2);
+          L.ellipse(lx3 + 0.6 * k, legTop + llen, 2.3 * k + 1, 1.3 * k + 1, ink);
+          L.ellipse(lx3 + 0.6 * k, legTop + llen, 2.3 * k, 1.3 * k, col2);
+          for (var to = 0; to < 3; to++) {         // toes
+            var tox = lx3 + 0.6 * k + (to - 1) * 1.5 * k;
+            L.tri(tox - 0.5 * k, legTop + llen + 0.4 * k, tox + 0.5 * k,
+              legTop + llen + 0.4 * k, tox + 0.3 * k, legTop + llen + 1.7 * k, ink);
+            L.tri(tox - 0.3 * k, legTop + llen + 0.4 * k, tox + 0.3 * k,
+              legTop + llen + 0.4 * k, tox + 0.25 * k, legTop + llen + 1.3 * k, horn);
+          }
+        }
+
+        // little fangs poking up out of the jaw
+        for (var fi2 = 0; fi2 < 2; fi2++) {
+          var fx3 = g.headX + g.headR * (0.9 + fi2 * 0.55);
+          var fy3 = g.headY + g.headRY * 0.5;
+          L.tri(fx3 - 0.9 * k, fy3 + 1, fx3 + 0.9 * k, fy3 + 1,
+            fx3, fy3 - (1.4 + p * 0.7) * k - 1, ink);
+          L.tri(fx3 - 0.6 * k, fy3 + 1, fx3 + 0.6 * k, fy3 + 1,
+            fx3, fy3 - (1.4 + p * 0.7) * k, horn);
+        }
+
+        // a spiked tail once it is properly a dragon
+        if (p >= 2) {
+          for (var ti3 = 0; ti3 < 3; ti3++) {
+            var sx3 = g.bodyX - g.bodyRX * (0.9 + ti3 * 0.28);
+            var sy3 = g.bodyY - g.bodyRY * (0.5 - ti3 * 0.18);
+            L.tri(sx3 - k, sy3 + 1, sx3 + k, sy3 + 1,
+              sx3 - 0.9 * k, sy3 - (1.5 + p * 0.5) * k - 1, ink);
+            L.tri(sx3 - 0.65 * k, sy3 + 1, sx3 + 0.65 * k, sy3 + 1,
+              sx3 - 0.9 * k, sy3 - (1.5 + p * 0.5) * k, fin2);
+          }
+        }
+        void furL; void bone;
         break;
+      }
     }
   }
 

@@ -70,16 +70,30 @@
      Drink one down and the pet turns into the next phase of its monster. */
   var POTIONS = [
     { id: 'toxYellow', label: 'Yellow Toxin', icon: 'toxYellow', phase: 0,
-      via: 'drink', item: 'milk', mixIcon: 'mixMilk', mixLabel: 'Toxic Milk',
-      hint: 'Mix it into something to drink!' },
+      via: 'drink', item: 'milk' },
     { id: 'toxGreen', label: 'Green Toxin', icon: 'toxGreen', phase: 1,
-      via: 'drink', item: 'juice', mixIcon: 'mixJuice', mixLabel: 'Toxic Juice',
-      hint: 'Mix it into something to drink!' },
+      via: 'drink', item: 'juice' },
     { id: 'toxPurple', label: 'Purple Toxin', icon: 'toxPurple', phase: 2,
-      via: 'food', item: 'fish', mixIcon: 'mixFish', mixLabel: 'Toxic Fish',
-      hint: 'Mix it into something to eat!' }
+      via: 'food', item: 'fish' }
   ];
   var MORPH_TIME = 2.6;       // seconds the transformation takes
+
+  /* Nobody has to stay a monster. Once a pet is fully mutated an antidote
+     turns up in the drink menu, and drinking it puts everything back — the
+     toxins go too, so the whole chain can be earned again. */
+  var ANTIDOTE = { label: 'Antidote', icon: 'antidote', gain: 30, fun: 6,
+    fill: '#8ee86a', say: 'I feel like me again!' };
+
+  /* What the ? in a formula can be filled with. Only one of them is right for
+     the toxin in hand; the rest go up in smoke. */
+  var MIXERS = [
+    { id: 'water', kind: 'drink', label: 'Water', icon: 'drinkWater' },
+    { id: 'milk', kind: 'drink', label: 'Milk', icon: 'drinkMilk' },
+    { id: 'juice', kind: 'drink', label: 'Juice', icon: 'drinkJuice' },
+    { id: 'fish', kind: 'food', label: 'Fish', icon: 'foodFish' },
+    { id: 'meal', kind: 'food', label: 'Meal', icon: 'foodMeal' },
+    { id: 'donut', kind: 'food', label: 'Donut', icon: 'foodDonut' }
+  ];
 
   function potionById(id) {
     for (var i = 0; i < POTIONS.length; i++) if (POTIONS[i].id === id) return POTIONS[i];
@@ -2002,9 +2016,68 @@
     if (!pet || !pz) return;
     Icons.render(el.formulaPotion, pz.icon, 52);
     monsterSilhouette(el.formulaShape, pet.species, pz.phase + 1, pet.growth);
-    el.formulaHint.textContent = pz.hint;
+    el.formulaHint.textContent = 'Tap the ? to try something!';
+    el.formulaTray.classList.add('hidden');
+    el.formulaQ.classList.remove('picked');
+    el.formulaQ.textContent = '?';
     el.formulaModal.classList.add('show');
     Sfx.ding();
+  }
+
+  /* Tapping the ? opens a tray of things you could add. Only one of them is
+     the missing half of the formula. */
+  function openMixers() {
+    var pz = heldPotion();
+    if (!pz) return;
+    el.formulaMixers.innerHTML = '';
+    MIXERS.forEach(function (mx) {
+      var card = document.createElement('button');
+      card.className = 'food-card';
+      var cv = document.createElement('canvas');
+      card.appendChild(cv);
+      Icons.render(cv, mx.icon, 32);
+      var nm = document.createElement('span');
+      nm.textContent = mx.label;
+      card.appendChild(nm);
+      card.addEventListener('click', function () { tryMixer(mx); });
+      el.formulaMixers.appendChild(card);
+    });
+    el.formulaTray.classList.remove('hidden');
+    el.formulaHint.textContent = 'Which one goes with it?';
+    Sfx.click();
+  }
+
+  /* Guessing. The right one is mixed and served; the wrong one goes up in
+     smoke and the toxin is left in hand to try again. */
+  function tryMixer(mx) {
+    var pz = heldPotion();
+    if (!pz) return;
+    if (mx.id !== pz.item) {
+      el.formulaModal.classList.remove('show');
+      puffOfSmoke();
+      Sfx.splash();
+      say('Try again!', 2200);
+      return;
+    }
+    el.formulaQ.textContent = '';
+    Icons.render(el.formulaQ.appendChild(document.createElement('canvas')), mx.icon, 40);
+    el.formulaQ.classList.add('picked');
+    Sfx.ding();
+    setTimeout(function () {
+      el.formulaModal.classList.remove('show');
+      if (rt.sleep) { wake(true); return; }
+      if (pz.via === 'drink') startDrinking(pz.item, true);
+      else startFeeding(pz.item, true);
+    }, 700);
+  }
+
+  /* A cloud of smoke over the pet when a mixture goes wrong. */
+  function puffOfSmoke() {
+    for (var i = 0; i < 16; i++) {
+      spawn('fluff', W / 2 + (Math.random() - 0.5) * 26, room.groundY - 22 - Math.random() * 16,
+        { vx: (Math.random() - 0.5) * 26, vy: -14 - Math.random() * 12, g: -6, max: 1.5 });
+    }
+    rt.growthFlash = 0.35;
   }
 
   /* Two meters topped up at once wins a prize. It only fires on the way up,
@@ -2701,38 +2774,17 @@
 
   /* The mixture only appears in the picker that can serve it, and only while
      the pet is actually carrying the toxin. */
+  /* The antidote only exists for a pet that has gone all the way. */
   function refreshMixCards() {
-    var pz = heldPotion();
-    var drink = pz && pz.via === 'drink' ? pz : null;
-    var food = pz && pz.via === 'food' ? pz : null;
-    el.mixDrinkWrap.classList.toggle('hidden', !drink);
-    el.mixFoodWrap.classList.toggle('hidden', !food);
-    if (drink) {
-      Icons.render(el.mixDrinkIcon, drink.mixIcon, 38);
-      el.mixDrinkName.textContent = drink.mixLabel;
-    }
-    if (food) {
-      Icons.render(el.mixFoodIcon, food.mixIcon, 38);
-      el.mixFoodName.textContent = food.mixLabel;
-    }
-  }
-
-  /* Serving the mixture: it goes down like the drink or the meal it was
-     stirred into, and the transformation starts when the bowl is empty. */
-  function serveMix() {
-    var pz = heldPotion();
-    if (!pz) return;
-    el.drinkPicker.classList.remove('show');
-    el.foodPicker.classList.remove('show');
-    if (rt.sleep) { wake(true); return; }
-    if (pz.via === 'drink') startDrinking(pz.item, true);
-    else startFeeding(pz.item, true);
+    var cured = !!pet && pet.phase >= 3;
+    el.antidoteWrap.classList.toggle('hidden', !cured);
+    if (cured) Icons.render(el.antidoteIcon, 'antidote', 38);
   }
 
   function startDrinking(kind, mixed) {
     el.drinkPicker.classList.remove('show');
     if (rt.sleep) { wake(true); return; }
-    var drink = DRINKS[kind] || DRINKS.water;
+    var drink = kind === 'antidote' ? ANTIDOTE : (DRINKS[kind] || DRINKS.water);
     rt.activity = {
       kind: 'water', drink: kind, t: 0, dur: 4.0,
       given: 0, beat: 0, gain: drink.gain, mixed: !!mixed
@@ -3203,7 +3255,7 @@
         if (eaten.fun) pet.stats.fun = clamp(pet.stats.fun + eaten.fun, 0, 100);
         say(eaten.say);
       } else if (a.kind === 'water' && a.drink) {
-        var drunk = DRINKS[a.drink] || DRINKS.water;
+        var drunk = a.drink === 'antidote' ? ANTIDOTE : (DRINKS[a.drink] || DRINKS.water);
         if (drunk.fun) pet.stats.fun = clamp(pet.stats.fun + drunk.fun, 0, 100);
         // a toxic milk does not count toward the milk-twice tummy ache
         tummy = a.mixed ? false : countMilk(a.drink);
@@ -3217,12 +3269,14 @@
         }
       }
       var mixedDown = a.mixed;
+      var cured = a.drink === 'antidote';
       rt.activity = null;
       rt.props = {};
       rt.leanTarget = 0;
       refreshDock();
       save();
-      if (mixedDown) startMorph();
+      if (cured) startCure();
+      else if (mixedDown) startMorph();
     }
   }
 
@@ -3589,9 +3643,9 @@
       'drinkPicker', 'drinkCancel', 'looBtn',
       'prizeScreen', 'prizeClose', 'prizeGrid', 'prizeSub', 'sleepBtn',
       'gameWand', 'gameFrisbee', 'toolMeter', 'prizePop',
-      'mixDrinkWrap', 'mixDrinkBtn', 'mixDrinkIcon', 'mixDrinkName',
-      'mixFoodWrap', 'mixFoodBtn', 'mixFoodIcon', 'mixFoodName',
-      'formulaModal', 'formulaPotion', 'formulaShape', 'formulaHint', 'formulaOk'
+      'antidoteWrap', 'antidoteBtn', 'antidoteIcon',
+      'formulaModal', 'formulaPotion', 'formulaShape', 'formulaHint', 'formulaOk',
+      'formulaQ', 'formulaTray', 'formulaMixers'
     ].forEach(function (id) { el[id] = $(id); });
 
     el.actionBtns = Array.prototype.slice.call(document.querySelectorAll('[data-action]'));
@@ -3630,6 +3684,16 @@
     save();
   }
 
+  /* The antidote: the same shudder, but it ends up back where it started and
+     the toxins are cleared so the chain can be run again. */
+  function startCure() {
+    if (!pet || !pet.phase) return;
+    rt.morph = { t: 0, done: false, to: 0, cure: true };
+    Sfx.whoosh();
+    say('Urrgh…', 1400);
+    save();
+  }
+
   function updateMorph(dt) {
     var m = rt.morph;
     if (!m) return;
@@ -3637,6 +3701,10 @@
     if (!m.done && m.t > MORPH_TIME * 0.45) {
       m.done = true;
       pet.phase = Math.min(3, m.to);
+      if (m.cure) {
+        pet.potion = null;
+        pet.prizes = pet.prizes.filter(function (id) { return !potionById(id); });
+      }
       Sfx.grow();
       rt.growthFlash = 1;
       confettiBurst(W / 2, room.groundY - 34, 30);
@@ -3651,11 +3719,13 @@
   }
 
   function celebrateMorph() {
+    var cure = rt.morph && rt.morph.cure;
     el.celebrateText.innerHTML =
-      '<div class="celebrate-emoji">☣️</div>' +
-      '<div class="celebrate-title">' + escapeHtml(pet.name) + ' mutated!</div>' +
-      '<div class="celebrate-sub">Now a ' + escapeHtml(Pets.formLabel(pet.species, pet.phase)) +
-      '!</div>';
+      '<div class="celebrate-emoji">' + (cure ? '💚' : '☣️') + '</div>' +
+      '<div class="celebrate-title">' + escapeHtml(pet.name) +
+      (cure ? ' is back!' : ' mutated!') + '</div>' +
+      '<div class="celebrate-sub">' + (cure ? 'Back to being a ' : 'Now a ') +
+      escapeHtml(Pets.formLabel(pet.species, pet.phase)) + '!</div>';
     el.celebrate.classList.add('show');
     setTimeout(function () { el.celebrate.classList.remove('show'); }, 2800);
   }
@@ -3738,6 +3808,7 @@
       else if (pet.sickT > SICK_AFTER * 0.5) setHint("Your pet doesn't look well — feed it!");
       else if (pet.messes.length) setHint('Tap the mess to clean it up!');
       else if (pet.prizeNew > 0) setHint('A prize is in the toy box — tap it!');
+      else if (pet.potion) setHint('A formula is waiting in the toy box!');
       else if (db.plant >= PLANT_WILD) setHint('The plant needs a trim — tap it!');
       else if (lowVal < 30) setHint(HINTS[lowest]);
       else setHint('Stroke your pet to give it cuddles!');
@@ -4276,8 +4347,11 @@
       el.drinkPicker.classList.remove('show');
     });
 
-    el.mixDrinkBtn.addEventListener('click', function () { Sfx.click(); serveMix(); });
-    el.mixFoodBtn.addEventListener('click', function () { Sfx.click(); serveMix(); });
+    el.antidoteBtn.addEventListener('click', function () {
+      Sfx.click();
+      startDrinking('antidote');
+    });
+    el.formulaQ.addEventListener('click', function () { openMixers(); });
     el.formulaOk.addEventListener('click', function () {
       Sfx.click();
       el.formulaModal.classList.remove('show');

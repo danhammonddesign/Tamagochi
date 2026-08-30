@@ -179,13 +179,21 @@ gone than the last.
 The toxins turn up in the toy box like any other prize — whichever one your pet
 is due next is about half of everything it wins, so mutating never stalls behind
 a pile of hats. When one arrives you get a **formula card**: the flask, an
-unknown, and the silhouette of what your pet would become. It never says what
-the unknown is. Open the Feed or Water menu while your pet is carrying a toxin
-and you will find the mixture waiting there, glowing green.
+unknown, and the silhouette of what your pet would become.
 
-Drink it down and the pet shakes, the room floods toxic green, and it comes back
-bigger, darker and toothier. Everything else carries on exactly as before — a
-monster still eats, drinks, plays, bathes, sleeps and grows up.
+**Tap the ?** and a tray of six things opens — water, milk, juice, fish, a meal,
+a donut. Only one of them is the missing half. Pick wrong and the whole thing
+goes up in a puff of smoke and your pet asks to try again, with the toxin still
+in hand. Pick right and it drinks the mixture down, shakes, the room floods
+toxic green, and it comes back bigger, darker and toothier. The formula is
+always there to reopen — tap the flask in the toy box.
+
+Everything else carries on exactly as before: a monster still eats, drinks,
+plays, bathes, sleeps and grows up.
+
+**Turning back.** Once a pet is fully mutated an **Antidote** appears in the
+drink menu. One bottle puts it back exactly as it was — and takes the toxins
+with it, so the whole chain can be earned and guessed all over again.
 
 | Pet | Phase 1 | Phase 2 | Phase 3 |
 |---|---|---|---|
@@ -194,7 +202,7 @@ monster still eats, drinks, plays, bathes, sleeps and grows up.
 | Fox | Ember Fox | Blaze Fox | **Firefox** — wreathed in flame |
 | Axolotl | Deep One | Kraken Pup | **Cthulhu** — a beard of face tentacles, sunken eyes, wings |
 | Black Cat | Shade Cat | Night Stalker | **Void Panther** |
-| Clownfish | Snapper | Deep Lurker | **Leviathan** |
+| Clownfish | Ember Fin | Flame Drake | **Fire Dragon** — a crest of webbed spines, bone horns and four clawed legs |
 
 You can look at a formula again any time by tapping the flask in the toy box.
 
