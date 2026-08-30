@@ -711,3 +711,32 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
+
+/* ---------- mutation ---------- */
+.mix-wrap { margin-top: 4px; }
+.mix-wrap.hidden { display: none; }
+.mix-heading { color: #5aa02a; }
+.food-card.mix, .drink-card.mix {
+  border-color: #8ee86a;
+  background: linear-gradient(180deg, #f2ffe8, #e2ffd0);
+  box-shadow: 0 0 0 2px rgba(142, 232, 106, .45), 0 4px 0 #b7e39a;
+  animation: mix-throb 1.5s ease-in-out infinite;
+}
+@keyframes mix-throb {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(142, 232, 106, .35), 0 4px 0 #b7e39a; }
+  50% { box-shadow: 0 0 0 5px rgba(142, 232, 106, .55), 0 4px 0 #b7e39a; }
+}
+
+.modal.formula { max-width: 340px; }
+.formula-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; margin: 10px 0 4px;
+}
+.formula-tile {
+  width: 64px; height: 64px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #f4f1fb; border: 2px solid #ded7ee;
+}
+.formula-tile canvas { image-rendering: pixelated; width: 52px; height: 52px; }
+.formula-q { font: 800 30px/1 system-ui, sans-serif; color: #8a7fb0; }
+.formula-op { font: 800 20px/1 system-ui, sans-serif; color: #6f6690; }

@@ -8,6 +8,22 @@
   var INK = '#141014';
   var SZ = 16;
 
+  /* A stoppered flask, filled with whatever colour is asked for. */
+  function toxin(L, body, glow, dark) {
+    L.rect(6.5, 0.5, 3, 3, C('#c9d6e2'));        // stopper
+    L.rect(6, 0, 4, 1.5, C('#8a939e'));
+    L.rect(7, 3, 2, 2, C('#dfe8f0'));            // neck
+    L.tri(7.5, 4, 8.5, 4, 8, 6, C('#dfe8f0'));
+    L.ellipse(8, 10.5, 5.4, 5, C('#dfe8f0'));    // glass
+    L.ellipse(8, 11.4, 4.4, 3.8, C(dark));       // liquid
+    L.ellipse(8, 11.8, 4.1, 3.2, C(body));
+    L.ellipse(6.6, 11, 1.6, 1.1, C(glow));
+    L.set(9.6, 9.6, C(glow));                    // bubbles
+    L.set(7.4, 8.6, C(glow));
+    L.set(10.4, 12.4, C(dark));
+    L.set(5.4, 13, C(dark));
+  }
+
   var DEFS = {
     // ---- care actions -------------------------------------------------
     feed: function (L) {                       // apple
@@ -205,6 +221,40 @@
       L.tri(3.6, 5.4, 12.4, 5.4, 8, 14, C('#5fc8ff'));
       L.rect(2, 2, 12, 2, C('#eef6fb'));
       L.line(5.4, 6.6, 6.6, 10, C('#c8f0ff'), 1);
+    },
+    /* Toxic liquids: a stoppered flask of something that should not be drunk,
+       in three increasingly alarming colours. */
+    toxYellow: function (L) { toxin(L, '#e8d21f', '#fff59a', '#a88f06'); },
+    toxGreen: function (L) { toxin(L, '#5fe03a', '#c3ff9a', '#2f8f18'); },
+    toxPurple: function (L) { toxin(L, '#b45fff', '#e2c3ff', '#6b1fa8'); },
+
+    /* The same liquid already stirred into something the pet will swallow. */
+    mixMilk: function (L) {
+      L.tri(3, 5, 13, 5, 8, 0.5, C('#e8eef5'));
+      L.rect(3, 5, 11, 10, C('#f6f9fc'));
+      L.rect(3, 5, 11, 2, C('#e8eef5'));
+      L.rect(4, 8, 9, 6, C('#e8d21f'));
+      L.rect(4, 8, 9, 1, C('#fff59a'));
+      L.set(6, 10, C('#fff59a'));
+      L.set(10, 12, C('#fff59a'));
+      L.set(8.5, 2.6, C('#c9d6e2'));
+    },
+    mixJuice: function (L) {
+      L.tri(2.5, 3, 13.5, 3, 8, 15, C('#d6ffc3'));
+      L.tri(3.6, 5.4, 12.4, 5.4, 8, 14, C('#5fe03a'));
+      L.rect(2, 2, 12, 2, C('#c3ff9a'));
+      L.set(6.5, 8, C('#c3ff9a'));
+      L.set(9.5, 10, C('#c3ff9a'));
+      L.line(11, 1, 9.4, 6, C('#2f8f18'), 1);
+    },
+    mixFish: function (L) {
+      L.ellipse(8.5, 8, 5.4, 3.4, C('#b45fff'));
+      L.ellipse(7.5, 7, 3.4, 1.8, C('#e2c3ff'));
+      L.tri(3.4, 8, 0.6, 4.4, 0.6, 11.6, C('#8a3fd6'));
+      L.tri(9, 4.8, 12, 1.6, 12.6, 5.4, C('#8a3fd6'));
+      L.set(11, 6.6, C('#1b0d2a'));
+      L.set(5.5, 9.5, C('#e2c3ff'));
+      L.set(9.5, 10, C('#e2c3ff'));
     },
     drinkMilk: function (L) {                  // milk carton
       L.tri(3, 5, 13, 5, 8, 0.5, C('#e8eef5'));

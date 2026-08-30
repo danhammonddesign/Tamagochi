@@ -234,8 +234,12 @@
   // Some pets are drawn bigger than others. The scale multiplies the whole
   // layer — the sprite is redrawn at the larger size rather than magnified —
   // so a big pet keeps the same crisp one-pixel grid as the scene around it.
+  // how much bigger a pet is drawn at each mutation phase
+  var MONSTER_SCALE = [1, 1.16, 1.34, 1.55];
   var PET_SCALE = { fish: 2, axolotl: 1.85 };
-  function scaleOf(id) { return PET_SCALE[id] || 1; }
+  function scaleOf(id, phase) {
+    return (PET_SCALE[id] || 1) * MONSTER_SCALE[Math.min(3, Math.max(0, phase || 0))];
+  }
 
   // roughly how many layer pixels wide the sprite is per unit of scale, so the
   // game can shrink a big pet that would not fit the scene
@@ -420,7 +424,7 @@
      up — so it gets its own sprite. It still grows from the same stage
      numbers and takes the same eyes, mouth, hat and scrubbable spots, so
      everything the game does to a pet works on it too. */
-  function drawFish(L, sp, st, opts) {
+  function drawFish(L, sp, st, opts, phase) {
     var k = Math.max(1, L.w / SIZE);
     var fur = C(sp.fur), furL = C(sp.furLight), furD = C(sp.furDark);
     var cream = C(sp.cream), ink = C(sp.outline), fin = C(sp.finColor || sp.furLight);
@@ -525,7 +529,15 @@
       }
     }
 
+    var mg = {
+      cx: cx, feet: FEET * k, top: cy - dorsalTop,
+      headX: cx + brx * 0.5, headY: cy, headR: brx * 0.4, headRY: bry * 0.7,
+      bodyX: cx, bodyY: cy, bodyRX: brx, bodyRY: bry
+    };
+    drawMonsterParts(L, sp, mg, phase || 0, k, opts);
+
     L.outline(ink);
+    drawMonsterGlow(L, sp, mg, phase || 0, k);
 
     if (opts.sick) {
       var iceX = cx + brx * 0.2, iceY = cy - bry - 1.5 * k;
@@ -584,7 +596,7 @@
 
   /* An axolotl, facing us: the same care mechanics as everyone else, built out
      of a round head, six frilly gills, two little hands and a paddle tail. */
-  function drawAxolotl(L, sp, st, opts) {
+  function drawAxolotl(L, sp, st, opts, phase) {
     var k = Math.max(1, L.w / SIZE);
     var body = C(sp.fur), bodyL = C(sp.furLight), bodyD = C(sp.furDark);
     var belly = C(sp.cream), ink = C(sp.outline), fin = C(sp.finColor || sp.furLight);
@@ -688,7 +700,15 @@
       }
     }
 
+    var mg2 = {
+      cx: cx, feet: FEET * k, top: hy - hry - 2 * k,
+      headX: cx, headY: hy, headR: hrx, headRY: hry,
+      bodyX: cx, bodyY: by, bodyRX: brx, bodyRY: bry
+    };
+    drawMonsterParts(L, sp, mg2, phase || 0, k, opts);
+
     L.outline(ink);
+    drawMonsterGlow(L, sp, mg2, phase || 0, k);
 
     if (opts.sick) {
       var iceY = hy - hry - 1.5 * k;
@@ -715,31 +735,335 @@
     };
   }
 
+
+  /* ------------------------------------------------------------------ */
+  /* monsters                                                            */
+  /* ------------------------------------------------------------------ */
+  /* A mutated pet is the same animal underneath — same body, same care —
+     wearing a darker palette, drawn a size bigger, with a few extra parts
+     bolted on. Three phases, each one further gone than the last. */
+  var MONSTERS = {
+    dog: {
+      kind: 'wolf',
+      names: ['Hound', 'Dire Wolf', 'Werewolf'],
+      skin: [
+        { fur: '#9a9384', furLight: '#b8b1a2', furDark: '#5f5a4e', cream: '#ded8c9',
+          creamShade: '#c2bcac', paw: '#9a9384', earColor: '#5f5a4e', iris: '#ffd23d' },
+        { fur: '#6e6a62', furLight: '#8d8880', furDark: '#3d3a35', cream: '#b3aea4',
+          creamShade: '#98938a', paw: '#6e6a62', earColor: '#3d3a35', iris: '#ffd23d',
+          earStyle: 'point', innerEar: '#8a5a4a' },
+        { fur: '#4a4741', furLight: '#66625b', furDark: '#242220', cream: '#8d887e',
+          creamShade: '#75706a', paw: '#4a4741', earColor: '#242220', outline: '#12100f',
+          nose: '#12100f', iris: '#ffcf1f', earStyle: 'point', innerEar: '#7a4a3c' }
+      ]
+    },
+    cat: {
+      kind: 'sabre',
+      names: ['Fanged Cat', 'Sabre Cat', 'Sabertooth'],
+      skin: [
+        { fur: '#4a8f8a', furLight: '#67b3ad', furDark: '#2f6360', cream: '#d8f2ee',
+          creamShade: '#b6ded8', innerEar: '#7fd0c8', blush: '#4fb0a6', paw: '#d8f2ee',
+          tailTip: '#d8f2ee', nose: '#1b3a38', iris: '#ffe14d', whiskers: false },
+        { fur: '#2f7d78', furLight: '#4aa39c', furDark: '#1c5350', cream: '#bde8e2',
+          creamShade: '#9bd2ca', innerEar: '#66c4bb', blush: '#3d9a90', paw: '#bde8e2',
+          tailTip: '#bde8e2', nose: '#122b2a', iris: '#ffe14d', whiskers: false },
+        { fur: '#1e6461', furLight: '#33908a', furDark: '#12403f', cream: '#a9e6df',
+          creamShade: '#86cfc6', innerEar: '#4fb3aa', blush: '#2d7d74', paw: '#a9e6df',
+          tailTip: '#a9e6df', nose: '#0b1f1e', outline: '#0b1f22', iris: '#ffd21f', whiskers: false }
+      ]
+    },
+    fox: {
+      kind: 'fire',
+      names: ['Ember Fox', 'Blaze Fox', 'Firefox'],
+      skin: [
+        { fur: '#e8622a', furLight: '#ff8a3d', furDark: '#a83a12', cream: '#ffd9a0',
+          creamShade: '#f0bd7a', tailTip: '#ffd23d', iris: '#ffe14d' },
+        { fur: '#d94314', furLight: '#ff7a1e', furDark: '#8a2a08', cream: '#ffc46a',
+          creamShade: '#eda23f', tailTip: '#ffd23d', earTip: '#5e1602', iris: '#fff06a' },
+        { fur: '#b32a06', furLight: '#ff5f00', furDark: '#5e1602', cream: '#ffb03d',
+          creamShade: '#e08a15', tailTip: '#ffe14d', earTip: '#2a0d04', outline: '#2a0d04',
+          nose: '#2a0d04', iris: '#fff06a' }
+      ]
+    },
+    blackcat: {
+      kind: 'void',
+      names: ['Shade Cat', 'Night Stalker', 'Void Panther'],
+      skin: [
+        { fur: '#33304a', furLight: '#4a4668', furDark: '#201e30', cream: '#4a4668',
+          creamShade: '#3d3a58', innerEar: '#8f5fd6', blush: '#5a3f80', iris: '#b06bff', whiskers: false },
+        { fur: '#2a2740', furLight: '#3f3b5e', furDark: '#18162a', cream: '#3f3b5e',
+          creamShade: '#332f4d', innerEar: '#a06fe6', blush: '#503a75', iris: '#c98bff', whiskers: false },
+        { fur: '#1b1930', furLight: '#2e2a4d', furDark: '#0e0d1a', cream: '#2e2a4d',
+          creamShade: '#241f3d', innerEar: '#b585f5', blush: '#3f2d61', outline: '#08070f',
+          iris: '#e0a6ff', whiskers: false }
+      ]
+    },
+    axolotl: {
+      kind: 'cthulhu',
+      names: ['Deep One', 'Kraken Pup', 'Cthulhu'],
+      skin: [
+        { fur: '#2f9a86', furLight: '#4dc0a8', furDark: '#1c6b5c', cream: '#bdf0e2',
+          finColor: '#4dc0a8', frill: '#7fdc6a', frillDark: '#4fae42', iris: '#ffe14d' },
+        { fur: '#25806f', furLight: '#3aa48e', furDark: '#144f45', cream: '#9adcc9',
+          finColor: '#3aa48e', frill: '#6ecf52', frillDark: '#3f9433', iris: '#ffe14d' },
+        { fur: '#17594f', furLight: '#248071', furDark: '#0c332d', cream: '#6fb8a5',
+          finColor: '#248071', frill: '#57b83c', frillDark: '#2f7a24', outline: '#07211d',
+          iris: '#ffd21f' }
+      ]
+    },
+    fish: {
+      kind: 'leviathan',
+      names: ['Snapper', 'Deep Lurker', 'Leviathan'],
+      skin: [
+        { fur: '#d95f18', furLight: '#f0812f', furDark: '#a03f08', band: '#e8e2cf',
+          finColor: '#e0701f', tailTip: '#e0701f', iris: '#ffe14d' },
+        { fur: '#a83c12', furLight: '#cf5c1e', furDark: '#6e2409', band: '#d6cfb8',
+          finColor: '#b8480f', tailTip: '#b8480f', iris: '#ffe14d' },
+        { fur: '#6e2409', furLight: '#9a3d10', furDark: '#3d1204', band: '#bdb59c',
+          finColor: '#7f2c08', tailTip: '#7f2c08', outline: '#180b04', iris: '#ffd21f' }
+      ]
+    }
+  };
+
+  function monsterOf(id) { return MONSTERS[id] || null; }
+
+  /* The name shown for a pet: its species until it mutates, then whatever it
+     has turned into. */
+  function formLabel(id, phase) {
+    var m = MONSTERS[id];
+    if (phase > 0 && m) return m.names[Math.min(phase, 3) - 1];
+    return (SPECIES[id] || SPECIES.fox).label;
+  }
+
+  /* The species table the drawing code sees while a pet is mutated. */
+  function monsterSkin(sp, phase) {
+    var m = MONSTERS[sp.id];
+    if (!m || phase < 1) return sp;
+    var out = {}, key;
+    for (key in sp) if (Object.prototype.hasOwnProperty.call(sp, key)) out[key] = sp[key];
+    var pal = m.skin[Math.min(phase, 3) - 1];
+    for (key in pal) if (Object.prototype.hasOwnProperty.call(pal, key)) out[key] = pal[key];
+    out.eyeStyle = phase >= 2 ? 'glow' : sp.eyeStyle;
+    out.eyeColor = out.outline;
+    return out;
+  }
+
+  /* Fangs hanging from the muzzle — the one part almost every monster gets. */
+  function fangs(L, g, k, len, wide, col, ink) {
+    var y0 = g.headY + g.headRY * 0.5;
+    var half = Math.max(1, 0.9 * k);
+    for (var s = -1; s <= 1; s += 2) {
+      var fx = g.headX + s * g.headR * wide;
+      L.tri(fx - half - 1, y0 - 1, fx + half + 1, y0 - 1, fx + s * 0.5 * k, y0 + len + 1, ink);
+      L.tri(fx - half, y0, fx + half, y0, fx + s * 0.5 * k, y0 + len, col);
+    }
+  }
+
+  /* Claws on the front paws. */
+  function claws(L, g, k, n, col, ink) {
+    for (var s = -1; s <= 1; s += 2) {
+      var px = g.bodyX + s * g.bodyRX * 0.55;
+      for (var i = 0; i < n; i++) {
+        var cxp = px + (i - (n - 1) / 2) * 1.7 * k;
+        L.tri(cxp - 0.9 * k, g.feet - 1, cxp + 0.9 * k, g.feet - 1, cxp, g.feet + 2.4 * k, ink);
+        L.tri(cxp - 0.5 * k, g.feet - 1, cxp + 0.5 * k, g.feet - 1, cxp, g.feet + 1.7 * k, col);
+      }
+    }
+  }
+
+  /* A row of spines following the curve of the back. */
+  function spines(L, g, k, n, len, col, ink) {
+    for (var i = 0; i < n; i++) {
+      var f = (i + 0.5) / n;
+      var sx = g.bodyX - g.bodyRX * 0.85 + f * g.bodyRX * 1.5;
+      var dx = (sx - g.bodyX) / g.bodyRX;
+      var sy = g.bodyY - g.bodyRY * Math.sqrt(Math.max(0, 1 - dx * dx)) + 1;
+      var h = len * (0.55 + 0.45 * Math.sin(f * Math.PI));
+      L.tri(sx - 1.5 * k, sy + 1, sx + 1.5 * k, sy + 1, sx - 0.6 * k, sy - h - 1, ink);
+      L.tri(sx - k, sy + 1, sx + k, sy + 1, sx - 0.5 * k, sy - h, col);
+    }
+  }
+
+  /* The extra parts each monster grows, laid on before the outline pass. */
+  function drawMonsterParts(L, sp, g, phase, k, opts) {
+    var m = MONSTERS[sp.id];
+    if (!m || phase < 1) return;
+    var p = Math.min(phase, 3);
+    var ink = C(sp.outline), furD = C(sp.furDark), furL = C(sp.furLight);
+    var bone = C('#f4efe2'), boneS = C('#cfc7b4');
+
+    switch (m.kind) {
+      case 'wolf':
+        fangs(L, g, k, (1.4 + p * 0.9) * k, 0.4, bone, ink);
+        if (p >= 2) claws(L, g, k, 3, bone, ink);
+        if (p >= 2) spines(L, g, k, 4 + p, (1.6 + p) * k, furD, ink);
+        if (p >= 3) {                                    // a pair of blunt horns
+          for (var ws = -1; ws <= 1; ws += 2) {
+            var wx = g.headX + ws * g.headR * 0.72, wy = g.headY - g.headRY * 0.78;
+            L.tri(wx - 1.6 * k, wy + 1, wx + 1.6 * k, wy + 1, wx + ws * 2.6 * k, wy - 4.6 * k, ink);
+            L.tri(wx - k, wy + 1, wx + k, wy + 1, wx + ws * 2.2 * k, wy - 4 * k, boneS);
+          }
+        }
+        break;
+
+      case 'sabre':
+        fangs(L, g, k, Math.min(7.5 * k, (2 + p * 1.9) * k), 0.46, bone, ink);
+        if (p >= 2) claws(L, g, k, 3, bone, ink);
+        if (p >= 2) {                                    // tufted ear tips
+          for (var ss = -1; ss <= 1; ss += 2) {
+            var tx = g.headX + ss * g.headR * 0.8, ty = g.top + 1 * k;
+            L.tri(tx - 1.2 * k, ty + 2 * k, tx + 1.2 * k, ty + 2 * k, tx + ss * k, ty - 3 * k, furD);
+          }
+        }
+        if (p >= 3) spines(L, g, k, 5, 2.4 * k, furD, ink);
+        break;
+
+      case 'fire':
+        // flames licking off the head, shoulders and tail tip
+        var flame = C(p >= 3 ? '#ffe14d' : '#ffb03d'), flameHot = C('#fff3a0');
+        // the flames sit on the crown and the shoulders, clear of the face
+        var seats = [
+          [g.headX - g.headR * 0.5, g.headY - g.headRY * 0.94, 0.9],
+          [g.headX + g.headR * 0.5, g.headY - g.headRY * 0.94, 0.9],
+          [g.bodyX - g.bodyRX * 0.72, g.bodyY - g.bodyRY * 0.9, 0.8],
+          [g.bodyX + g.bodyRX * 0.72, g.bodyY - g.bodyRY * 0.9, 0.8]
+        ];
+        if (p >= 2) seats.push([g.headX, g.headY - g.headRY * 1.06, 1.3]);
+        if (p >= 3) seats.push([g.bodyX, g.bodyY - g.bodyRY * 1.02, 1.05]);
+        for (var fi = 0; fi < seats.length; fi++) {
+          var st0 = seats[fi];
+          var fh = (2.6 + p * 1.9) * k * st0[2];
+          var flick = Math.sin((opts.bob || 0) * 2 + fi * 1.7) * 0.8 * k;
+          L.tri(st0[0] - 1.7 * k, st0[1] + 1, st0[0] + 1.7 * k, st0[1] + 1,
+            st0[0] + flick, st0[1] - fh - 1, ink);
+          L.tri(st0[0] - 1.2 * k, st0[1] + 1, st0[0] + 1.2 * k, st0[1] + 1,
+            st0[0] + flick, st0[1] - fh, flame);
+          L.tri(st0[0] - 0.55 * k, st0[1] + 1, st0[0] + 0.55 * k, st0[1] + 1,
+            st0[0] + flick * 0.6, st0[1] - fh * 0.55, flameHot);
+        }
+        if (p >= 2) fangs(L, g, k, (1.2 + p * 0.7) * k, 0.4, bone, ink);
+        if (p >= 3) claws(L, g, k, 3, C('#ffe14d'), ink);
+        break;
+
+      case 'void':
+        if (p >= 1) fangs(L, g, k, (1.2 + p * 0.8) * k, 0.4, bone, ink);
+        if (p >= 2) {                                    // a second pair of eyes
+          var ec = C(sp.iris || '#c98bff');
+          for (var vs = -1; vs <= 1; vs += 2) {
+            var vx = g.headX + vs * g.headR * 0.34, vy = g.headY - g.headRY * 0.62;
+            L.ellipse(vx, vy, 1.5 * k, 1.1 * k, ink);
+            L.ellipse(vx, vy, 0.9 * k, 0.7 * k, ec);
+          }
+        }
+        if (p >= 3) {                                    // a crown of shards
+          for (var cs = -2; cs <= 2; cs++) {
+            var kx = g.headX + cs * g.headR * 0.42;
+            var ky = g.headY - g.headRY * (0.86 - Math.abs(cs) * 0.06);
+            var kh = (5.5 - Math.abs(cs) * 1.1) * k;
+            L.tri(kx - 1.4 * k, ky, kx + 1.4 * k, ky, kx, ky - kh - 1, ink);
+            L.tri(kx - k, ky, kx + k, ky, kx, ky - kh, C(sp.furLight));
+          }
+        }
+        break;
+
+      case 'cthulhu':
+        // face tentacles hanging where a mouth would be
+        var tent = C(sp.furDark), tentL = C(sp.furLight);
+        var nT = 2 + p;
+        for (var ti = 0; ti < nT; ti++) {
+          var tf = nT === 1 ? 0.5 : ti / (nT - 1);
+          var tx0 = g.headX + (tf - 0.5) * g.headR * 1.05;
+          var ty0 = g.headY + g.headRY * 0.34;
+          var tl = (3 + p * 2.6) * k;
+          var curl = (tf - 0.5) * 3.4 * k;
+          for (var tq = 0; tq <= tl; tq++) {
+            var q = tq / tl;
+            var px2 = tx0 + curl * q * q + Math.sin(q * 3 + ti) * 0.8 * k;
+            var py2 = ty0 + tq;
+            var r2 = (1.5 - q * 0.9) * k;
+            L.disc(px2, py2, r2 + 1, ink);
+            L.disc(px2, py2, r2, q > 0.6 ? tentL : tent);
+          }
+        }
+        if (p >= 2) {                                    // extra eyes on the brow
+          var ce = C(sp.iris || '#ffe14d');
+          for (var xs = -1; xs <= 1; xs += 2) {
+            var xx = g.headX + xs * g.headR * 0.72, xy = g.headY - g.headRY * 0.55;
+            L.ellipse(xx, xy, 1.7 * k, 1.3 * k, ink);
+            L.ellipse(xx, xy, k, 0.8 * k, ce);
+          }
+        }
+        if (p >= 3) {                                    // little bat wings
+          for (var gs = -1; gs <= 1; gs += 2) {
+            var gx2 = g.bodyX + gs * g.bodyRX * 0.7, gy2 = g.bodyY - g.bodyRY * 0.5;
+            L.tri(gx2, gy2, gx2 + gs * 9 * k, gy2 - 7 * k, gx2 + gs * 8 * k, gy2 + 3 * k, ink);
+            L.tri(gx2, gy2, gx2 + gs * 8 * k, gy2 - 6 * k, gx2 + gs * 7 * k, gy2 + 2 * k, tent);
+            L.line(gx2, gy2, gx2 + gs * 7.5 * k, gy2 - 5.5 * k, ink, k);
+          }
+        }
+        break;
+
+      case 'leviathan':
+        // a jagged grin along the front of the body
+        var jaw = g.headX + g.headR * 0.4;
+        for (var jt = 0; jt < 3 + p; jt++) {
+          var jx = jaw - jt * 2.2 * k;
+          var jy = g.headY + g.headRY * 0.42;
+          L.tri(jx - 1.1 * k, jy - 1, jx + 1.1 * k, jy - 1, jx, jy + (1.4 + p * 0.9) * k, ink);
+          L.tri(jx - 0.7 * k, jy - 1, jx + 0.7 * k, jy - 1, jx, jy + (1 + p * 0.8) * k, bone);
+        }
+        spines(L, g, k, 3 + p, (2 + p * 1.4) * k, furD, ink);
+        if (p >= 3) {                                    // an angler's lure
+          var lx = g.headX + g.headR * 0.2, ly = g.bodyY - g.bodyRY * 1.35;
+          L.line(g.headX - g.headR * 0.1, g.bodyY - g.bodyRY, lx, ly, ink, k);
+          L.disc(lx, ly, 2.2 * k, ink);
+          L.disc(lx, ly, 1.6 * k, C('#fff3a0'));
+        }
+        void furL;
+        break;
+    }
+  }
+
+  /* Anything that should glow rather than be outlined goes on afterwards. */
+  function drawMonsterGlow(L, sp, g, phase, k) {
+    var m = MONSTERS[sp.id];
+    if (!m || phase < 2) return;
+    var glow = C(sp.iris || '#ffe14d');
+    var pts = [[g.headX - g.headR * 0.44, g.headY], [g.headX + g.headR * 0.44, g.headY]];
+    for (var i = 0; i < pts.length; i++) {
+      L.disc(pts[i][0], pts[i][1], (phase >= 3 ? 0.9 : 0.6) * k, glow);
+    }
+  }
+
   function drawPet(L, speciesId, stageKey, opts) {
     opts = opts || {};
     var sp = SPECIES[speciesId] || SPECIES.fox;
     var st = STAGES[stageIndex(stageKey)];
-    if (sp.body === 'fish') return drawFish(L, sp, st, opts);
-    if (sp.body === 'axolotl') return drawAxolotl(L, sp, st, opts);
+    var phase = Math.min(3, Math.max(0, opts.phase || 0));
+    if (phase > 0) sp = monsterSkin(sp, phase);
+    if (sp.body === 'fish') return drawFish(L, sp, st, opts, phase);
+    if (sp.body === 'axolotl') return drawAxolotl(L, sp, st, opts, phase);
 
+    var k = Math.max(1, L.w / SIZE);
     var fur = C(sp.fur), furL = C(sp.furLight), furD = C(sp.furDark);
     var cream = C(sp.cream), creamS = C(sp.creamShade);
     var ink = C(sp.outline);
 
-    var hrx = st.head[0], hry = st.head[1];
-    var brx = st.body[0], bry = st.body[1];
-    var bob = opts.bob || 0;
-    var lean = opts.lean || 0;
+    var hrx = st.head[0] * k, hry = st.head[1] * k;
+    var brx = st.body[0] * k, bry = st.body[1] * k;
+    var bob = (opts.bob || 0) * k;
+    var lean = (opts.lean || 0) * k;
     var sleep = opts.sleep || 0;
 
-    var cx = SIZE / 2;
-    var bodyCY = FEET - bry - 2.5 + bob * 0.5 + sleep;
+    var cx = L.w / 2;
+    var feet = FEET * k;
+    var bodyCY = feet - bry - 2.5 * k + bob * 0.5 + sleep * k;
     var headCY = bodyCY - (bry + hry) * 0.74 + bob + hry * 0.45 * sleep;
     var headCX = cx + lean;
 
     /* ---- tail (behind everything, sweeping up the left side) ---- */
-    var tlen = st.tail[0], tthick = st.tail[1];
-    var wag = (opts.tailWag || 0);
+    var tlen = st.tail[0] * k, tthick = st.tail[1] * k;
+    var wag = (opts.tailWag || 0) * k;
     var t0x = cx - brx * 0.5, t0y = bodyCY + bry * 0.3;
     var t1x = t0x - tlen * 0.95, t1y = t0y + bry * 0.35 + wag * 1.5;
     var t2x = t0x - tlen * 0.62, t2y = t0y - tlen * 0.8 + wag * 2.4;
@@ -780,14 +1104,14 @@
     var pawC = C(sp.paw);
     for (var s2 = -1; s2 <= 1; s2 += 2) {
       var px = cx + s2 * brx * 0.55;
-      var legH = Math.round(bry * 0.5) + 1;
-      L.rect(px - brx * 0.22 - 1, FEET - legH, brx * 0.44 + 2, legH + 1, ink);
-      L.rect(px - brx * 0.22, FEET - legH, brx * 0.44, legH, pawC);
+      var legH = Math.round(bry * 0.5) + k;
+      L.rect(px - brx * 0.22 - 1, feet - legH, brx * 0.44 + 2, legH + 1, ink);
+      L.rect(px - brx * 0.22, feet - legH, brx * 0.44, legH, pawC);
     }
 
     /* ---- ears (drawn before the head so the bases tuck under it) ---- */
-    var earLen = st.ear * (1 - 0.18 * sleep);
-    var wig = (opts.earWig || 0) + sleep * 1.6;
+    var earLen = st.ear * k * (1 - 0.18 * sleep);
+    var wig = (opts.earWig || 0) * k + sleep * 1.6 * k;
     function grow(p, g2, k) {
       return { x: g2.x + (p.x - g2.x) * k, y: g2.y + (p.y - g2.y) * k };
     }
@@ -812,14 +1136,14 @@
       };
       var gx = (baseIn.x + baseOut.x + tip.x) / 3, gy = (baseIn.y + baseOut.y + tip.y) / 3;
       var g = { x: gx, y: gy };
-      var big = 1 + 2.4 / Math.max(4, earLen + hrx * 0.5);
+      var big = 1 + 2.4 * k / Math.max(4 * k, earLen + hrx * 0.5);
       var oi = grow(baseIn, g, big), oo = grow(baseOut, g, big), ot = grow(tip, g, big);
       L.tri(oi.x, oi.y, oo.x, oo.y, ot.x, ot.y, ink);
       L.tri(baseIn.x, baseIn.y, baseOut.x, baseOut.y, tip.x, tip.y, fur);
       // inner ear, pulled toward the centroid
       var a = grow(baseIn, g, 0.58), b = grow(baseOut, g, 0.58), c = grow(tip, g, 0.72);
       L.tri(a.x, a.y, b.x, b.y, c.x, c.y, C(sp.innerEar));
-      if (sp.earTip && earLen > 3.4) {
+      if (sp.earTip && earLen > 3.4 * k) {
         var tipK = 0.3;
         L.tri(tip.x, tip.y,
           tip.x + (baseIn.x - tip.x) * tipK, tip.y + (baseIn.y - tip.y) * tipK,
@@ -857,40 +1181,40 @@
 
     // forehead stripes (tabby)
     if (sp.foreheadStripes) {
-      for (var k = -1; k <= 1; k++) {
-        L.rect(headCX + k * 2.4 - 0.5, headCY - hry * 0.74, 1, 2.6, furD);
+      for (var st2 = -1; st2 <= 1; st2++) {
+        L.rect(headCX + st2 * 2.4 * k - 0.5 * k, headCY - hry * 0.74, k, 2.6 * k, furD);
       }
     }
 
     /* ---- face ---- */
-    var eyeR = st.eye;
+    var eyeR = st.eye * k;
     var eyeY = headCY - hry * 0.02;
     var eyeDX = hrx * 0.44;
     var eyes = opts.eyes || 'open';
-    drawEye(L, sp, headCX - eyeDX, eyeY, eyeR, eyes === 'wink' ? 'blink' : eyes, -1);
-    drawEye(L, sp, headCX + eyeDX, eyeY, eyeR, eyes, 1);
+    drawEye(L, sp, headCX - eyeDX, eyeY, eyeR, eyes === 'wink' ? 'blink' : eyes, -1, k);
+    drawEye(L, sp, headCX + eyeDX, eyeY, eyeR, eyes, 1, k);
 
     // blush — feverish and darker when the pet is poorly
     if (opts.blush !== false) {
       var blushCol = C(opts.sick ? '#e8607a' : sp.blush);
       for (var s5 = -1; s5 <= 1; s5 += 2) {
         L.ellipse(headCX + s5 * hrx * 0.62, headCY + hry * 0.36, hrx * (opts.sick ? 0.24 : 0.19),
-          opts.sick ? 1.4 : 1, blushCol);
+          (opts.sick ? 1.4 : 1) * k, blushCol);
       }
     }
 
     // nose + mouth
     var noseY = headCY + hry * 0.34;
     var ns = sp.noseScale || 1;
-    L.ellipse(headCX, noseY, 1.1 * ns, 0.9 * ns, C(sp.nose));
-    drawMouth(L, sp, headCX, noseY + 2.4, opts.mouth || 'smile');
+    L.ellipse(headCX, noseY, 1.1 * ns * k, 0.9 * ns * k, C(sp.nose));
+    drawMouth(L, sp, headCX, noseY + 2.4 * k, opts.mouth || 'smile', k);
 
     // whiskers — kept inside the silhouette so the outline pass leaves them thin
-    if (sp.whiskers && hrx >= 8.5) {
+    if (sp.whiskers && hrx >= 8.5 * k) {
       var wc = C('#ffffff');
       for (var s6 = -1; s6 <= 1; s6 += 2) {
-        L.line(headCX + s6 * hrx * 0.5, noseY - 0.5, headCX + s6 * hrx * 0.98, noseY - 1.5, wc, 1);
-        L.line(headCX + s6 * hrx * 0.5, noseY + 1.5, headCX + s6 * hrx * 0.96, noseY + 1.5, wc, 1);
+        L.line(headCX + s6 * hrx * 0.5, noseY - 0.5 * k, headCX + s6 * hrx * 0.98, noseY - 1.5 * k, wc, k);
+        L.line(headCX + s6 * hrx * 0.5, noseY + 1.5 * k, headCX + s6 * hrx * 0.96, noseY + 1.5 * k, wc, k);
       }
     }
     /* ---- scrubbable spots: mud to wash off, tufts to brush out ---- */
@@ -904,12 +1228,12 @@
         if (dxh * dxh + dyh * dyh <= 1.1) { sx += lean; sy += bob * 0.5; }
         if (sp2.kind === 'tuft') {
           var dir = sp2.flip ? 1 : -1;
-          L.tri(sx - 1.6, sy + 1.2, sx + 1.6, sy + 1.2, sx + dir * 2, sy - 2.6, furD);
-          L.line(sx + dir * 0.6, sy + 0.6, sx + dir * 1.6, sy - 1.8, furL, 1);
+          L.tri(sx - 1.6 * k, sy + 1.2 * k, sx + 1.6 * k, sy + 1.2 * k,
+            sx + dir * 2 * k, sy - 2.6 * k, furD);
+          L.line(sx + dir * 0.6 * k, sy + 0.6 * k, sx + dir * 1.6 * k, sy - 1.8 * k, furL, k);
         } else {
-          L.disc(sx, sy, 1.6, mud);
-          L.set(sx, sy, mudD);
-          L.set(sx + 1, sy - 1, mudD);
+          L.disc(sx, sy, 1.6 * k, mud);
+          L.disc(sx, sy, 0.6 * k, mudD);
         }
       }
     }
@@ -918,8 +1242,8 @@
     if (opts.foam && opts.foam.length) {
       for (var f = 0; f < opts.foam.length; f++) {
         var fm = opts.foam[f];
-        L.disc(fm.x, fm.y + bob * 0.5, fm.r, C('#ffffff'));
-        L.set(fm.x - 1, fm.y - 1 + bob * 0.5, C('#eaf9ff'));
+        L.disc(fm.x, fm.y + bob * 0.5, fm.r * k, C('#ffffff'));
+        L.disc(fm.x - 0.8 * k, fm.y - 0.8 * k + bob * 0.5, fm.r * 0.4 * k, C('#eaf9ff'));
       }
     }
 
@@ -928,21 +1252,29 @@
       for (var dp = 0; dp < opts.drips.length; dp++) {
         var dr = opts.drips[dp];
         var dy2 = dr.y + bob * 0.5;
-        L.ellipse(dr.x, dy2, 1.5, 2, C('#7fd8ff'));
-        L.set(dr.x - 1, dy2 - 1, C('#d6f2ff'));
+        L.ellipse(dr.x, dy2, 1.5 * k, 2 * k, C('#7fd8ff'));
+        L.disc(dr.x - 0.8 * k, dy2 - 0.8 * k, 0.5 * k, C('#d6f2ff'));
       }
     }
 
+    var mg3 = {
+      cx: cx, feet: feet, top: headCY - hry - earLen,
+      headX: headCX, headY: headCY, headR: hrx, headRY: hry,
+      bodyX: cx, bodyY: bodyCY, bodyRX: brx, bodyRY: bry
+    };
+    drawMonsterParts(L, sp, mg3, phase, k, opts);
+
     /* ---- outline ---- */
     L.outline(ink);
+    drawMonsterGlow(L, sp, mg3, phase, k);
 
     if (opts.sick) {
       var iceX = headCX, iceY = headCY - hry * 0.95;
       L.ellipse(iceX, iceY, hrx * 0.42 + 1, hry * 0.24 + 1, ink);
       L.ellipse(iceX, iceY, hrx * 0.42, hry * 0.24, C('#9adcf8'));
-      L.ellipse(iceX - hrx * 0.14, iceY - 0.6, hrx * 0.16, 0.7, C('#dff3ff'));
-      L.rect(iceX - 1, iceY - hry * 0.24 - 2, 3, 2, ink);
-      L.rect(iceX - 1, iceY - hry * 0.24 - 2, 2, 1, C('#7fb8d8'));
+      L.ellipse(iceX - hrx * 0.14, iceY - 0.6 * k, hrx * 0.16, 0.7 * k, C('#dff3ff'));
+      L.rect(iceX - k, iceY - hry * 0.24 - 2 * k, 3 * k, 2 * k, ink);
+      L.rect(iceX - k, iceY - hry * 0.24 - 2 * k, 2 * k, k, C('#7fb8d8'));
     }
 
     if (opts.hat) drawHat(L, opts.hat, headCX, headCY, hrx, hry, ink);
@@ -953,17 +1285,17 @@
                  [headCX + hrx * 0.5, headCY - hry * 0.75]];
       for (var q = 0; q < pts.length; q++) {
         if ((opts.shine * 3) < q) break;
-        L.set(pts[q][0], pts[q][1], sh);
-        L.set(pts[q][0] - 1, pts[q][1] + 1, sh);
-        L.set(pts[q][0] + 1, pts[q][1] + 1, sh);
-        L.set(pts[q][0], pts[q][1] + 2, sh);
+        L.disc(pts[q][0], pts[q][1], 0.6 * k, sh);
+        L.disc(pts[q][0] - k, pts[q][1] + k, 0.6 * k, sh);
+        L.disc(pts[q][0] + k, pts[q][1] + k, 0.6 * k, sh);
+        L.disc(pts[q][0], pts[q][1] + 2 * k, 0.6 * k, sh);
       }
     }
 
     return {
       cx: cx,
       top: headCY - hry - earLen,
-      bottom: FEET,
+      bottom: feet,
       headX: headCX,
       headY: headCY,
       headR: hrx
@@ -1045,15 +1377,16 @@
         top: g.cy - g.bry - 4 * g.k
       };
     }
-    var hrx = st.head[0], hry = st.head[1];
-    var brx = st.body[0], bry = st.body[1];
-    var bodyCY = FEET - bry - 2.5;
+    var lk = k || scaleOf(speciesId);
+    var hrx = st.head[0] * lk, hry = st.head[1] * lk;
+    var brx = st.body[0] * lk, bry = st.body[1] * lk;
+    var bodyCY = FEET * lk - bry - 2.5 * lk;
     var headCY = bodyCY - (bry + hry) * 0.74;
     return {
-      cx: SIZE / 2, feet: FEET,
+      cx: (SIZE * lk) / 2, feet: FEET * lk,
       bodyCY: bodyCY, bodyRX: brx, bodyRY: bry,
       headCY: headCY, headRX: hrx, headRY: hry,
-      top: headCY - hry - st.ear
+      top: headCY - hry - st.ear * lk
     };
   }
 
@@ -1065,6 +1398,9 @@
     FEET: FEET,
     scaleOf: scaleOf,
     spanOf: spanOf,
+    MONSTERS: MONSTERS,
+    monsterOf: monsterOf,
+    formLabel: formLabel,
     stageFor: stageFor,
     metrics: metrics,
     stageIndex: stageIndex,

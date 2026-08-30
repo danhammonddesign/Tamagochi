@@ -3,7 +3,8 @@
 A Tamagotchi-style pet game for kids. Adopt a baby **cat**, **fox**,
 **black cat**, **Dalmatian**, **clownfish** or **axolotl**, look after it, and watch it grow up
 from Baby to Adult. Keep a whole shelf of pets and switch between them
-whenever you like.
+whenever you like — and if you can find the right toxic liquids, mutate one
+into a monster.
 
 No build step, no dependencies, no network — just open `index.html`.
 
@@ -162,6 +163,40 @@ A tank pet wins the same four hats, plus seven things for the tank:
   the same.
 * A **bubble curtain** that sends a stream of bubbles up one side.
 * **Rainbow Gravel** scattered through the sand.
+
+### Monsters
+
+Your pet does not have to stay a pet. Win the right toxic liquid, mix it into
+the right thing to swallow, and it mutates — three times over, each one further
+gone than the last.
+
+| Phase | You need | Mixed into |
+|---|---|---|
+| 1 | **Yellow Toxin** | Milk |
+| 2 | **Green Toxin** | Orange juice |
+| 3 | **Purple Toxin** | Fish |
+
+The toxins turn up in the toy box like any other prize — whichever one your pet
+is due next is about half of everything it wins, so mutating never stalls behind
+a pile of hats. When one arrives you get a **formula card**: the flask, an
+unknown, and the silhouette of what your pet would become. It never says what
+the unknown is. Open the Feed or Water menu while your pet is carrying a toxin
+and you will find the mixture waiting there, glowing green.
+
+Drink it down and the pet shakes, the room floods toxic green, and it comes back
+bigger, darker and toothier. Everything else carries on exactly as before — a
+monster still eats, drinks, plays, bathes, sleeps and grows up.
+
+| Pet | Phase 1 | Phase 2 | Phase 3 |
+|---|---|---|---|
+| Dalmatian | Hound | Dire Wolf | **Werewolf** |
+| Cat | Fanged Cat | Sabre Cat | **Sabertooth** — teal, with sabres to match |
+| Fox | Ember Fox | Blaze Fox | **Firefox** — wreathed in flame |
+| Axolotl | Deep One | Kraken Pup | **Cthulhu** — tentacles, extra eyes, wings |
+| Black Cat | Shade Cat | Night Stalker | **Void Panther** |
+| Clownfish | Snapper | Deep Lurker | **Leviathan** |
+
+You can look at a formula again any time by tapping the flask in the toy box.
 
 ### Mini games
 

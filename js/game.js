@@ -65,6 +65,38 @@
   };
   var MILK_LIMIT = 2;         // milks in a row before a poorly tummy
 
+  /* Mutation. Three toxic liquids, each earned as a prize and each useless on
+     its own — it has to be mixed into something the pet will actually swallow.
+     Drink one down and the pet turns into the next phase of its monster. */
+  var POTIONS = [
+    { id: 'toxYellow', label: 'Yellow Toxin', icon: 'toxYellow', phase: 0,
+      via: 'drink', item: 'milk', mixIcon: 'mixMilk', mixLabel: 'Toxic Milk',
+      hint: 'Mix it into something to drink!' },
+    { id: 'toxGreen', label: 'Green Toxin', icon: 'toxGreen', phase: 1,
+      via: 'drink', item: 'juice', mixIcon: 'mixJuice', mixLabel: 'Toxic Juice',
+      hint: 'Mix it into something to drink!' },
+    { id: 'toxPurple', label: 'Purple Toxin', icon: 'toxPurple', phase: 2,
+      via: 'food', item: 'fish', mixIcon: 'mixFish', mixLabel: 'Toxic Fish',
+      hint: 'Mix it into something to eat!' }
+  ];
+  var MORPH_TIME = 2.6;       // seconds the transformation takes
+
+  function potionById(id) {
+    for (var i = 0; i < POTIONS.length; i++) if (POTIONS[i].id === id) return POTIONS[i];
+    return null;
+  }
+  // the liquid this pet is due next, whether or not it has been won yet
+  function nextPotion(p) {
+    p = p || pet;
+    if (!p || p.phase >= 3) return null;
+    return POTIONS[p.phase] || null;
+  }
+  // the liquid it is holding and has not used
+  function heldPotion(p) {
+    p = p || pet;
+    return p && p.potion ? potionById(p.potion) : null;
+  }
+
   // what each animal says when it is thoroughly pleased with you
   var HAPPY_SAY = {
     dog: 'Woof woof!', fox: 'Yip yip!', cat: 'Purrrrr!',
@@ -85,7 +117,10 @@
     { id: 'pumpkin', kind: 'wallpaper', label: 'Pumpkin Wallpaper', icon: 'wallPumpkin' },
     { id: 'cactus', kind: 'plant', label: 'Cactus', icon: 'plantCactus' },
     { id: 'skullbanner', kind: 'banner', label: 'Skull Lights', icon: 'bannerSkull' },
-    { id: 'candyrug', kind: 'rug', label: 'Candy Corn Rug', icon: 'rugCandy' }
+    { id: 'candyrug', kind: 'rug', label: 'Candy Corn Rug', icon: 'rugCandy' },
+    { id: 'toxYellow', kind: 'potion', label: 'Yellow Toxin', icon: 'toxYellow' },
+    { id: 'toxGreen', kind: 'potion', label: 'Green Toxin', icon: 'toxGreen' },
+    { id: 'toxPurple', kind: 'potion', label: 'Purple Toxin', icon: 'toxPurple' }
   ];
 
   var TANK_PRIZES = [
@@ -99,7 +134,10 @@
     { id: 'galaxy', kind: 'wallpaper', label: 'Starry Water', icon: 'waterGalaxy' },
     { id: 'kelp', kind: 'plant', label: 'Tall Kelp', icon: 'plantKelp' },
     { id: 'bubbler', kind: 'banner', label: 'Bubble Curtain', icon: 'bubbler' },
-    { id: 'gravel', kind: 'rug', label: 'Rainbow Gravel', icon: 'gravelRainbow' }
+    { id: 'gravel', kind: 'rug', label: 'Rainbow Gravel', icon: 'gravelRainbow' },
+    { id: 'toxYellow', kind: 'potion', label: 'Yellow Toxin', icon: 'toxYellow' },
+    { id: 'toxGreen', kind: 'potion', label: 'Green Toxin', icon: 'toxGreen' },
+    { id: 'toxPurple', kind: 'potion', label: 'Purple Toxin', icon: 'toxPurple' }
   ];
 
   var ALL_PRIZES = LAND_PRIZES.concat(TANK_PRIZES);
@@ -507,6 +545,7 @@
       // a new pet arrives spotless, so it starts with the two-full-meters
       // prize already claimed — one has to be earned by looking after it
       prizeArmed: true, gv: GROWTH_V,
+      phase: 0, potion: null,
       prizes: [], prizeNew: 0, best: {}
     };
   }
@@ -533,6 +572,10 @@
     p.prizes = p.prizes.map(function (id) { return PRIZE_ALIAS[id] || id; })
       .filter(function (id, i, all) { return prizeById(id, p) && all.indexOf(id) === i; });
     if (typeof p.prizeNew !== 'number') p.prizeNew = 0;
+    // how far the pet has mutated, and which toxin it is carrying unused
+    p.phase = clamp(Math.round(p.phase || 0), 0, 3);
+    if (p.potion && (!potionById(p.potion) || potionById(p.potion).phase !== p.phase)) p.potion = null;
+    if (!p.potion) p.potion = null;
     if (!p.best || typeof p.best !== 'object') p.best = {};
     if (p.best.mouse !== undefined && p.best.wand === undefined) p.best.wand = p.best.mouse;
     delete p.best.mouse;
@@ -669,6 +712,7 @@
     dose: null,                 // the medicine timing game
     witch: null, winTaps: 0, winTapT: -10,
     ghost: null, shipTaps: 0, shipTapT: -10,
+    morph: null,
     needLoo: null, loo: null,
     props: {}, particles: [],
     spots: [], foam: [], drips: [],
@@ -692,11 +736,13 @@
      floor — goes through these three so it follows whichever pet is out. */
   var petLayers = {};
   function petSpan() { return Pets.spanOf(pet ? pet.species : 'fox'); }
+  function petPhase() { return (pet && pet.phase) || 0; }
   function pSize() {
-    var k = Pets.scaleOf(pet ? pet.species : 'fox');
+    var k = Pets.scaleOf(pet ? pet.species : 'fox', petPhase());
     // a big pet only grows as big as the scene has room for, so it never runs
     // off both edges of a narrow phone
-    if (k > 1) k = Math.min(k, (W - 10) / petSpan());
+    // a monster is allowed to crowd the room a little more than a pet does
+    if (k > 1) k = Math.min(k, (W - 10 + petPhase() * 3) / petSpan());
     return Math.max(Pets.SIZE, Math.round(Pets.SIZE * k));
   }
   function petK() { return pSize() / Pets.SIZE; }
@@ -1873,7 +1919,14 @@
      into the toy box, and the box lights up until you go and look. Nothing
      covers the screen, so play is never interrupted. */
   function awardPrize() {
-    var left = prizeList(pet).filter(function (p) { return !hasPrize(p.id); });
+    // a toxin the pet has not been given yet jumps the queue about half the
+    // time, so mutating never stalls behind a pile of hats
+    var due = nextPotion();
+    var potionDue = due && !pet.potion && !hasPrize(due.id) ? due : null;
+    var left = prizeList(pet).filter(function (p) {
+      return !hasPrize(p.id) && p.kind !== 'potion';
+    });
+    if (potionDue && (!left.length || Math.random() < 0.5)) return awardPotion(potionDue);
     if (!left.length) return null;
     var won = left[Math.floor(Math.random() * left.length)];
     pet.prizes.push(won.id);
@@ -1891,6 +1944,67 @@
     prizePopTimer = setTimeout(function () { el.prizePop.classList.remove('show'); }, 2400);
     save();
     return won;
+  }
+
+  /* Winning a toxin is its own little event: the flask lands in the toy box
+     and a formula card pops up showing what it turns the pet into. */
+  function awardPotion(pz) {
+    pet.prizes.push(pz.id);
+    pet.potion = pz.id;
+    pet.prizeNew++;
+    Sfx.grow();
+    rt.prizeFly = { t: 0, icon: pz.icon };
+    confettiBurst(W / 2, room.groundY - 40, 26);
+    for (var i = 0; i < 10; i++) {
+      spawn('sparkle', W / 2 + (Math.random() - 0.5) * 26, room.groundY - 30,
+        { vx: (Math.random() - 0.5) * 26, vy: -20 - Math.random() * 16, g: 30, max: 1.2 });
+    }
+    save();
+    setTimeout(function () { showFormula(pz); }, 700);
+    return prizeById(pz.id);
+  }
+
+  /* The formula card: the flask, an unknown, and the silhouette of what the
+     pet would become. It never says what the unknown is — the mixture shows up
+     in the food or drink picker for you to find. */
+  function monsterSilhouette(canvas, species, phase, growth) {
+    var k = Pets.scaleOf(species, phase);
+    var sz = Math.round(Pets.SIZE * k);
+    var L = new PX.Layer(sz, sz);
+    Pets.drawPet(L, species, Pets.stageFor(growth).key,
+      { eyes: 'open', mouth: 'smile', phase: phase });
+    // trim to what was actually drawn, so the shape fills the tile
+    var minX = sz, maxX = -1, minY = sz, maxY = -1;
+    for (var y = 0; y < sz; y++) {
+      for (var x = 0; x < sz; x++) {
+        if (!L.data[y * sz + x]) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    var side = Math.max(8, Math.max(maxX - minX, maxY - minY) + 3);
+    var scr = new PX.Screen(canvas, side, side);
+    var ink = C('#3a3350');
+    scr.layer.clear(C('#f4f1fb'));
+    if (maxX >= 0) {
+      var ox = Math.round((side - (maxX - minX)) / 2) - minX;
+      var oy = Math.round((side - (maxY - minY)) / 2) - minY;
+      for (y = 0; y < sz; y++) {
+        for (x = 0; x < sz; x++) if (L.data[y * sz + x]) scr.layer.set(x + ox, y + oy, ink);
+      }
+    }
+    scr.present();
+  }
+
+  function showFormula(pz) {
+    if (!pet || !pz) return;
+    Icons.render(el.formulaPotion, pz.icon, 52);
+    monsterSilhouette(el.formulaShape, pet.species, pz.phase + 1, pet.growth);
+    el.formulaHint.textContent = pz.hint;
+    el.formulaModal.classList.add('show');
+    Sfx.ding();
   }
 
   /* Two meters topped up at once wins a prize. It only fires on the way up,
@@ -2298,11 +2412,12 @@
   function pickerOpen() {
     return el.foodPicker.classList.contains('show') ||
       el.drinkPicker.classList.contains('show') ||
+      el.formulaModal.classList.contains('show') ||
       el.gamePicker.classList.contains('show');
   }
 
   function maybeSleep(dt) {
-    if (rt.sleep || rt.activity || rt.tool || rt.dose || rt.loo || rt.needLoo) return;
+    if (rt.sleep || rt.activity || rt.tool || rt.dose || rt.loo || rt.needLoo || rt.morph) return;
     if (rt.pooping || rt.petting || rt.angry > 0) return;
     if (pet.sick || rt.intro || pickerOpen()) return;
     if (minStat(pet) < 32) return;              // never nap while something is needed
@@ -2574,22 +2689,53 @@
     return false;
   }
 
-  function startFeeding(kind) {
+  function startFeeding(kind, mixed) {
     el.foodPicker.classList.remove('show');
     if (rt.sleep) { wake(true); return; }
     var food = FOODS[kind] || FOODS.meal;
-    rt.activity = { kind: 'feed', food: kind, t: 0, dur: 4.6, given: 0, beat: 0, gain: food.gain };
+    rt.activity = { kind: 'feed', food: kind, t: 0, dur: 4.6, given: 0, beat: 0,
+      gain: food.gain, mixed: !!mixed };
     rt.props = {};
     refreshDock();
   }
 
-  function startDrinking(kind) {
+  /* The mixture only appears in the picker that can serve it, and only while
+     the pet is actually carrying the toxin. */
+  function refreshMixCards() {
+    var pz = heldPotion();
+    var drink = pz && pz.via === 'drink' ? pz : null;
+    var food = pz && pz.via === 'food' ? pz : null;
+    el.mixDrinkWrap.classList.toggle('hidden', !drink);
+    el.mixFoodWrap.classList.toggle('hidden', !food);
+    if (drink) {
+      Icons.render(el.mixDrinkIcon, drink.mixIcon, 38);
+      el.mixDrinkName.textContent = drink.mixLabel;
+    }
+    if (food) {
+      Icons.render(el.mixFoodIcon, food.mixIcon, 38);
+      el.mixFoodName.textContent = food.mixLabel;
+    }
+  }
+
+  /* Serving the mixture: it goes down like the drink or the meal it was
+     stirred into, and the transformation starts when the bowl is empty. */
+  function serveMix() {
+    var pz = heldPotion();
+    if (!pz) return;
+    el.drinkPicker.classList.remove('show');
+    el.foodPicker.classList.remove('show');
+    if (rt.sleep) { wake(true); return; }
+    if (pz.via === 'drink') startDrinking(pz.item, true);
+    else startFeeding(pz.item, true);
+  }
+
+  function startDrinking(kind, mixed) {
     el.drinkPicker.classList.remove('show');
     if (rt.sleep) { wake(true); return; }
     var drink = DRINKS[kind] || DRINKS.water;
     rt.activity = {
       kind: 'water', drink: kind, t: 0, dur: 4.0,
-      given: 0, beat: 0, gain: drink.gain
+      given: 0, beat: 0, gain: drink.gain, mixed: !!mixed
     };
     rt.props = {};
     refreshDock();
@@ -2845,7 +2991,7 @@
   /* actions                                                             */
   /* ------------------------------------------------------------------ */
   function startAction(name) {
-    if (!pet || rt.activity || rt.tool || rt.intro) return;
+    if (!pet || rt.activity || rt.tool || rt.intro || rt.morph) return;
     var cfg = ACTIONS[name];
     if (!cfg) return;
     Sfx.init();
@@ -2871,8 +3017,8 @@
       el.gamePicker.classList.add('show');
       return;
     }
-    if (name === 'feed') { el.foodPicker.classList.add('show'); return; }
-    if (name === 'water') { el.drinkPicker.classList.add('show'); return; }
+    if (name === 'feed') { refreshMixCards(); el.foodPicker.classList.add('show'); return; }
+    if (name === 'water') { refreshMixCards(); el.drinkPicker.classList.add('show'); return; }
     if (name === 'medicine') return startDose();
 
     rt.activity = { kind: name, t: 0, dur: cfg.dur, given: 0, beat: 0 };
@@ -3059,7 +3205,8 @@
       } else if (a.kind === 'water' && a.drink) {
         var drunk = DRINKS[a.drink] || DRINKS.water;
         if (drunk.fun) pet.stats.fun = clamp(pet.stats.fun + drunk.fun, 0, 100);
-        tummy = countMilk(a.drink);
+        // a toxic milk does not count toward the milk-twice tummy ache
+        tummy = a.mixed ? false : countMilk(a.drink);
         if (!tummy) say(drunk.say);
       } else {
         say(cfg.done);
@@ -3069,11 +3216,13 @@
           spawn('heart', W / 2 + (Math.random() - 0.5) * 14, room.groundY - 28, { vy: -14, max: 1.2 });
         }
       }
+      var mixedDown = a.mixed;
       rt.activity = null;
       rt.props = {};
       rt.leanTarget = 0;
       refreshDock();
       save();
+      if (mixedDown) startMorph();
     }
   }
 
@@ -3439,7 +3588,10 @@
       'gamePicker', 'gameCancel', 'toolFill', 'medBtn', 'foodPicker', 'foodCancel',
       'drinkPicker', 'drinkCancel', 'looBtn',
       'prizeScreen', 'prizeClose', 'prizeGrid', 'prizeSub', 'sleepBtn',
-      'gameWand', 'gameFrisbee', 'toolMeter', 'prizePop'
+      'gameWand', 'gameFrisbee', 'toolMeter', 'prizePop',
+      'mixDrinkWrap', 'mixDrinkBtn', 'mixDrinkIcon', 'mixDrinkName',
+      'mixFoodWrap', 'mixFoodBtn', 'mixFoodIcon', 'mixFoodName',
+      'formulaModal', 'formulaPotion', 'formulaShape', 'formulaHint', 'formulaOk'
     ].forEach(function (id) { el[id] = $(id); });
 
     el.actionBtns = Array.prototype.slice.call(document.querySelectorAll('[data-action]'));
@@ -3466,6 +3618,48 @@
 
   function setHint(text) { el.hint.textContent = text; }
 
+  /* Drinking the mixture down: the pet shakes itself apart for a moment, the
+     tank or room flashes toxic green, and it comes back as the next thing. */
+  function startMorph() {
+    var pz = heldPotion();
+    if (!pz || pet.phase !== pz.phase) return;
+    pet.potion = null;
+    rt.morph = { t: 0, done: false, to: pet.phase + 1 };
+    Sfx.whoosh();
+    say('Urrgh…', 1400);
+    save();
+  }
+
+  function updateMorph(dt) {
+    var m = rt.morph;
+    if (!m) return;
+    m.t += dt;
+    if (!m.done && m.t > MORPH_TIME * 0.45) {
+      m.done = true;
+      pet.phase = Math.min(3, m.to);
+      Sfx.grow();
+      rt.growthFlash = 1;
+      confettiBurst(W / 2, room.groundY - 34, 30);
+      celebrateMorph();
+      save();
+    }
+    if (Math.random() < dt * 26) {
+      spawn('sparkle', W / 2 + (Math.random() - 0.5) * 34, room.groundY - 34 + Math.random() * 22,
+        { vx: (Math.random() - 0.5) * 24, vy: -18 - Math.random() * 16, g: 26, max: 1.1 });
+    }
+    if (m.t > MORPH_TIME) { rt.morph = null; refreshDock(); }
+  }
+
+  function celebrateMorph() {
+    el.celebrateText.innerHTML =
+      '<div class="celebrate-emoji">☣️</div>' +
+      '<div class="celebrate-title">' + escapeHtml(pet.name) + ' mutated!</div>' +
+      '<div class="celebrate-sub">Now a ' + escapeHtml(Pets.formLabel(pet.species, pet.phase)) +
+      '!</div>';
+    el.celebrate.classList.add('show');
+    setTimeout(function () { el.celebrate.classList.remove('show'); }, 2800);
+  }
+
   function celebrate(stage) {
     Sfx.grow();
     rt.growthFlash = 0.9;
@@ -3476,7 +3670,8 @@
     el.celebrateText.innerHTML =
       '<div class="celebrate-emoji">🎉</div>' +
       '<div class="celebrate-title">' + escapeHtml(pet.name) + ' grew up!</div>' +
-      '<div class="celebrate-sub">Now a ' + stage.label + ' ' + Pets.SPECIES[pet.species].label + '!</div>';
+      '<div class="celebrate-sub">Now a ' + stage.label + ' ' +
+      escapeHtml(Pets.formLabel(pet.species, pet.phase)) + '!</div>';
     el.celebrate.classList.add('show');
     setTimeout(function () { el.celebrate.classList.remove('show'); }, 2800);
   }
@@ -3504,7 +3699,8 @@
     var sp = Pets.SPECIES[pet.species];
     var stage = Pets.stageFor(pet.growth);
     el.petName.textContent = pet.name;
-    el.petStage.textContent = stage.label + ' ' + sp.label;
+    el.petStage.textContent = stage.label + ' ' + Pets.formLabel(pet.species, pet.phase);
+    void sp;
 
     var idx = Pets.stageIndex(stage.key);
     var next = Pets.STAGES[idx + 1];
@@ -3636,11 +3832,16 @@
       drips: rt.drips,
       sick: pet.sick,
       hat: pet.hat,
+      phase: pet.phase,
       shine: rt.shine > 0 ? rt.shine : 0
     });
     // a pounce at the wand throws the whole pet toward the toy for a moment
     var lunge = rt.pounce ? Math.sin(clamp(rt.pounce.t / 0.4, 0, 1) * Math.PI) : 0;
     var petDX = (rt.pounce ? rt.pounce.dir * 8 * lunge : 0) + looOffset();
+    if (rt.morph) {
+      var shake = 1 - Math.abs(rt.morph.t / MORPH_TIME - 0.45) * 1.8;
+      petDX += Math.sin(rt.t * 46) * 3 * Math.max(0, shake);
+    }
     if (inTank() && !rt.activity && !rt.tool) {
       // it drifts about the tank, but only as far as the glass allows
       var slack = Math.max(0, (W - petSpan() * petK()) / 2 - 2);
@@ -3727,6 +3928,16 @@
       if (lv < 30) drawNeedBubble(L, bubX, bubY, lowest, rt.t);
     }
 
+    if (rt.morph) {
+      // a toxic wash that thickens up to the moment it changes, then clears
+      var mk = rt.morph.t / MORPH_TIME;
+      var thick = mk < 0.45 ? mk / 0.45 : Math.max(0, 1 - (mk - 0.45) / 0.3);
+      var step = thick > 0.75 ? 1 : thick > 0.45 ? 2 : 3;
+      var tox = C(rt.morph.done ? '#c3ff9a' : '#8ee86a');
+      for (var ty = 0; ty < H; ty += 1) {
+        for (var tx = (ty * 2) % (step + 1); tx < W; tx += step + 1) L.set(tx, ty, tox);
+      }
+    }
     if (rt.growthFlash > 0 && Math.floor(rt.growthFlash * 16) % 2 === 0) {
       var white = C('#ffffff');
       for (var y = 0; y < H; y++) for (var x = (y % 2); x < W; x += 2) L.set(x, y, white);
@@ -3779,6 +3990,7 @@
     if (rt.pounce) { rt.pounce.t += dt; if (rt.pounce.t > 0.4) rt.pounce = null; }
     if (rt.witch) { rt.witch.t += dt; if (rt.witch.t > WITCH_FLY) rt.witch = null; }
     if (rt.ghost) { rt.ghost.t += dt; if (rt.ghost.t > GHOST_FLY) rt.ghost = null; }
+    updateMorph(dt);
 
     growthClock += dt;
     if (growthClock > 10) {
@@ -4036,7 +4248,7 @@
       el.gamePicker.classList.remove('show');
     });
 
-    var foodCards = document.querySelectorAll('.food-card');
+    var foodCards = document.querySelectorAll('.food-card:not(.mix)');
     for (var fi = 0; fi < foodCards.length; fi++) {
       (function (card) {
         card.addEventListener('click', function () {
@@ -4050,7 +4262,7 @@
       el.foodPicker.classList.remove('show');
     });
 
-    var drinkCards = document.querySelectorAll('.drink-card');
+    var drinkCards = document.querySelectorAll('.drink-card:not(.mix)');
     for (var di = 0; di < drinkCards.length; di++) {
       (function (card) {
         card.addEventListener('click', function () {
@@ -4062,6 +4274,13 @@
     el.drinkCancel.addEventListener('click', function () {
       Sfx.click();
       el.drinkPicker.classList.remove('show');
+    });
+
+    el.mixDrinkBtn.addEventListener('click', function () { Sfx.click(); serveMix(); });
+    el.mixFoodBtn.addEventListener('click', function () { Sfx.click(); serveMix(); });
+    el.formulaOk.addEventListener('click', function () {
+      Sfx.click();
+      el.formulaModal.classList.remove('show');
     });
 
     el.soundBtn.addEventListener('click', function () {
@@ -4120,7 +4339,7 @@
 
       var stage = document.createElement('span');
       stage.className = 'pc-stage';
-      stage.textContent = Pets.stageFor(p.growth).label + ' ' + Pets.SPECIES[p.species].label;
+      stage.textContent = Pets.stageFor(p.growth).label + ' ' + Pets.formLabel(p.species, p.phase);
       card.appendChild(stage);
 
       var hearts = document.createElement('span');
@@ -4165,7 +4384,7 @@
       var scr = new PX.Screen(canvas, TILE, TILE);
       var L = tileLayer(p.species);
       Pets.drawPet(L, p.species, Pets.stageFor(p.growth).key,
-        { eyes: 'open', mouth: 'smile', hat: p.hat });
+        { eyes: 'open', mouth: 'smile', hat: p.hat, phase: p.phase });
       var tsp = Pets.SPECIES[p.species] || Pets.SPECIES.cat;
       scr.layer.clear(C(tsp.thumbBg));
       // a fish floats, so it gets a strip of sand instead of a shadow
@@ -4208,12 +4427,14 @@
   var PRIZE_USE = {
     hat: 'Tap to wear', toy: 'Tap to play', picture: 'Tap to hang up',
     wallpaper: 'Tap to put up', plant: 'Tap to pot it', banner: 'Tap to string up',
-    rug: 'Tap to lay it down', house: 'Tap to build it', wreck: 'Tap to sink it'
+    rug: 'Tap to lay it down', house: 'Tap to build it', wreck: 'Tap to sink it',
+    potion: 'Tap for the formula'
   };
   var PRIZE_ON = {
     hat: 'Wearing it', toy: 'Tap to play', picture: 'On the wall',
     wallpaper: 'On the walls', plant: 'In the pot', banner: 'Twinkling away',
-    rug: 'On the floor', house: 'Standing there', wreck: 'Out at the back'
+    rug: 'On the floor', house: 'Standing there', wreck: 'Out at the back',
+    potion: 'All used up'
   };
   // which field on the pet each kind of decoration is remembered in
   var PRIZE_SLOT = {
@@ -4235,6 +4456,7 @@
   };
 
   function prizeInUse(pz) {
+    if (pz.kind === 'potion') return !(pet && pet.potion === pz.id);
     var slot = PRIZE_SLOT[pz.kind];
     return !!(pet && slot && pet[slot] === pz.id);
   }
@@ -4244,6 +4466,12 @@
   function usePrize(pz) {
     el.prizeScreen.classList.add('hidden');
     if (pz.kind === 'toy') { playWithToy(pz); return; }
+    if (pz.kind === 'potion') {
+      var recipe = potionById(pz.id);
+      if (pet.potion === pz.id && recipe) showFormula(recipe);
+      else say('All used up!', 1600);
+      return;
+    }
 
     var wearing = prizeInUse(pz);
     pet[PRIZE_SLOT[pz.kind]] = wearing ? null : pz.id;
