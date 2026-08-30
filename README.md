@@ -199,10 +199,10 @@ with it, so the whole chain can be earned and guessed all over again.
 |---|---|---|---|
 | Dalmatian | Hound | Dire Wolf | **Werewolf** — a ragged black-and-white hound with red eyes |
 | Cat | Blue Tabby | Blue Tiger | **Demon Tiger** — blue and striped, burning slit eyes, a mouthful of needles |
-| Fox | Ember Fox | Blaze Fox | **Firefox** — wreathed in flame |
+| Fox | Ember Fox | Spirit Fox | **Kitsune** — twin glowing tails, huge eyes, drifting embers |
 | Axolotl | Deep One | Kraken Pup | **Cthulhu** — a beard of face tentacles, sunken eyes, wings |
 | Black Cat | Shade Cat | Night Stalker | **Void Panther** |
-| Clownfish | Ember Fin | Flame Drake | **Fire Dragon** — a crest of webbed spines, bone horns and four clawed legs |
+| Clownfish | Ember Fin | Flame Drake | **Fire Dragon** — a chubby little drake with a webbed crest, bone horns and four clawed legs |
 
 You can look at a formula again any time by tapping the flask in the toy box.
 

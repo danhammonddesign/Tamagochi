@@ -2997,7 +2997,7 @@
   }
 
   function makeSpot(kind) {
-    var m = Pets.metrics(Pets.stageFor(pet.growth).key, pet.species, petK());
+    var m = Pets.metrics(Pets.stageFor(pet.growth).key, pet.species, petK(), petPhase());
     var onHead = Math.random() < 0.35;
     var a = Math.random() * Math.PI * 2;
     var r = kind === 'tuft' ? 0.55 + Math.random() * 0.35 : Math.sqrt(Math.random()) * 0.72;
@@ -3305,7 +3305,7 @@
       rt.props.tub = { x: W / 2, y: room.groundY + 1 };
       // the tub front hides the lower body, so float any dirt down there
       // back up to where it can actually be seen and scrubbed
-      var m = Pets.metrics(Pets.stageFor(pet.growth).key, pet.species, petK());
+      var m = Pets.metrics(Pets.stageFor(pet.growth).key, pet.species, petK(), petPhase());
       var topY = pFeet() - 9 * petK();
       for (var i = 0; i < rt.spots.length; i++) {
         var sp = rt.spots[i];

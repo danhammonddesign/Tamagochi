@@ -238,7 +238,10 @@
   var MONSTER_SCALE = [1, 1.16, 1.34, 1.55];
   var PET_SCALE = { fish: 2, axolotl: 1.85 };
   function scaleOf(id, phase) {
-    return (PET_SCALE[id] || 1) * MONSTER_SCALE[Math.min(3, Math.max(0, phase || 0))];
+    var ph = Math.min(3, Math.max(0, phase || 0));
+    var m = MONSTERS[id];
+    var own = ph > 0 && m && m.scale ? m.scale[ph - 1] : 1;
+    return (PET_SCALE[id] || 1) * MONSTER_SCALE[ph] * own;
   }
 
   // roughly how many layer pixels wide the sprite is per unit of scale, so the
@@ -385,9 +388,11 @@
   /* Geometry of the fish inside its layer. The layer may be bigger than a
      land pet's, so everything is worked out from the scale rather than from
      fixed numbers — the sprite is redrawn larger, not blown up. */
-  function fishGeom(st, k) {
-    // a clownfish is a stout oval, not a long torpedo
-    var brx = st.body[0] * 1.6 * k, bry = st.body[1] * 1.22 * k;
+  function fishGeom(st, k, sp) {
+    // a clownfish is a stout oval, not a long torpedo; a drake is rounder still
+    var sq = sp && sp.stout ? 1 : 0;
+    var brx = st.body[0] * (1.6 - sq * 0.34) * k;
+    var bry = st.body[1] * (1.22 + sq * 0.2) * k;
     return {
       k: k, brx: brx, bry: bry,
       cx: (SIZE * k) / 2,
@@ -430,7 +435,7 @@
     var cream = C(sp.cream), ink = C(sp.outline), fin = C(sp.finColor || sp.furLight);
     var white = C(sp.band || '#fdfbf2');
 
-    var g = fishGeom(st, k);
+    var g = fishGeom(st, k, sp);
     var brx = g.brx, bry = g.bry;
     var bob = (opts.bob || 0) * k;
     var lean = (opts.lean || 0) * k;
@@ -497,8 +502,9 @@
     // a fish only has the one eye facing us, so it gets a white ball behind
     // whatever expression is on top — a lone blink or squint on bare orange
     // would not read as an eye at all
-    L.ellipse(eyeX, eyeY, eyeR * 1.26 + 1, eyeR * 1.36 + 1, ink);
-    L.ellipse(eyeX, eyeY, eyeR * 1.26, eyeR * 1.36, C(sp.sclera || '#ffffff'));
+    var sMul = sp.scleraMul || 1.26;
+    L.ellipse(eyeX, eyeY, eyeR * sMul + 1, eyeR * (sMul + 0.1) + 1, ink);
+    L.ellipse(eyeX, eyeY, eyeR * sMul, eyeR * (sMul + 0.1), C(sp.sclera || '#ffffff'));
     drawEye(L, sp, eyeX, eyeY, eyeR, opts.eyes || 'open', 1);
     L.ellipse(eyeX - eyeR * 1.4, eyeY + eyeR * 1.5, 1.3 * k, 0.8 * k, C(sp.blush));
     fishMouth(L, sp, cx + brx * 0.76, cy + bry * 0.3, opts.mouth || 'smile', k);
@@ -784,16 +790,21 @@
       ]
     },
     fox: {
-      kind: 'fire',
-      names: ['Ember Fox', 'Blaze Fox', 'Firefox'],
+      kind: 'ember',
+      names: ['Ember Fox', 'Spirit Fox', 'Kitsune'],
       skin: [
-        { fur: '#e8622a', furLight: '#ff8a3d', furDark: '#a83a12', cream: '#ffd9a0',
-          creamShade: '#f0bd7a', tailTip: '#ffd23d', iris: '#ffe14d' },
-        { fur: '#d94314', furLight: '#ff7a1e', furDark: '#8a2a08', cream: '#ffc46a',
-          creamShade: '#eda23f', tailTip: '#ffd23d', earTip: '#5e1602', iris: '#fff06a' },
-        { fur: '#b32a06', furLight: '#ff5f00', furDark: '#5e1602', cream: '#ffb03d',
-          creamShade: '#e08a15', tailTip: '#ffe14d', earTip: '#2a0d04', outline: '#2a0d04',
-          nose: '#2a0d04', iris: '#fff06a' }
+        { fur: '#f2712c', furLight: '#ff9a52', furDark: '#c04512', cream: '#ffe3c2',
+          creamShade: '#f7cba0', innerEar: '#f7a48f', paw: '#c04512',
+          tailTip: '#fff0d6', eyeStyle: 'round', eyeColor: '#7a2f10', iris: '#ffcf8f',
+          eyeScale: 1.15 },
+        { fur: '#f2662a', furLight: '#ff8f45', furDark: '#b83b0e', cream: '#ffdcb0',
+          creamShade: '#f5c191', innerEar: '#f79a85', paw: '#b83b0e',
+          tailTip: '#fff6e0', eyeStyle: 'round', eyeColor: '#6b2a0e', iris: '#ffd9a0',
+          eyeScale: 1.3 },
+        { fur: '#f45c22', furLight: '#ff8437', furDark: '#ab310a', cream: '#ffd6a3',
+          creamShade: '#f2b880', innerEar: '#fa9179', paw: '#ab310a',
+          tailTip: '#fffbef', outline: '#3a1204', eyeStyle: 'round', eyeColor: '#5e2409',
+          iris: '#ffe0b0', eyeScale: 1.45 }
       ]
     },
     blackcat: {
@@ -827,20 +838,21 @@
     fish: {
       kind: 'drake',
       names: ['Ember Fin', 'Flame Drake', 'Fire Dragon'],
+      scale: [0.92, 0.86, 0.8],
       skin: [
-        { fur: '#f26b25', furLight: '#ff9147', furDark: '#b23f0c', band: '#e8843f',
+        { fur: '#f26b25', furLight: '#ff9147', furDark: '#c9591c', band: '#f2712c',
           cream: '#ffd9a0', finColor: '#e8551a', tailTip: '#e8551a', blush: '#d1682a',
-          eyeColor: '#1b0a08', iris: '#7fe8ff', eyeStyle: 'round', eyeScale: 1.15,
-          sclera: '#ffc48f' },
-        { fur: '#e8561a', furLight: '#ff7d33', furDark: '#96310a', band: '#d1682a',
+          eyeColor: '#1b0a08', iris: '#7fe8ff', eyeStyle: 'round', eyeScale: 1.45,
+          sclera: '#ffc48f', scleraMul: 1.1, stout: true },
+        { fur: '#e8561a', furLight: '#ff7d33', furDark: '#b8480f', band: '#e8561a',
           cream: '#f2a86a', finColor: '#cf4310', tailTip: '#cf4310', blush: '#b8501c',
-          eyeColor: '#150705', iris: '#7fe8ff', eyeStyle: 'round', eyeScale: 1.3,
-          sclera: '#f2a86a' },
-        { fur: '#d94510', furLight: '#ff6b1f', furDark: '#7a2405', band: '#c25a1c',
+          eyeColor: '#150705', iris: '#7fe8ff', eyeStyle: 'round', eyeScale: 1.6,
+          sclera: '#f2a86a', scleraMul: 1.1, stout: true },
+        { fur: '#d94510', furLight: '#ff6b1f', furDark: '#a03a0c', band: '#d94510',
           cream: '#e07f3a', finColor: '#b83409', tailTip: '#b83409', outline: '#2a0d04',
           blush: '#a03f10',
-          eyeColor: '#100504', iris: '#7fe8ff', eyeStyle: 'round', eyeScale: 1.45,
-          sclera: '#e08a4a' }
+          eyeColor: '#100504', iris: '#7fe8ff', eyeStyle: 'round', eyeScale: 1.75,
+          sclera: '#e08a4a', scleraMul: 1.1, stout: true }
       ]
     }
   };
@@ -1053,32 +1065,55 @@
         break;
       }
 
-      case 'fire':
-        // flames licking off the head, shoulders and tail tip
-        var flame = C(p >= 3 ? '#ffe14d' : '#ffb03d'), flameHot = C('#fff3a0');
-        // the flames sit on the crown and the shoulders, clear of the face
-        var seats = [
-          [g.headX - g.headR * 0.5, g.headY - g.headRY * 0.94, 0.9],
-          [g.headX + g.headR * 0.5, g.headY - g.headRY * 0.94, 0.9],
-          [g.bodyX - g.bodyRX * 0.72, g.bodyY - g.bodyRY * 0.9, 0.8],
-          [g.bodyX + g.bodyRX * 0.72, g.bodyY - g.bodyRY * 0.9, 0.8]
-        ];
-        if (p >= 2) seats.push([g.headX, g.headY - g.headRY * 1.06, 1.3]);
-        if (p >= 3) seats.push([g.bodyX, g.bodyY - g.bodyRY * 1.02, 1.05]);
-        for (var fi = 0; fi < seats.length; fi++) {
-          var st0 = seats[fi];
-          var fh = (2.6 + p * 1.9) * k * st0[2];
-          var flick = Math.sin((opts.bob || 0) * 2 + fi * 1.7) * 0.8 * k;
-          L.tri(st0[0] - 1.7 * k, st0[1] + 1, st0[0] + 1.7 * k, st0[1] + 1,
-            st0[0] + flick, st0[1] - fh - 1, ink);
-          L.tri(st0[0] - 1.2 * k, st0[1] + 1, st0[0] + 1.2 * k, st0[1] + 1,
-            st0[0] + flick, st0[1] - fh, flame);
-          L.tri(st0[0] - 0.55 * k, st0[1] + 1, st0[0] + 0.55 * k, st0[1] + 1,
-            st0[0] + flick * 0.6, st0[1] - fh * 0.55, flameHot);
+      case 'ember': {
+        /* A spirit fox: twin fluffy tails with glowing pale tips, a cream
+           ruff, and huge eyes ringed in pale light. */
+        var glowC = C(sp.tailTip || '#fff0d6'), ruff = C(sp.cream);
+        var furM = C(sp.fur), furB = C(sp.furLight);
+
+        // a second tail, curling up on the other side
+        var txb = g.bodyX + g.bodyRX * 0.72, tyb = g.feet - 1;
+        var tSteps = 16;
+        for (var tp2 = 0; tp2 < 2; tp2++) {
+          for (var i2 = 0; i2 <= tSteps; i2++) {
+            var t2 = i2 / tSteps;
+            var px2 = txb + Math.sin(t2 * 1.5) * g.bodyRX * (0.5 + p * 0.12);
+            var py2 = tyb - t2 * g.bodyRY * (1.5 + p * 0.35);
+            var r2 = (1.6 + p * 0.5) * k * (0.75 + 0.6 * Math.sin(t2 * 2.6));
+            L.disc(px2, py2, r2 + (tp2 === 0 ? 1 : 0),
+              tp2 === 0 ? ink : (t2 > 0.58 ? glowC : furM));
+          }
         }
-        if (p >= 2) fangs(L, g, k, (1.2 + p * 0.7) * k, 0.4, bone, ink);
-        if (p >= 3) claws(L, g, k, 3, C('#ffe14d'), ink);
+
+        // a soft cream ruff across the chest, scalloped along the bottom
+        L.ellipse(g.bodyX, g.bodyY - g.bodyRY * 0.22, g.bodyRX * 0.7,
+          g.bodyRY * (0.46 + p * 0.04), ruff);
+        for (var rf = 0; rf < 3 + p; rf++) {
+          var rff = (rf + 0.5) / (3 + p);
+          L.disc(g.bodyX + (rff - 0.5) * g.bodyRX * 1.22,
+            g.bodyY + g.bodyRY * 0.16, g.bodyRX * 0.17, ruff);
+        }
+        for (var cs2 = -1; cs2 <= 1; cs2 += 2) {
+          L.tri(g.headX + cs2 * g.headR * 0.66, g.headY + g.headRY * 0.1,
+            g.headX + cs2 * g.headR * 0.66, g.headY + g.headRY * 0.66,
+            g.headX + cs2 * g.headR * (1.1 + p * 0.06), g.headY + g.headRY * 0.42, ruff);
+        }
+        // and a little tuft between the ears
+        L.tri(g.headX - 2.4 * k, g.headY - g.headRY * 0.82, g.headX + 2.4 * k,
+          g.headY - g.headRY * 0.82, g.headX + k, g.headY - g.headRY * 1.06, ruff);
+
+        // pale rings round the eyes, then the eyes back on top of them
+        if (g.eyeR) {
+          for (var es3 = -1; es3 <= 1; es3 += 2) {
+            L.ellipse(g.headX + es3 * g.eyeDX, g.eyeY, g.eyeR * 1.22, g.eyeR * 1.34,
+              C('#cfd9f2'));
+            drawEye(L, sp, g.headX + es3 * g.eyeDX, g.eyeY, g.eyeR,
+              opts.eyes || 'open', es3, k);
+          }
+        }
+        void furB;
         break;
+      }
 
       case 'void':
         if (p >= 1) fangs(L, g, k, (1.2 + p * 0.8) * k, 0.4, bone, ink);
@@ -1164,17 +1199,17 @@
 
         // the crest — a dark membrane with orange spines standing out of it
         var cbx = g.bodyX + g.bodyRX * 0.16;
-        var nS = 3 + p;
+        var nS = 2 + p;
         for (var wpass = 0; wpass < 2; wpass++) {
           for (var ci = 0; ci < nS; ci++) {
             var cf = ci / Math.max(1, nS - 1);
-            var clen = (3.4 + p * 2) * k * (1 - cf * 0.34);
-            var bx3 = cbx - ci * 2.4 * k;
+            var clen = (3 + p * 1.4) * k * (1 - cf * 0.3);
+            var bx3 = cbx - ci * 2.2 * k;
             var dxc = (bx3 - g.bodyX) / g.bodyRX;
             var by3 = g.bodyY - g.bodyRY * Math.sqrt(Math.max(0, 1 - dxc * dxc)) + 1;
             var tx3 = bx3 - clen * 0.5, ty3 = by3 - clen;
             if (wpass === 0) {                     // membrane behind the spines
-              L.tri(bx3 + 1.5 * k, by3 + 1, tx3, ty3, bx3 - clen * 0.5, by3 + 1, web);
+              L.tri(bx3 + 1.2 * k, by3 + 1, tx3, ty3, bx3 - clen * 0.34, by3 + 1, web);
             } else {
               L.tri(bx3 - 1.1 * k, by3 + 1, bx3 + 1.1 * k, by3 + 1, tx3, ty3 - 1, ink);
               L.tri(bx3 - 0.7 * k, by3 + 1, bx3 + 0.7 * k, by3 + 1, tx3, ty3, fin2);
@@ -1185,7 +1220,7 @@
         // a crown of bone horns over the top of the head
         for (var hi = 0; hi < 3; hi++) {
           var hf = (hi + 0.5) / 3;
-          var hx3 = g.headX - g.headR * 0.7 + hf * g.headR * 1.4;
+          var hx3 = g.headX - g.headR * 1.15 + hf * g.headR * 1.15;
           var dx3 = (hx3 - g.bodyX) / g.bodyRX;
           var hy3 = g.bodyY - g.bodyRY * Math.sqrt(Math.max(0, 1 - dx3 * dx3)) + 1;
           var hh = (1.1 + p * 0.55) * k * (0.7 + 0.5 * Math.sin(hf * Math.PI));
@@ -1243,7 +1278,21 @@
   /* Anything that should glow rather than be outlined goes on afterwards. */
   function drawMonsterGlow(L, sp, g, phase, k) {
     var m = MONSTERS[sp.id];
-    if (!m || phase < 2) return;
+    if (!m || phase < 1) return;
+    if (m.kind === 'ember') {
+      // sparks hanging in the air around it
+      var spark = C(sp.tailTip || '#fff0d6'), hot = C('#ffffff');
+      var n = 3 + phase * 2;
+      for (var e = 0; e < n; e++) {
+        var a = e * 2.3999;
+        var rr = 0.72 + ((e * 5) % 4) * 0.1;
+        var ex = g.bodyX + Math.cos(a) * g.bodyRX * 1.5 * rr;
+        var ey = g.bodyY + Math.sin(a) * g.bodyRY * 1.7 * rr - g.bodyRY * 0.3;
+        L.disc(ex, ey, (e % 3 ? 0.5 : 0.9) * k, e % 3 ? spark : hot);
+      }
+      return;
+    }
+    if (phase < 2) return;
     var glow = C(sp.iris || '#ffe14d');
     var pts = [[g.headX - g.headR * 0.44, g.headY], [g.headX + g.headR * 0.44, g.headY]];
     for (var i = 0; i < pts.length; i++) {
@@ -1570,9 +1619,11 @@
 
   /* Geometry of a stage, in layer coordinates — used to scatter dirt and
      tufts inside the body and head. */
-  function metrics(stageKey, speciesId, k) {
+  function metrics(stageKey, speciesId, k, phase) {
     var st = STAGES[stageIndex(stageKey)];
     var sp = SPECIES[speciesId];
+    // a mutated body is a different shape, so scrubbable spots follow it
+    if (sp && phase > 0) sp = monsterSkin(sp, phase);
     if (sp && sp.body === 'axolotl') {
       var a = axoGeom(st, k || scaleOf(speciesId));
       return {
@@ -1586,7 +1637,7 @@
     if (sp && sp.body === 'fish') {
       // a fish is one long body with no separate head, and it is drawn into a
       // layer of its own size
-      var g = fishGeom(st, k || scaleOf(speciesId));
+      var g = fishGeom(st, k || scaleOf(speciesId), sp);
       return {
         cx: g.cx, feet: FEET * g.k,
         bodyCY: g.cy, bodyRX: g.brx * 0.78, bodyRY: g.bry * 0.72,
