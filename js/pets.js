@@ -747,14 +747,21 @@
       kind: 'wolf',
       names: ['Hound', 'Dire Wolf', 'Werewolf'],
       skin: [
-        { fur: '#9a9384', furLight: '#b8b1a2', furDark: '#5f5a4e', cream: '#ded8c9',
-          creamShade: '#c2bcac', paw: '#9a9384', earColor: '#5f5a4e', iris: '#ffd23d' },
-        { fur: '#6e6a62', furLight: '#8d8880', furDark: '#3d3a35', cream: '#b3aea4',
-          creamShade: '#98938a', paw: '#6e6a62', earColor: '#3d3a35', iris: '#ffd23d',
-          earStyle: 'point', innerEar: '#8a5a4a' },
-        { fur: '#4a4741', furLight: '#66625b', furDark: '#242220', cream: '#8d887e',
-          creamShade: '#75706a', paw: '#4a4741', earColor: '#242220', outline: '#12100f',
-          nose: '#12100f', iris: '#ffcf1f', earStyle: 'point', innerEar: '#7a4a3c' }
+        { fur: '#eceae8', furLight: '#ffffff', furDark: '#2a2732', cream: '#f6f4f2',
+          creamShade: '#d8d5d3', paw: '#eceae8', innerEar: '#c96b7a', blush: '#c98a92',
+          tailTip: '#2a2732',
+          earStyle: 'point', eyeStyle: 'round', eyeColor: '#d8323f', iris: '#ff8a8a',
+          eyeScale: 0.92 },
+        { fur: '#dcd9d8', furLight: '#f4f2f1', furDark: '#1f1c26', cream: '#e6e3e2',
+          creamShade: '#c2bfbe', paw: '#dcd9d8', innerEar: '#b95a6a', blush: '#b57a84',
+          tailTip: '#1f1c26',
+          earStyle: 'point', eyeStyle: 'round', eyeColor: '#e01f2f', iris: '#ff8a8a',
+          eyeScale: 0.9 },
+        { fur: '#cbc8c8', furLight: '#e8e6e6', furDark: '#141118', cream: '#d6d3d3',
+          creamShade: '#adaaaa', paw: '#cbc8c8', innerEar: '#a84a5a', blush: '#9a6570',
+          tailTip: '#141118',
+          outline: '#0d0b12', nose: '#0d0b12', earStyle: 'point',
+          eyeStyle: 'round', eyeColor: '#e01f2f', iris: '#ff6b6b', eyeScale: 0.88 }
       ]
     },
     cat: {
@@ -864,6 +871,25 @@
     }
   }
 
+  /* A fringe of ragged fur spikes around part of an ellipse — the tattered
+     silhouette a shaggy monster wears. */
+  function furSpikes(L, cx, cy, rx, ry, from, to, n, len, col, ink) {
+    for (var pass = 0; pass < 2; pass++) {
+      for (var i = 0; i < n; i++) {
+        var a = from + (to - from) * (n === 1 ? 0.5 : i / (n - 1));
+        var ca = Math.cos(a), sa = Math.sin(a);
+        var px = cx + ca * rx, py = cy + sa * ry;
+        var wob = 0.6 + ((i * 7) % 5) * 0.16;          // uneven, like real fur
+        var tipX = px + ca * len * wob, tipY = py + sa * len * wob;
+        var w = len * (pass === 0 ? 0.44 : 0.3);
+        var g2 = pass === 0 ? 1 : 0;
+        L.tri(px - sa * w - ca, py + ca * w - sa,
+          px + sa * w - ca, py - ca * w - sa,
+          tipX + ca * g2, tipY + sa * g2, pass === 0 ? ink : col);
+      }
+    }
+  }
+
   /* Claws on the front paws. */
   function claws(L, g, k, n, col, ink) {
     for (var s = -1; s <= 1; s += 2) {
@@ -898,18 +924,52 @@
     var bone = C('#f4efe2'), boneS = C('#cfc7b4');
 
     switch (m.kind) {
-      case 'wolf':
-        fangs(L, g, k, (1.4 + p * 0.9) * k, 0.4, bone, ink);
-        if (p >= 2) claws(L, g, k, 3, bone, ink);
-        if (p >= 2) spines(L, g, k, 4 + p, (1.6 + p) * k, furD, ink);
-        if (p >= 3) {                                    // a pair of blunt horns
-          for (var ws = -1; ws <= 1; ws += 2) {
-            var wx = g.headX + ws * g.headR * 0.72, wy = g.headY - g.headRY * 0.78;
-            L.tri(wx - 1.6 * k, wy + 1, wx + 1.6 * k, wy + 1, wx + ws * 2.6 * k, wy - 4.6 * k, ink);
-            L.tri(wx - k, wy + 1, wx + k, wy + 1, wx + ws * 2.2 * k, wy - 4 * k, boneS);
-          }
+      case 'wolf': {
+        /* A ragged black-and-white hound: tattered fur round the neck and
+           shoulders, a black patch across one eye, dark claws, red eyes. */
+        var shag = C(sp.fur), patch = C(sp.furDark), claw = C('#3a3540');
+
+        // ruffs of fur down each cheek — kept off the chest, which stays smooth
+        for (var rs = -1; rs <= 1; rs += 2) {
+          furSpikes(L, g.headX, g.headY, g.headR * 0.96, g.headRY * 0.96,
+            rs < 0 ? Math.PI * 0.72 : Math.PI * 0.28,
+            rs < 0 ? Math.PI * 1.16 : -Math.PI * 0.16,
+            4 + p, (1.8 + p * 1.1) * k, shag, ink);
         }
+        // tufts breaking up the ear tips
+        for (var es2 = -1; es2 <= 1; es2 += 2) {
+          furSpikes(L, g.headX + es2 * g.headR * 0.7, g.headY - g.headRY * 0.55,
+            g.headR * 0.3, g.headRY * 0.3,
+            es2 < 0 ? Math.PI * 1.05 : Math.PI * 1.95,
+            es2 < 0 ? Math.PI * 1.35 : Math.PI * 1.65,
+            2, (1.4 + p * 0.7) * k, shag, ink);
+        }
+
+        // a black patch thrown across one side of the face
+        L.ellipse(g.headX - g.headR * 0.46, g.headY - g.headRY * 0.34,
+          g.headR * (0.34 + p * 0.09), g.headRY * (0.36 + p * 0.09), patch);
+        L.ellipse(g.headX - g.headR * 0.72, g.headY - g.headRY * 0.62,
+          g.headR * 0.26, g.headRY * 0.24, patch);
+        if (p >= 2) {
+          L.ellipse(g.headX - g.headR * 0.2, g.headY - g.headRY * 0.72,
+            g.headR * 0.2, g.headRY * 0.18, patch);
+        }
+        // the eye it covers goes back on top, still glowing
+        if (g.eyeR) {
+          drawEye(L, sp, g.headX - g.eyeDX, g.eyeY, g.eyeR, opts.eyes || 'open', -1, k);
+        }
+
+        // a few more scattered blotches as it turns
+        var blots = [[-0.62, 0.12], [0.58, 0.4], [-0.24, 0.66]];
+        for (var bl = 0; bl < Math.min(blots.length, p); bl++) {
+          L.ellipse(g.bodyX + blots[bl][0] * g.bodyRX, g.bodyY + blots[bl][1] * g.bodyRY,
+            g.bodyRX * 0.11, g.bodyRY * 0.11, patch);
+        }
+
+        claws(L, g, k, 3, claw, ink);
+        if (p >= 3) fangs(L, g, k, 1.8 * k, 0.4, C('#f4efe2'), ink);
         break;
+      }
 
       case 'tiger': {
         /* A demon tiger: bold stripes, a mouthful of needle teeth and big

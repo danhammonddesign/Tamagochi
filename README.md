@@ -189,7 +189,7 @@ monster still eats, drinks, plays, bathes, sleeps and grows up.
 
 | Pet | Phase 1 | Phase 2 | Phase 3 |
 |---|---|---|---|
-| Dalmatian | Hound | Dire Wolf | **Werewolf** |
+| Dalmatian | Hound | Dire Wolf | **Werewolf** — a ragged black-and-white hound with red eyes |
 | Cat | Blue Tabby | Blue Tiger | **Demon Tiger** — blue and striped, burning slit eyes, a mouthful of needles |
 | Fox | Ember Fox | Blaze Fox | **Firefox** — wreathed in flame |
 | Axolotl | Deep One | Kraken Pup | **Cthulhu** — a beard of face tentacles, sunken eyes, wings |
